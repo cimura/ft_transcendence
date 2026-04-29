@@ -17,15 +17,10 @@ jobs:
           fetch-depth: 0
 
       - name: Gemini PR Summary
-        uses: mshick/google-gemini-github-action@v1.3.0 # 無料で使えるGemini用Action
+        uses: tuatda/gemini-pr-summarizer@v1 
         with:
-          model: 'gemini-1.5-flash' # 高速・無料枠が広いモデル
-          system-prompt: |
-            あなたは優秀なエンジニアです。
-            GitHubのdiff（差分）を読み、以下の構成で日本語のPR概要を生成してください。
-            1. なにをしたか（3行以内で要約）
-            2. 変更内容の箇条書き
-            3. レビュアーへの注目ポイント
-            人間が文章を考える手間を省くのが目的なので、簡潔かつ正確に出力してください。
-          google-api-key: ${{ secrets.GEMINI_API_KEY }}
-          github-token: ${{ secrets.GITHUB_TOKEN }}
+          gemini_api_key: ${{ secrets.GEMINI_API_KEY }}
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          model: 'gemini-1.5-flash'
+          # 出力言語を指定
+          language: 'Japanese'
