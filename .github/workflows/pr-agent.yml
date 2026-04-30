@@ -1,0 +1,27 @@
+name: AI PR Agent
+on:
+  pull_request:
+    types: [opened, synchronize]
+  issue_comment:
+    types: [created] # コメントでAIに指示を出すことも可能になります
+
+jobs:
+  pr_agent:
+    runs-on: ubuntu-latest
+    permissions:
+      issues: write
+      pull-requests: write
+      contents: parse-meta
+    steps:
+      - name: PR Agent action
+        uses: Codium-ai/pr-agent@main
+        env:
+          # Gemini APIキーをOpenAI互換として設定
+          # PR AgentはGeminiもサポートしています
+          google.api_key: ${{ secrets.GEMINI_API_KEY }}
+          github.token: ${{ secrets.GITHUB_TOKEN }}
+          # 日本語で返信させる設定
+          PR_DESCRIPTION.MAIN_INSTRUCTION: "日本語で要約してください。"
+          PR_REVIEWER.EXTRA_INSTRUCTIONS: "必ず日本語でレビューしてください。細かいバグの可能性や、命名規則、変更点について指摘して。"
+          # 使用するモデルの指定
+          config.model: "gemini-1.5-flash"
