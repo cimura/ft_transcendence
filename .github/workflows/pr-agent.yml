@@ -11,7 +11,7 @@ jobs:
     permissions:
       issues: write
       pull-requests: write
-      contents: parse-meta
+      contents: write
     steps:
       - name: PR Agent action
         uses: Codium-ai/pr-agent@main
