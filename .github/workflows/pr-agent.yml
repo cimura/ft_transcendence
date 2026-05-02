@@ -24,3 +24,5 @@ jobs:
           PR_REVIEWER.EXTRA_INSTRUCTIONS: "必ず日本語でレビューしてください。細かいバグの可能性や、命名規則、変更点について指摘して。"
           # Model configuration (requires gemini/ prefix)
           config.model: "gemini/gemini-1.5-flash"
+          # Disable fallback to OpenAI models
+          config.fallback_models: '["gemini/gemini-1.5-flash"]'
