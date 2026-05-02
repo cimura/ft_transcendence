@@ -16,12 +16,11 @@ jobs:
       - name: PR Agent action
         uses: Codium-ai/pr-agent@main
         env:
-          # Gemini APIキーをOpenAI互換として設定
-          # PR AgentはGeminiもサポートしています
-          google.api_key: ${{ secrets.GEMINI_API_KEY }}
-          github.token: ${{ secrets.GITHUB_TOKEN }}
-          # 日本語で返信させる設定
+          # Gemini API key configuration
+          GOOGLE_AI_STUDIO.GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          # Japanese response configuration
           PR_DESCRIPTION.MAIN_INSTRUCTION: "日本語で要約してください。"
           PR_REVIEWER.EXTRA_INSTRUCTIONS: "必ず日本語でレビューしてください。細かいバグの可能性や、命名規則、変更点について指摘して。"
-          # 使用するモデルの指定
-          config.model: "gemini-1.5-flash"
+          # Model configuration (requires gemini/ prefix)
+          config.model: "gemini/gemini-1.5-flash"
