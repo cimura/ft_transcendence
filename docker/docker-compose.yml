@@ -1,0 +1,14 @@
+networks:
+  transcendence:
+    driver: bridge
+
+services:
+  frontend:
+    build:
+      context: ..
+      dockerfile: docker/frontend/Dockerfile
+    container_name: frontend
+    ports: 
+      - "5173:5173"
+    networks:
+      - transcendence

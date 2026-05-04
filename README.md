@@ -1,1 +1,12 @@
 # ft_transcendence
+
+## フロントエンド
+1. Dockerコンテナを起動・起動
+```bash
+cd docker 
+docker compose up --build
+```
+※初回はインストールのため、時間がかかる
+
+2. 起動完了後、以下のURLでアクセス（ホストからのアクセスを許可しているため、ホスト側のブラウザで確認可）
+`http://localhost:5173`
