@@ -1,4 +1,18 @@
+networks:
+  transcendence:
+    driver: bridge
+
 services:
+  frontend:
+    build:
+      context: ..
+      dockerfile: docker/frontend/Dockerfile
+    container_name: frontend
+    volumes:
+      - ../frontend/:/app
+      - /app/node_modules
+    networks:
+      - transcendence
   nginx:
     image: nginx
     build: nginx/.
@@ -6,3 +20,7 @@ services:
     ports:
       - "443:443"
     restart: always
+    depends_on:
+      - frontend
+    networks:
+      - transcendence
