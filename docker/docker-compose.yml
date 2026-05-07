@@ -12,3 +12,10 @@ services:
       - "5173:5173"
     networks:
       - transcendence
+  nginx:
+    image: nginx
+    build: nginx/.
+    container_name: nginx
+    ports:
+      - "443:443"
+    restart: always
