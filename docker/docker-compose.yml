@@ -8,8 +8,6 @@ services:
       context: ..
       dockerfile: docker/frontend/Dockerfile
     container_name: frontend
-    ports: 
-      - "5173:5173"
     networks:
       - transcendence
   nginx:
@@ -19,3 +17,7 @@ services:
     ports:
       - "443:443"
     restart: always
+    depends_on:
+      - frontend
+    networks:
+      - transcendence

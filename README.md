@@ -3,8 +3,7 @@
 ## フロントエンド
 1. Dockerコンテナを起動・起動
 ```bash
-cd docker 
-docker compose up --build
+make
 ```
 ※初回はインストールのため、時間がかかる
 
