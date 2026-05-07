@@ -1,6 +1,6 @@
 FROM nginx:latest
 
-RUN apk update && apk add openssl
+RUN apt-get update && apt-get install openssl
 
 RUN mkdir -p /etc/ssl/certs /etc/ssl/privates
 RUN openssl req -x509 -nodes -days 365 -newkey rsa:2048 \
