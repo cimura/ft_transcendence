@@ -5,22 +5,36 @@ networks:
 services:
   frontend:
     build:
-      context: ..
-      dockerfile: docker/frontend/Dockerfile
+      context: ../frontend
+      dockerfile: ../docker/frontend/Dockerfile
     container_name: frontend
     volumes:
-      - ../frontend/:/app
+      - ../frontend:/app
+      - /app/node_modules
+    networks:
+      - transcendence
+  backend:
+    build: 
+      context: ../backend
+      dockerfile: ../docker/backend/Dockerfile
+    container_name: backend
+    ports:
+      - "3000:3000"
+    volumes:
+      - ../backend:/app
       - /app/node_modules
     networks:
       - transcendence
   nginx:
     image: nginx
-    build: nginx/.
+    build:
+      context: nginx
     container_name: nginx
     ports:
       - "443:443"
     restart: always
     depends_on:
       - frontend
+      - backend
     networks:
       - transcendence
