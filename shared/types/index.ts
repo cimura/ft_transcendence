@@ -5,6 +5,7 @@ export interface User {
   email: string;       // メールアドレス
   avatarUrl?: string;  // プロフィール画像のURL（オプショナル）
   createdAt: Date;
+  updatedAt: Date;
 }
 
 // 1-1. ユーザープロフィール (User Profile) - 回廊のリストを含む
@@ -46,6 +47,7 @@ export interface Comment {
   authorId: string;    // 誰が書き込んだか
   content: string;     // コメント本文
   createdAt: Date;
+  updatedAt: Date;
 }
 
 // 5. 足音同期のためのリアルタイムデータ (WebSocket)
