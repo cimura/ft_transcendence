@@ -10,7 +10,7 @@ services:
     container_name: frontend
     volumes:
       - ../frontend:/app
-      - /app/node_modules
+      - frontend_node_modules:/app/node_modules
     networks:
       - transcendence
   backend:
@@ -20,7 +20,7 @@ services:
     container_name: backend
     volumes:
       - ../backend:/app
-      - /app/node_modules
+      - backend_node_modules:/app/node_modules
     networks:
       - transcendence
   nginx:
@@ -36,3 +36,7 @@ services:
       - backend
     networks:
       - transcendence
+
+volumes:
+  frontend_node_modules:
+  backend_node_modules:
