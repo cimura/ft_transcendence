@@ -45,13 +45,13 @@ The first startup may take some time because Docker needs to build imanges and i
 ### Frontend through Nginx
 
 ```text
-https://localhost/
+https://localhost:8443
 ```
 
 ### Backend through Nginx
 
 ```text
-https://localhost/api/
+https://localhost:8443/api/
 ```
 
 Beause the local HTTPS certificate is self-signed, the browser may show a security warning.
@@ -59,15 +59,6 @@ Beause the local HTTPS certificate is self-signed, the browser may show a securi
 ### How to test with curl
 
 ```bash
-curl -kI https://localhost/
-curl -k https://localhost/api/
+curl -kI https://localhost:8443
+curl -k https://localhost:8443/api/
 ```
-
-The backend is reachable directly by:
-
-```bash
-curl http://localhost:3000/api/
-```
-
-
-
