@@ -16,15 +16,56 @@ docker compose version
 docker buildx version
 ```
 
+## Environment Variables
+This project uses local .env files for environment variables.
+For the backend, create a local environment file from the example:
+
+```bash
+cp backend/.env.example backend/.env
+```
+
+The backend .env file is used by Prisma to connect to PostgreSQL.
+
 ## Services
-This project currently starts three services:
+This project currently starts four services:
 
 - frontend: frontend development server
 - backend: NestJS backend server
 - nginx: HTTPS reverse proxy
+- postgres: PostgreSQL database used through Prisma
 
 Nginx is the public entry point for the application.
+
 The backend uses NestJS. NestJS uses Express as its default HTTP platform adapter, so the current backend stack is Node.js + NestJS + Express adapter.
+
+The database stack is PostgreSQL + Prisma ORM.
+
+### Prisma
+
+The generated Prisma Client is not committed to Git.
+It is generated automatically when the backend container starts:
+
+```bash
+npm run start:dev
+```
+
+if needed, generate it manually:
+
+```bash
+docker compose -f docker/docker-compose.yml exec backend npx prisma generate
+```
+
+To check the migration status:
+
+```bash
+docker compose -f docker/docker-compose.yml exec backend npx prisma migrate status
+```
+
+To apply development migrations manually:
+
+```bash
+docker compose -f docker/docker-composeyml exec backend npx prisma migrate dev
+```
 
 ## Start the containers
 
@@ -38,7 +79,7 @@ or
 make build
 ```
 
-The first startup may take some time because Docker needs to build imanges and install dependencies.
+The first startup may take some time because Docker needs to build images and install dependencies.
 
 ## Access URLs
 
@@ -54,7 +95,7 @@ https://localhost:8443
 https://localhost:8443/api/
 ```
 
-Beause the local HTTPS certificate is self-signed, the browser may show a security warning.
+Because the local HTTPS certificate is self-signed, the browser may show a security warning.
 
 ### How to test with curl
 
