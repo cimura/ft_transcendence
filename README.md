@@ -24,7 +24,7 @@ For the backend, create a local environment file from the example:
 cp backend/.env.example backend/.env
 ```
 
-The backend .env file is used by Prisma to connect to PostgreSQL.
+The backend .env file is used by Prisma to connect to PostgreSQL and by PostgreSQL for the user ID,the password, and the database name.
 
 ## Services
 This project currently starts four services:
@@ -64,7 +64,7 @@ docker compose -f docker/docker-compose.yml exec backend npx prisma migrate stat
 To apply development migrations manually:
 
 ```bash
-docker compose -f docker/docker-composeyml exec backend npx prisma migrate dev
+docker compose -f docker/docker-compose.yml exec backend npx prisma migrate dev
 ```
 
 ## Start the containers
