@@ -7,7 +7,7 @@ Content-Type: application/json
   "password": "password123"
 }
 
-### サインイン（ログインしてトークン取得）
+### サインイン（トークン取得）
 POST https://localhost:8443/api/auth/signin
 Content-Type: application/json
 

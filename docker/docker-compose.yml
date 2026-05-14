@@ -19,6 +19,8 @@ services:
       context: ../backend
       dockerfile: ../docker/backend/Dockerfile
     container_name: backend
+    env_file:
+      - ../.env
     restart: always
     volumes:
       - ../backend:/app

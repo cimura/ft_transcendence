@@ -16,6 +16,21 @@ docker compose version
 docker buildx version
 ```
 
+### Environment variables setup
+The application relies on environment variables to securely manage sensitive configurations, such as authentication keys, without hardcoding them into the source code. 
+
+You can easily set up the default environment variables by copying the provided example file. Run the following command in your project root:
+
+```bash
+cp .env.example .env
+```
+
+**Variables Description**:
+| KEY             | DESCRIPTION                                                                               |
+| :--:            | :--:                                                                                      |
+| JWT_SECRET      | A secure, random cryptographic string used to sign and verify JSON Web Tokens.            |
+| JWT_EXPIRES_IN  | The validity duration of the issued token (e.g., `1d` for one day, `60s` for 60 seconds). |
+
 ## Services
 This project currently starts three services:
 

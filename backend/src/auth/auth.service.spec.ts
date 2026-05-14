@@ -30,24 +30,24 @@ describe('AuthService', () => {
     expect(result).toEqual({ message: 'User successfully registered!' });
   });
 
-  // テストケース2: 正常なログイン
+  // テストケース2: 正常なサインイン
   it('should login and return a token', async () => {
     // 準備: まずユーザーを登録する
     await service.signUp('test2@example.com', 'password123');
-    // 実行: ログインを試みる
+    // 実行: サインインを試みる
     const result = await service.signIn('test2@example.com', 'password123');
     // 検証: モック化したJwtServiceが 'fake_jwt_token_123' を返すはず
     expect(result).toEqual({ access_token: 'fake_jwt_token_123' });
   });
 
-  // テストケース3: 存在しないユーザーでのログイン失敗
+  // テストケース3: 存在しないユーザーでのサインイン失敗
   it('should throw UnauthorizedException for unknown user', async () => {
     // 実行 & 検証: エラー（例外）が投げられる（throwされる）ことを確認する
     await expect(service.signIn('unknown@example.com', 'password123'))
       .rejects.toThrow(UnauthorizedException);
   });
 
-  // テストケース4: 間違ったパスワードでのログイン失敗
+  // テストケース4: 間違ったパスワードでのサインイン失敗
   it('should throw UnauthorizedException for wrong password', async () => {
     await service.signUp('test3@example.com', 'password123');
     await expect(service.signIn('test3@example.com', 'wrongpassword'))
@@ -63,4 +63,3 @@ describe('AuthService', () => {
       .rejects.toThrow(ConflictException);
   });
 });
-
