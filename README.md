@@ -21,7 +21,7 @@ This project uses local .env files for environment variables.
 For the backend, create a local environment file from the example:
 
 ```bash
-cp backend/.env.example backend/.env
+cp .env.example .env
 ```
 
 The backend .env file is used by Prisma to connect to PostgreSQL and by PostgreSQL for the user, the password, and the database name.
