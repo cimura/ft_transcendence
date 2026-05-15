@@ -118,3 +118,21 @@ or
 docker compose -f docker/docker-compose.yml exec backend npx prisma migrate dev
 ```
 
+## Code formatting
+
+Backend code is formatted with Prettier.
+
+To check formatting:
+
+```bash
+docker compose -f docker/docker-compose.yml exec backend npm run format:check
+```
+
+To apply formatting:
+
+```bash
+docker compose -f docker/docker-compose.yml exec backend npm run format
+```
+
+The backend has its own .prettierignore file because Prettier is executed inside the backend container. Generated Prisma files under src/generated/ are excluded from formatting.
+
