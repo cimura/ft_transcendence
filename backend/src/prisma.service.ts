@@ -3,14 +3,17 @@ import { PrismaClient } from './generated/prisma/client.js';
 import { PrismaPg } from '@prisma/adapter-pg';
 
 @Injectable()
-export class PrismaService 
+export class PrismaService
   extends PrismaClient
-  implements OnModuleInit, OnModuleDestroy {
+  implements OnModuleInit, OnModuleDestroy
+{
   constructor() {
     const databaseUrl = process.env.DATABASE_URL;
 
     if (!databaseUrl) {
-      throw new Error('Environment variable DATABASE_URL is not set. Please set DATABASE_URL to your database connection string.');
+      throw new Error(
+        'Environment variable DATABASE_URL is not set. Please set DATABASE_URL to your database connection string.',
+      );
     }
 
     const adapter = new PrismaPg({
