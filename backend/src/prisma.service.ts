@@ -5,8 +5,14 @@ import { PrismaPg } from '@prisma/adapter-pg';
 @Injectable()
 export class PrismaService extends PrismaClient {
   constructor() {
+    const databaseUrl = process.env.DATABASE_URL;
+
+    if (!databaseUrl) {
+      throw new Error('Environment variable DATABASE_URL is not set. Please set DATABASE_URL to your database connection string.');
+    }
+
     const adapter = new PrismaPg({
-      connectionString: process.env.DATABASE_URL as string,
+      connectionString: databaseUrl,
     });
 
     super({ adapter });
