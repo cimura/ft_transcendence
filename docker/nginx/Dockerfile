@@ -9,4 +9,3 @@ RUN openssl req -x509 -nodes -days 365 -newkey rsa:2048 \
     -subj "/C=JP/ST=Tokyo/L=Tokyo/O=42Tokyo/OU=ft_transcendence/CN=ft_transcendence.local"
 
 COPY conf/nginx.conf /etc/nginx/conf.d/default.conf
-COPY html/ /usr/share/nginx/html/
