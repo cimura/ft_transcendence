@@ -1,4 +1,4 @@
 src/generated/
-node-modules/
+node_modules/
 dist/
 coverage/
