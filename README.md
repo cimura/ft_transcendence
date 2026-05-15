@@ -16,7 +16,7 @@ docker compose version
 docker buildx version
 ```
 
-## Environment Variables
+## Environment variables
 This project uses local .env files for environment variables.
 For the backend, create a local environment file from the example:
 
@@ -24,7 +24,7 @@ For the backend, create a local environment file from the example:
 cp backend/.env.example backend/.env
 ```
 
-The backend .env file is used by Prisma to connect to PostgreSQL and by PostgreSQL for the user ID,the password, and the database name.
+The backend .env file is used by Prisma to connect to PostgreSQL and by PostgreSQL for the user, the password, and the database name.
 
 ## Services
 This project currently starts four services:
@@ -40,33 +40,6 @@ The backend uses NestJS. NestJS uses Express as its default HTTP platform adapte
 
 The database stack is PostgreSQL + Prisma ORM.
 
-### Prisma
-
-The generated Prisma Client is not committed to Git.
-It is generated automatically when the backend container starts:
-
-```bash
-npm run start:dev
-```
-
-if needed, generate it manually:
-
-```bash
-docker compose -f docker/docker-compose.yml exec backend npx prisma generate
-```
-
-To check the migration status:
-
-```bash
-docker compose -f docker/docker-compose.yml exec backend npx prisma migrate status
-```
-
-To apply development migrations manually:
-
-```bash
-docker compose -f docker/docker-compose.yml exec backend npx prisma migrate dev
-```
-
 ## Start the containers
 
 ```bash
@@ -80,6 +53,14 @@ make build
 ```
 
 The first startup may take some time because Docker needs to build images and install dependencies.
+
+After the containers are running, apply the Prisma migrations to the local PostgreSQL database:
+
+```bash
+make migrate
+```
+
+This is needed after the first startup, after recreating the database volume, or after pulling new Prisma migrations from Git.
 
 ## Access URLs
 
@@ -103,3 +84,37 @@ Because the local HTTPS certificate is self-signed, the browser may show a secur
 curl -kI https://localhost:8443
 curl -k https://localhost:8443/api/
 ```
+
+### Prisma
+
+The generated Prisma Client is not committed to Git.
+It is generated automatically when the backend container starts:
+
+```bash
+npm run start:dev
+```
+
+If needed, generate it manually:
+
+```bash
+docker compose -f docker/docker-compose.yml exec backend npx prisma generate
+```
+
+To check the migration status:
+
+```bash
+docker compose -f docker/docker-compose.yml exec backend npx prisma migrate status
+```
+
+To apply development migrations manually:
+
+```bash
+make migrate
+```
+
+or
+
+```bash
+docker compose -f docker/docker-compose.yml exec backend npx prisma migrate dev
+```
+
