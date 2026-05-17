@@ -4,6 +4,9 @@ import { ValidationPipe } from '@nestjs/common';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
+
+  app.enableShutdownHooks();
+
   app.setGlobalPrefix('api');
   // アプリ全体にバリデーションを適用
   app.useGlobalPipes(
