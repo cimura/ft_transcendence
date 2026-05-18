@@ -28,4 +28,7 @@ re: fclean build
 logs:
 	docker compose -f $(COMPOSE_FILE) logs -f
 
+migrate:
+	docker compose -f $(COMPOSE_FILE) exec backend npx prisma migrate dev
+
 .PHONY: all up build down clean fclean re logs

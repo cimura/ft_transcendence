@@ -4,6 +4,9 @@
 node_modules/
 npm-debug.log*
 
+# Prisma
+backend/src/generated/prisma
+
 # Build outputs
 dist/
 build/
