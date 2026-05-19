@@ -14,7 +14,7 @@ import { JwtStrategy } from './jwt.strategy';
       inject: [ConfigService],
       useFactory: async (configService: ConfigService): Promise<JwtModuleOptions> => ({
         global: true,
-        // 秘密鍵は必須なのでコンパイル時にエラーにする(末尾に"!")
+        // JWT_SECRET は env.validation.ts で必須チェックしているため、ここでは存在する前提で扱う
         secret: configService.get<string>('JWT_SECRET')!,
         signOptions: {
           expiresIn: configService.get<string>('JWT_EXPIRES_IN', '1d') as NonNullable<JwtModuleOptions['signOptions']>['expiresIn'],

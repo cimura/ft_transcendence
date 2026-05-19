@@ -39,7 +39,7 @@ curl -X POST https://localhost:8443/api/auth/signin \
 ### プロフィール (サインイン済みユーザーでアクセス)
 ```bash
 curl -k -X GET https://localhost:8443/api/auth/profile
-Authorization: Bearer <YOUR_JWT_TOKEN_HERE>
+-H "Authorization: Bearer <YOUR_JWT_TOKEN_HERE>"
 ```
 
 ## テスト方法 B: VSCode REST Client
@@ -66,6 +66,10 @@ Content-Type: application/json
   "email": "test@example.com",
   "password": "password123"
 }
+
+### サインイン確認(profile)
+GET https://localhost:8443/api/auth/profile
+Authorization: Bearer <YOUR_JWT_TOKEN_HERE>
 ```
 
 ## トークンの検証 (jwt.io)
