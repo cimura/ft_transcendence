@@ -18,4 +18,8 @@ build/
 # OS
 .DS_Store
 
+# AI Documents
+AGENTS.md
+
+# Visual Studio Code
 !.vscode/*settings.json

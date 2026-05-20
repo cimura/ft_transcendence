@@ -16,15 +16,24 @@ docker compose version
 docker buildx version
 ```
 
-## Environment variables
-This project uses local .env files for environment variables.
-For the backend, create a local environment file from the example:
+### Environment variables setup
+The application relies on environment variables to securely manage sensitive configurations, such as authentication keys, without hardcoding them into the source code. 
+
+You can easily set up the default environment variables by copying the provided example file. Run the following command in your project root:
 
 ```bash
 cp .env.example .env
 ```
 
-The backend .env file is used by Prisma to connect to PostgreSQL and by PostgreSQL for the user, the password, and the database name.
+**Variables Description**:
+| KEY               | DESCRIPTION                                                                               |
+| :--              | :--                                                                                      |
+| JWT_SECRET        | A secure, random cryptographic string used to sign and verify JSON Web Tokens.            |
+| JWT_EXPIRES_IN    | The validity duration of the issued token (e.g., `1d` for one day, `60s` for 60 seconds). |
+| DATABASE_URL      | PostgreSQL connection URL used by Prisma.                                                 |
+| POSTGRES_USER     | The user of PostgreSQL.                                                                   |
+| POSTGRES_PASSWORD | The password of PostgreSQL.                                                               |
+| POSTGRES_DB       | The name of PostgreSQL.                                                                   |
 
 ## Services
 This project currently starts four services:
