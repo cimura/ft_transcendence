@@ -5,7 +5,10 @@ interface SignupProps {
   onSwitchToLogin: () => void
 }
 
-export default function Signup({ onSignupSuccess, onSwitchToLogin }: SignupProps) {
+export default function Signup({
+  onSignupSuccess,
+  onSwitchToLogin,
+}: SignupProps) {
   const [error, setError] = useState('')
 
   const handleSignup = async (formData: FormData) => {

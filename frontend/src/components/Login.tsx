@@ -5,7 +5,10 @@ interface LoginProps {
   onSwitchToSignup: () => void
 }
 
-export default function Login({ onLoginSuccess, onSwitchToSignup }: LoginProps) {
+export default function Login({
+  onLoginSuccess,
+  onSwitchToSignup,
+}: LoginProps) {
   const [error, setError] = useState('')
 
   const handleLogin = async (formData: FormData) => {
