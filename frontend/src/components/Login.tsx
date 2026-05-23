@@ -2,23 +2,28 @@ import { useState } from 'react'
 
 interface LoginProps {
   onLoginSuccess: () => void
+  onSwitchToSignup: () => void
 }
 
-export default function Login({ onLoginSuccess }: LoginProps) {
+export default function Login({ onLoginSuccess, onSwitchToSignup }: LoginProps) {
   const [error, setError] = useState('')
 
   const handleLogin = async (formData: FormData) => {
-    const email = formData.get('email') as string
+    const identifier = formData.get('identifier') as string
     const password = formData.get('password') as string
 
-    console.log('Login attempt: ', { email, password })
+    console.log('Login attempt: ', { identifier, password })
     try {
       setError('')
       // TODO: backend API（バックエンドと繋げたら実装）
-      // const response = await fetch('/api/auth/login', { ... })
+      // const response = await fetch('/api/auth/signin', {
+      //   method: 'POST',
+      //   headers: { 'Content-Type': 'application/json' },
+      //   body: JSON.stringify({ identifier, password })
+      // })
 
       // 仮の成功
-      console.log('Login successful: ', { email })
+      console.log('Login successful: ', { identifier })
       onLoginSuccess()
     } catch {
       setError('ログインに失敗しました')
@@ -39,15 +44,15 @@ export default function Login({ onLoginSuccess }: LoginProps) {
           {/** Email */}
           <div>
             <label
-              htmlFor="email"
+              htmlFor="identifier"
               className="block text-sm font-medium text-gray-700 mb-2"
             >
-              Email
+              Username or Email
             </label>
             <input
-              type="email"
-              id="email"
-              name="email"
+              type="text"
+              id="identifier"
+              name="identifier"
               required
               className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
             />
@@ -76,6 +81,16 @@ export default function Login({ onLoginSuccess }: LoginProps) {
             Login
           </button>
         </form>
+        {/** Switch to Signup */}
+        <div className="mt-4 text-center text-sm text-gray-600">
+          Don't have an account?{' '}
+          <button
+            onClick={onSwitchToSignup}
+            className="text-blue-600 hover:text-blue-800 font-medium"
+          >
+            Sign up
+          </button>
+        </div>
       </div>
     </div>
   )
