@@ -2,12 +2,12 @@ import { useState } from 'react'
 
 interface SignupProps {
   onSignupSuccess: () => void
-  onSwitchToLogin: () => void
+  onSwitchToSignIn: () => void
 }
 
 export default function Signup({
   onSignupSuccess,
-  onSwitchToLogin,
+  onSwitchToSignIn,
 }: SignupProps) {
   const [error, setError] = useState('')
 
@@ -127,14 +127,14 @@ export default function Signup({
             Sign Up
           </button>
         </form>
-        {/** Switch to Login */}
+        {/** Switch to SignIn */}
         <div className="mt-4 text-center text-sm text-gray-600">
           Already have an account?{' '}
           <button
-            onClick={onSwitchToLogin}
+            onClick={onSwitchToSignIn}
             className="text-blue-600 hover:text-blue-800 font-medium"
           >
-            Log in
+            Sign in
           </button>
         </div>
       </div>

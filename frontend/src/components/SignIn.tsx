@@ -1,21 +1,21 @@
 import { useState } from 'react'
 
-interface LoginProps {
-  onLoginSuccess: () => void
+interface SignInProps {
+  onSignInSuccess: () => void
   onSwitchToSignup: () => void
 }
 
-export default function Login({
-  onLoginSuccess,
+export default function SignIn({
+  onSignInSuccess,
   onSwitchToSignup,
-}: LoginProps) {
+}: SignInProps) {
   const [error, setError] = useState('')
 
-  const handleLogin = async (formData: FormData) => {
+  const handleSignIn = async (formData: FormData) => {
     const identifier = formData.get('identifier') as string
     const password = formData.get('password') as string
 
-    console.log('Login attempt: ', { identifier, password })
+    console.log('SignIn attempt: ', { identifier, password })
     try {
       setError('')
       // TODO: backend API（バックエンドと繋げたら実装）
@@ -26,8 +26,8 @@ export default function Login({
       // })
 
       // 仮の成功
-      console.log('Login successful: ', { identifier })
-      onLoginSuccess()
+      console.log('SignIn successful: ', { identifier })
+      onSignInSuccess()
     } catch {
       setError('ログインに失敗しました')
     }
@@ -36,8 +36,8 @@ export default function Login({
   return (
     <div className="min-h-screen flex items-center justify-center bg-gray-100">
       <div className="bg-white p-8 rounded-lg shadow-md w-96">
-        <h1 className="text-2xl font-bold mb-6 text-center">Login</h1>
-        <form action={handleLogin} className="space-y-4">
+        <h1 className="text-2xl font-bold mb-6 text-center">SignIn</h1>
+        <form action={handleSignIn} className="space-y-4">
           {/** error message */}
           {error && (
             <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded">
@@ -76,12 +76,12 @@ export default function Login({
               className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
             />
           </div>
-          {/** Login Button */}
+          {/** SignIn Button */}
           <button
             type="submit"
             className="w-full bg-blue-600 text-white py-2 px-4 rounded-md hover:bg-blue-700 transition-colors"
           >
-            Login
+            SignIn
           </button>
         </form>
         {/** Switch to Signup */}
