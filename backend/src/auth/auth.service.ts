@@ -1,4 +1,8 @@
-import { Injectable, UnauthorizedException, ConflictException } from '@nestjs/common';
+import {
+  Injectable,
+  UnauthorizedException,
+  ConflictException,
+} from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { PrismaService } from 'src/prisma.service';
 import { SignUpRequestDto, SignUpResponseDto } from './dto/signup.dto';
@@ -10,7 +14,10 @@ import * as bcrypt from 'bcrypt';
 
 @Injectable()
 export class AuthService {
-  constructor(private jwtService: JwtService, private prisma: PrismaService) {}
+  constructor(
+    private jwtService: JwtService,
+    private prisma: PrismaService,
+  ) {}
 
   // 1. サインアップ（新規登録）
   async signUp(dto: SignUpRequestDto): Promise<SignUpResponseDto> {
@@ -35,7 +42,7 @@ export class AuthService {
       select: {
         id: true,
         email: true,
-      }
+      },
     });
 
     return {
@@ -47,7 +54,7 @@ export class AuthService {
 
   // 2. サインイン（ログイン）
   async signIn(dto: SignInRequestDto): Promise<SignInResponseDto> {
-      // DBからユーザーを探す
+    // DBからユーザーを探す
     const user = await this.prisma.user.findUnique({
       where: { email: dto.email },
     });
@@ -84,9 +91,9 @@ export class AuthService {
     }
 
     return user;
-}
+  }
 
   private async generateToken(userId: string): Promise<string> {
-    return await this.jwtService.signAsync({sub: userId }); 
+    return await this.jwtService.signAsync({ sub: userId });
   }
 }
