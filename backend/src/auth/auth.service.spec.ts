@@ -43,15 +43,17 @@ describe('AuthService', () => {
   // テストケース3: 存在しないユーザーでのサインイン失敗
   it('should throw UnauthorizedException for unknown user', async () => {
     // 実行 & 検証: エラー（例外）が投げられる（throwされる）ことを確認する
-    await expect(service.signIn('unknown@example.com', 'password123'))
-      .rejects.toThrow(UnauthorizedException);
+    await expect(
+      service.signIn('unknown@example.com', 'password123'),
+    ).rejects.toThrow(UnauthorizedException);
   });
 
   // テストケース4: 間違ったパスワードでのサインイン失敗
   it('should throw UnauthorizedException for wrong password', async () => {
     await service.signUp('test3@example.com', 'password123');
-    await expect(service.signIn('test3@example.com', 'wrongpassword'))
-      .rejects.toThrow(UnauthorizedException);
+    await expect(
+      service.signIn('test3@example.com', 'wrongpassword'),
+    ).rejects.toThrow(UnauthorizedException);
   });
 
   // テストケース5: 重複したメールアドレスでのサインアップ失敗
@@ -59,7 +61,8 @@ describe('AuthService', () => {
     // 準備: 1回目の登録（成功するはず）
     await service.signUp('duplicate@example.com', 'password123');
     // 実行 & 検証: 全く同じメールアドレスで2回目の登録を試みると、ConflictExceptionが投げられるはず
-    await expect(service.signUp('duplicate@example.com', 'anotherpassword'))
-      .rejects.toThrow(ConflictException);
+    await expect(
+      service.signUp('duplicate@example.com', 'anotherpassword'),
+    ).rejects.toThrow(ConflictException);
   });
 });

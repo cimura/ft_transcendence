@@ -1,4 +1,8 @@
-import { Injectable, UnauthorizedException, ConflictException } from '@nestjs/common';
+import {
+  Injectable,
+  UnauthorizedException,
+  ConflictException,
+} from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import * as bcrypt from 'bcrypt';
 
@@ -12,7 +16,7 @@ export class AuthService {
   // 1. サインアップ（新規登録）
   async signUp(email: string, pass: string): Promise<any> {
     // 重複チェック: すでに同じメールアドレスが存在するか
-    const existingUser = mockUsers.find(u => u.email === email);
+    const existingUser = mockUsers.find((u) => u.email === email);
     if (existingUser) {
       // 存在した場合は、409 Conflict
       throw new ConflictException('Email already exists!');
@@ -22,7 +26,11 @@ export class AuthService {
     const hashedPassword = await bcrypt.hash(pass, saltRounds);
 
     // モックDBに保存
-    const newUser = { id: Date.now().toString(), email, password: hashedPassword };
+    const newUser = {
+      id: Date.now().toString(),
+      email,
+      password: hashedPassword,
+    };
     mockUsers.push(newUser);
 
     return { message: 'User successfully registered!' };
@@ -30,8 +38,8 @@ export class AuthService {
 
   // 2. サインイン（ログイン）
   async signIn(email: string, pass: string): Promise<any> {
-      // DB（モック）からユーザーを探す
-    const user = mockUsers.find(u => u.email === email);
+    // DB（モック）からユーザーを探す
+    const user = mockUsers.find((u) => u.email === email);
     if (!user) {
       throw new UnauthorizedException('Invalid credentials');
     }

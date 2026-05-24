@@ -9,10 +9,10 @@ import { PrismaService } from './prisma.service';
 @Module({
   imports: [
     ConfigModule.forRoot({
-      isGlobal: true, 
+      isGlobal: true,
       validate, // 環境変数の検証関数を指定
     }),
-    AuthModule
+    AuthModule,
   ],
   controllers: [AppController],
   providers: [AppService, PrismaService],
