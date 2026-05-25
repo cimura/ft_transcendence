@@ -27,12 +27,12 @@ export function useLobbySocket() {
     })
 
     // 接続エラー
-    socket.on('connect_error', (error) => {
+    socket.on('connect_error', (error: Error) => {
       console.error('[Socket] 接続エラー:', error)
     })
 
     // 切断
-    socket.on('disconnect', (reason) => {
+    socket.on('disconnect', (reason: string) => {
       console.log('[Socket] 切断:', reason)
     })
 
