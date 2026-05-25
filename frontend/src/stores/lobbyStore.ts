@@ -1,4 +1,5 @@
 import { create } from 'zustand'
+import { immer } from 'zustand/middleware/immer'
 import { mockRooms } from '../mocks/room'
 import type { GameRoom } from '../types/room'
 
@@ -11,17 +12,24 @@ interface LobbyStore {
   setCurrentRoom: (room: GameRoom | null) => void
 }
 
-export const useLobbyStore = create<LobbyStore>((set) => ({
-  rooms: mockRooms,
-  currentRoom: null,
-  setRooms: (rooms) => set({ rooms }),
-  upsertRoom: (room) =>
-    set((s) => ({
-      rooms: s.rooms.some((r) => r.id === room.id)
-        ? s.rooms.map((r) => (r.id === room.id ? room : r))
-        : [...s.rooms, room],
-    })),
-  removeRoom: (id) =>
-    set((s) => ({ rooms: s.rooms.filter((r) => r.id !== id) })),
-  setCurrentRoom: (room) => set({ currentRoom: room }),
-}))
+export const useLobbyStore = create<LobbyStore>()(
+  immer((set) => ({
+    rooms: mockRooms,
+    currentRoom: null,
+    setRooms: (rooms) => set({ rooms }),
+    upsertRoom: (room) =>
+      set((state) => {
+        const index = state.rooms.findIndex((r) => r.id === room.id)
+        if (index >= 0) {
+          state.rooms[index] = room // update
+        } else {
+          state.rooms.push(room) // insert
+        }
+      }),
+    removeRoom: (id) =>
+      set((state) => {
+        state.rooms = state.rooms.filter((r) => r.id !== id)
+      }),
+    setCurrentRoom: (room) => set({ currentRoom: room }),
+  }))
+)
