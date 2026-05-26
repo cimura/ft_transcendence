@@ -9,7 +9,6 @@ import {
   HttpStatus,
 } from '@nestjs/common';
 import { AuthService } from './auth.service';
-import { Request as ExpressRequest } from 'express';
 import { JwtAuthGuard } from './jwt-auth.guard';
 import {
   ApiTags,
