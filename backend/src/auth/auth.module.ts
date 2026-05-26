@@ -11,12 +11,10 @@ import { PrismaService } from 'src/prisma.service';
   imports: [
     PassportModule,
     JwtModule.registerAsync({
+      global: true,
       imports: [ConfigModule],
       inject: [ConfigService],
-      useFactory: (
-        configService: ConfigService,
-      ): Promise<JwtModuleOptions> => ({
-        global: true,
+      useFactory: (configService: ConfigService) => ({
         // JWT_SECRET は env.validation.ts で必須チェックしているため、ここでは存在する前提で扱う
         secret: configService.get<string>('JWT_SECRET')!,
         signOptions: {

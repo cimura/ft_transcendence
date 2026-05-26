@@ -20,13 +20,7 @@ import {
 import { SignUpRequestDto, SignUpResponseDto } from './dto/signup.dto';
 import { SignInRequestDto, SignInResponseDto } from './dto/signin.dto';
 import { ProfileResponseDto } from './dto/profile.dto';
-
-interface AuthenticatedRequest extends ExpressRequest {
-  user: {
-    userId: string;
-    email: string;
-  };
-}
+import type { AuthenticatedRequest } from './interfaces/auth.interface';
 
 @ApiTags('auth')
 @Controller('auth')
