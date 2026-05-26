@@ -15,6 +15,9 @@ jobs:
   lint-and-format:
     runs-on: ubuntu-latest
 
+    env:
+      DATABASE_URL: "postgresql://transcendence:transcendence@postgres:5432/transcendence?schema=public"
+
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
