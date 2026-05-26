@@ -5,6 +5,7 @@ import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { AuthModule } from './auth/auth.module';
 import { PrismaService } from './prisma.service';
+import { UploadsModule } from './uploads/uploads.module';
 
 @Module({
   imports: [
@@ -13,6 +14,7 @@ import { PrismaService } from './prisma.service';
       validate, // 環境変数の検証関数を指定
     }),
     AuthModule,
+    UploadsModule,
   ],
   controllers: [AppController],
   providers: [AppService, PrismaService],
