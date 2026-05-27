@@ -1,6 +1,8 @@
 import {
   Controller,
+  Get,
   Patch,
+  Delete,
   Body,
   UseGuards,
   Request,
@@ -16,12 +18,29 @@ import {
 import { UsersService } from './users.service';
 import { UpdateUserDto } from './dto/update-user.dto';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
-import type { AuthenticatedRequest } from '../auth/interfaces/auth.interface'; // 実際のパスに合わせて調整してください
+import { ProfileResponseDto } from './dto/profile.dto';
+import type { AuthenticatedRequest } from '../auth/interfaces/auth.interface';
 
 @ApiTags('users')
 @Controller('users')
 export class UsersController {
   constructor(private readonly usersService: UsersService) {}
+
+  @Get('profile')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'ユーザーのプロフィールの取得' })
+  @ApiResponse({ status: 200, description: '成功時', type: ProfileResponseDto })
+  @ApiResponse({ status: 401, description: '認証失敗時' })
+  async profile(
+    @Request() req: AuthenticatedRequest,
+  ): Promise<ProfileResponseDto> {
+    const user = await this.usersService.profile(req.user.userId);
+    return {
+      message: 'This is a protected route. You are authenticated.',
+      user,
+    };
+  }
 
   @Patch('me')
   @UseGuards(JwtAuthGuard)
@@ -47,5 +66,23 @@ export class UsersController {
     const userId = req.user.userId;
 
     return this.usersService.updateMe(userId, dto);
+  }
+
+  @Delete('me')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @HttpCode(HttpStatus.OK) // 通常 DELETE では 204 だが、削除完了通知を返すため 200
+  @ApiOperation({ summary: 'ログイン中の自分のアカウントを削除（退会処理）' })
+  @ApiResponse({
+    status: 200,
+    description: 'アカウントの削除が正常に完了しました',
+  })
+  @ApiResponse({ status: 401, description: '認証情報が無効です' })
+  @ApiResponse({
+    status: 404,
+    description: '削除対象のユーザーが見つかりません',
+  })
+  async deleteMe(@Request() req: AuthenticatedRequest) {
+    return this.usersService.deleteMe(req.user.userId);
   }
 }
