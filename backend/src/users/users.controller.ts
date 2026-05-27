@@ -19,7 +19,7 @@ import { UsersService } from './users.service';
 import { UpdateUserDto } from './dto/update-user.dto';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { ProfileResponseDto } from './dto/profile.dto';
-import type { AuthenticatedRequest } from '../auth/interfaces/auth.interface';
+import type { UserRequest } from './interfaces/user-request.interface';
 
 @ApiTags('users')
 @Controller('users')
@@ -32,9 +32,7 @@ export class UsersController {
   @ApiOperation({ summary: 'ユーザーのプロフィールの取得' })
   @ApiResponse({ status: 200, description: '成功時', type: ProfileResponseDto })
   @ApiResponse({ status: 401, description: '認証失敗時' })
-  async profile(
-    @Request() req: AuthenticatedRequest,
-  ): Promise<ProfileResponseDto> {
+  async profile(@Request() req: UserRequest): Promise<ProfileResponseDto> {
     const user = await this.usersService.profile(req.user.userId);
     return {
       message: 'This is a protected route. You are authenticated.',
@@ -59,10 +57,7 @@ export class UsersController {
     status: 409,
     description: '変更後のメールアドレスが既に他のユーザーに使用されています',
   })
-  async updateMe(
-    @Request() req: AuthenticatedRequest,
-    @Body() dto: UpdateUserDto,
-  ) {
+  async updateMe(@Request() req: UserRequest, @Body() dto: UpdateUserDto) {
     const userId = req.user.userId;
 
     return this.usersService.updateMe(userId, dto);
@@ -82,7 +77,7 @@ export class UsersController {
     status: 404,
     description: '削除対象のユーザーが見つかりません',
   })
-  async deleteMe(@Request() req: AuthenticatedRequest) {
+  async deleteMe(@Request() req: UserRequest) {
     return this.usersService.deleteMe(req.user.userId);
   }
 }
