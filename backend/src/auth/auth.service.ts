@@ -90,7 +90,7 @@ export class AuthService {
     return user;
   }
 
-  private async generateToken(userId: string): Promise<string> {
-    return await this.jwtService.signAsync({ sub: userId });
+  private generateToken(userId: string): Promise<string> {
+    return this.jwtService.signAsync({ sub: userId });
   }
 }
