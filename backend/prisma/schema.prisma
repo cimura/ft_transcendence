@@ -1,6 +1,6 @@
 generator client {
-  provider = "prisma-client"
-  output   = "../src/generated/prisma"
+  provider     = "prisma-client"
+  output       = "../src/generated/prisma"
   moduleFormat = "cjs"
 }
 
@@ -9,13 +9,21 @@ datasource db {
 }
 
 model User {
-  id           String   @id @default(uuid())
-  email        String   @unique
-  passwordHash String
-  displayName  String?
-  avatarUrl    String?
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
+  id                     String       @id @default(uuid())
+  email                  String       @unique
+  passwordHash           String
+  displayName            String?
+  avatarUrl              String?
+  createdAt              DateTime     @default(now())
+  updatedAt              DateTime     @updatedAt
+  sentFriendRequests     Friendship[] @relation("FriendRequester")
+  recievedFriendRequests Friendship[] @relation("FriendReceiver")
+}
+
+enum FriendRequestStatus {
+  PENDING
+  ACCEPTED
+  REJECTED
 }
 
 model UploadedImage {
@@ -26,4 +34,18 @@ model UploadedImage {
   size         Int
   url          String
   createdAt    DateTime @default(now())
+}
+
+model Friendship {
+  id          String              @id @default(uuid())
+  requesterId String
+  receiverId  String
+  status      FriendRequestStatus @default(PENDING)
+  createdAt   DateTime            @default(now())
+  updatedAt   DateTime            @updatedAt
+
+  requester User @relation("FriendRequester", fields: [requesterId], references: [id])
+  receiver  User @relation("FriendReceiver", fields: [receiverId], references: [id])
+
+  @@unique([requesterId, receiverId])
 }
