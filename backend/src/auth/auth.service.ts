@@ -4,13 +4,11 @@ import {
   ConflictException,
 } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
-import { PrismaService } from 'src/prisma.service';
+import { PrismaService } from '../prisma.service';
 import { SignUpRequestDto, SignUpResponseDto } from './dto/signup.dto';
 import { SignInRequestDto, SignInResponseDto } from './dto/signin.dto';
 import { ProfileUserDto } from './dto/profile.dto';
 import * as bcrypt from 'bcrypt';
-
-// DBが完成するまでの仮の保存場所（メモリ上の配列）
 
 @Injectable()
 export class AuthService {
@@ -33,7 +31,6 @@ export class AuthService {
     const saltRounds = 10;
     const hashedPassword = await bcrypt.hash(dto.password, saltRounds);
 
-    // モックDBに保存
     const user = await this.prisma.user.create({
       data: {
         email: dto.email,
