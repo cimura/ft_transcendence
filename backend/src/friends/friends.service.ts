@@ -2,8 +2,11 @@ import {
   Injectable,
   BadRequestException,
   NotFoundException,
+  ForbiddenException,
+  ConflictException,
 } from '@nestjs/common';
-import { PrismaService } from 'src/prisma.service';
+import { PrismaService } from '../prisma.service';
+import { FriendRequestStatus } from '../generated/prisma/enums';
 
 @Injectable()
 export class FriendsService {
@@ -45,13 +48,12 @@ export class FriendsService {
     });
   }
 
-  async acceptRequest(currentUserId: string, targetUserId: string) {
-    return;
-  }
-
   async getFriendsRequests(currentUserId: string) {
     const requesters = await this.prisma.friendship.findMany({
-      where: { receiverId: currentUserId, status: 'PENDING' },
+      where: {
+        receiverId: currentUserId,
+        status: 'PENDING',
+      },
       include: {
         requester: {
           select: {
@@ -66,8 +68,48 @@ export class FriendsService {
     return requesters;
   }
 
-  async rejectRequest(currentUserId: string, targetUserId: string) {
-    return;
+  async acceptRequest(currentUserId: string, requestId: string) {
+    const friendship = await this.prisma.friendship.findUnique({
+      where: { id: requestId },
+      select: {
+        receiverId: true,
+        status: true,
+      },
+    });
+
+    if (!friendship) throw new NotFoundException('Request not found');
+    if (friendship.receiverId != currentUserId)
+      throw new ForbiddenException('Log-in user is not the receiver');
+    if (friendship.status !== 'PENDING')
+      throw new ConflictException('Request has already accepted or rejected');
+
+    await this.prisma.friendship.update({
+      where: { id: requestId },
+      data: { status: 'ACCEPTED' },
+    });
+    return friendship;
+  }
+
+  async rejectRequest(currentUserId: string, requestId: string) {
+    const friendship = await this.prisma.friendship.findUnique({
+      where: { id: requestId },
+      select: {
+        receiverId: true,
+        status: true,
+      },
+    });
+
+    if (!friendship) throw new NotFoundException('Request not found');
+    if (friendship.receiverId != currentUserId)
+      throw new ForbiddenException('Log-in user is not the receiver');
+    if (friendship.status !== 'PENDING')
+      throw new ConflictException('Request has already accepted or rejected');
+
+    await this.prisma.friendship.update({
+      where: { id: requestId },
+      data: { status: 'REJECTED' },
+    });
+    return friendship;
   }
 
   async deleteFriend(currentUserId: string, targetUserId: string) {}
