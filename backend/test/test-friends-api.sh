@@ -1,0 +1,167 @@
+#!/usr/bin/env bash
+
+set -euo pipefail
+
+BASE_URL="https://localhost:8443/api"
+PASSWORD="password123"
+
+
+# generate unique email suffix
+SUFFIX=$(date +%s)
+
+ALICE_EMAIL="alice_${SUFFIX}@example.com"
+BOB_EMAIL="bob_${SUFFIX}@example.com"
+
+echo "ALICE_EMAIL=$ALICE_EMAIL"
+echo "BOB_EMAIL=$BOB_EMAIL"
+
+signup_user()
+{
+    email="$1"
+    echo
+    echo "=== Signup: $email ==="
+
+    curl -kiX POST "$BASE_URL/auth/signup" \
+        -H "Content-Type: application/json" \
+        -d "{\"email\":\"$email\",\"password\":\"$PASSWORD\"}"
+}
+
+signin_user()
+{
+	email="$1"
+
+	curl -k -s -X POST "$BASE_URL/auth/signin" \
+		-H "Content-Type: application/json" \
+		-d "{\"email\":\"$email\",\"password\":\"$PASSWORD\"}" \
+		| jq -r '.accessToken'
+}
+
+get_user_id_from_token()
+{
+	token="$1"
+    payload=$(echo "$token" | cut -d '.' -f 2 | tr '_-' '/+')
+
+    while [ $((${#payload} % 4)) -ne 0 ]; do
+        payload="${payload}="
+    done
+
+	echo "$payload" | base64 -d | jq -r '.sub'
+}
+
+send_friend_request()
+{
+	token="$1"
+	target_user_id="$2"
+
+	echo
+	echo "== Send friend request =="
+
+	curl -k -i -X POST "$BASE_URL/friends/request" \
+		-H "Content-Type: application/json" \
+		-H "Authorization: Bearer $token" \
+		-d "{\"userId\":\"$target_user_id\"}"
+}
+
+get_friend_requests()
+{
+	token="$1"
+
+	echo
+	echo "== Get friend requests =="
+
+	curl -k -s -X GET "$BASE_URL/friends/requests" \
+		-H "Authorization: Bearer $token" \
+		| jq
+}
+
+get_first_request_id()
+{
+	token="$1"
+
+	curl -k -s -X GET "$BASE_URL/friends/requests" \
+		-H "Authorization: Bearer $token" \
+		| jq -r '.[0].id'
+}
+
+accept_friend_request()
+{
+	token="$1"
+	request_id="$2"
+
+	echo
+	echo "== Accept friend request =="
+
+	curl -k -i -X PUT "$BASE_URL/friends/$request_id/accept" \
+		-H "Authorization: Bearer $token"
+}
+
+get_friends()
+{
+	token="$1"
+	name="$2"
+
+	echo
+	echo "== Get friends: $name =="
+
+	curl -k -s -X GET "$BASE_URL/friends" \
+		-H "Authorization: Bearer $token" \
+		| jq
+}
+
+delete_friend()
+{
+	token="$1"
+	friend_user_id="$2"
+	name="$3"
+
+	echo
+	echo "== Delete friend: $name =="
+
+	curl -k -i -X DELETE "$BASE_URL/friends/$friend_user_id" \
+		-H "Authorization: Bearer $token"
+}
+
+# signup
+signup_user "$ALICE_EMAIL"
+signup_user "$BOB_EMAIL"
+
+# signin
+echo
+echo "== Singin users =="
+
+TOKEN_ALICE=$(signin_user "$ALICE_EMAIL")
+TOKEN_BOB=$(signin_user "$BOB_EMAIL")
+
+echo "TOKEN_ALICE=$TOKEN_ALICE"
+echo "TOKEN_BOB=$TOKEN_BOB"
+
+# extract Bob id
+BOB_ID=$(get_user_id_from_token "$TOKEN_BOB")
+echo "BOB_ID=$BOB_ID"
+
+# Alice sends request to Bob
+send_friend_request "$TOKEN_ALICE" "$BOB_ID"
+
+# Bob gets request id
+get_friend_requests "$TOKEN_BOB"
+REQUEST_ID=$(get_first_request_id "$TOKEN_BOB")
+echo "REQUEST_ID=$REQUEST_ID"
+
+# Bob accepts
+accept_friend_request "$TOKEN_BOB" "$REQUEST_ID"
+
+# Alice GET /friends should contain Bob
+# Bob GET /friends should contain Alice
+get_friends "$TOKEN_ALICE" "Alice"
+get_friends "$TOKEN_BOB" "Bob"
+
+# Alice deletes Bob
+delete_friend "$TOKEN_ALICE" "$BOB_ID" "Alice deletes Bob"
+
+# Alice GET /friends should be empty
+# Bob GET /friends should be empty
+get_friends "$TOKEN_ALICE" "Alice after delete"
+get_friends "$TOKEN_BOB" "Bob after delete"
+
+echo
+echo "Friends API smoke test completed successfully."
