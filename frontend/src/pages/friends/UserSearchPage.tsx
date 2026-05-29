@@ -13,7 +13,7 @@ export function UserSearchPage() {
     useUserSearch()
 
   // フレンド申請送信
-  const handleSendRequest = async (userId: number) => {
+  const handleSendRequest = async (userId: string) => {
     try {
       await sendRequest(userId)
     } catch (err) {

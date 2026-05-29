@@ -2,7 +2,7 @@ import type { SearchResult } from '../../types/friend'
 
 interface UserSearchResultProps {
   user: SearchResult
-  onSendRequest: (userId: number) => void
+  onSendRequest: (userId: string) => void
 }
 
 /**

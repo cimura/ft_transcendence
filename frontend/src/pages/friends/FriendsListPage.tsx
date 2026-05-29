@@ -7,7 +7,7 @@ import { ConfirmDialog } from '../../components/friends/ConfirmDialog'
 // モックデータ（バックエンド実装後にuseFriendsフックに切り替える）
 const MOCK_FRIENDS: Friend[] = [
   {
-    id: 1,
+    id: 'user-1',
     username: 'ttakino',
     email: 'ttakino@example.com',
     avatarUrl: undefined,
@@ -16,7 +16,7 @@ const MOCK_FRIENDS: Friend[] = [
     lastSeen: undefined,
   },
   {
-    id: 2,
+    id: 'user-2',
     username: 'sshimura',
     email: 'sshimura@example.com',
     avatarUrl: undefined,
@@ -25,7 +25,7 @@ const MOCK_FRIENDS: Friend[] = [
     lastSeen: undefined,
   },
   {
-    id: 3,
+    id: 'user-3',
     username: 'rseki',
     email: 'rseki@example.com',
     avatarUrl: undefined,
@@ -34,7 +34,7 @@ const MOCK_FRIENDS: Friend[] = [
     lastSeen: new Date('2024-01-15'),
   },
   {
-    id: 4,
+    id: 'user-4',
     username: 'yutakagi',
     email: 'yutakagi@example.com',
     avatarUrl: undefined,
@@ -43,7 +43,7 @@ const MOCK_FRIENDS: Friend[] = [
     lastSeen: undefined,
   },
   {
-    id: 5,
+    id: 'user-5',
     username: 'ryomori',
     email: 'ryomori@example.com',
     avatarUrl: undefined,
@@ -53,7 +53,7 @@ const MOCK_FRIENDS: Friend[] = [
   },
   // 追加のモックデータ（ページネーションテスト用）
   ...Array.from({ length: 15 }, (_, i) => ({
-    id: i + 6,
+    id: `user-${i + 6}`,
     username: `user${i + 6}`,
     email: `user${i + 6}@example.com`,
     avatarUrl: undefined,

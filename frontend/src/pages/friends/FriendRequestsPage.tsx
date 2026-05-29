@@ -6,15 +6,15 @@ import { FriendRequestCard } from '../../components/friends/FriendRequestCard'
 // モックデータ（バックエンド実装後にuseFriendRequestsフックに切り替える）
 const MOCK_REQUESTS: FriendRequest[] = [
   {
-    id: 1,
+    id: 'req-1',
     requester: {
-      id: 10,
+      id: 'user-10',
       username: 'new_user1',
       email: 'new_user1@example.com',
       avatarUrl: undefined,
     },
     receiver: {
-      id: 1,
+      id: 'user-1',
       username: 'me',
       email: 'me@example.com',
       avatarUrl: undefined,
@@ -23,15 +23,15 @@ const MOCK_REQUESTS: FriendRequest[] = [
     createdAt: new Date('2024-01-20'),
   },
   {
-    id: 2,
+    id: 'req-2',
     requester: {
-      id: 11,
+      id: 'user-11',
       username: 'new_user2',
       email: 'new_user2@example.com',
       avatarUrl: undefined,
     },
     receiver: {
-      id: 1,
+      id: 'user-1',
       username: 'me',
       email: 'me@example.com',
       avatarUrl: undefined,
@@ -50,14 +50,14 @@ export function FriendRequestsPage() {
   const [requests, setRequests] = useState<FriendRequest[]>(MOCK_REQUESTS)
 
   // 承認処理
-  const handleAccept = (requestId: number) => {
+  const handleAccept = (requestId: string) => {
     // TODO: バックエンド実装後にacceptRequest(requestId)を呼ぶ
     console.log('承認:', requestId)
     setRequests((prev) => prev.filter((req) => req.id !== requestId))
   }
 
   // 拒否処理
-  const handleReject = (requestId: number) => {
+  const handleReject = (requestId: string) => {
     // TODO: バックエンド実装後にrejectRequest(requestId)を呼ぶ
     console.log('拒否:', requestId)
     setRequests((prev) => prev.filter((req) => req.id !== requestId))

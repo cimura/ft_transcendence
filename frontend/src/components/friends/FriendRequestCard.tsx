@@ -2,8 +2,8 @@ import type { FriendRequest } from '../../types/friend'
 
 interface FriendRequestCardProps {
   request: FriendRequest
-  onAccept: (requestId: number) => void
-  onReject: (requestId: number) => void
+  onAccept: (requestId: string) => void
+  onReject: (requestId: string) => void
 }
 
 /**

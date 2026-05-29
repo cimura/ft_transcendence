@@ -3,7 +3,7 @@
  * Represents a user's friend with online status
  */
 export interface Friend {
-  id: number
+  id: string
   username: string
   email: string
   avatarUrl?: string
@@ -17,7 +17,7 @@ export interface Friend {
  * Represents a friend request between users
  */
 export interface FriendRequest {
-  id: number
+  id: string
   requester: User
   receiver: User
   status: RequestStatus
@@ -29,7 +29,7 @@ export interface FriendRequest {
  * Basic user information
  */
 export interface User {
-  id: number
+  id: string
   username: string
   email: string
   avatarUrl?: string
@@ -40,7 +40,7 @@ export interface User {
  * User search result with friendship status
  */
 export interface SearchResult {
-  id: number
+  id: string
   username: string
   avatarUrl?: string
   isFriend: boolean

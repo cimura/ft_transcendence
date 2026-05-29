@@ -33,7 +33,7 @@ export const getFriendRequests = async (): Promise<FriendRequest[]> => {
  * @param userId Target user ID
  * @returns Promise<void>
  */
-export const sendFriendRequest = async (userId: number): Promise<void> => {
+export const sendFriendRequest = async (userId: string): Promise<void> => {
   await api.post('/api/friends/request', { userId })
 }
 
@@ -42,7 +42,7 @@ export const sendFriendRequest = async (userId: number): Promise<void> => {
  * @param requestId Friend request ID
  * @returns Promise<void>
  */
-export const acceptFriendRequest = async (requestId: number): Promise<void> => {
+export const acceptFriendRequest = async (requestId: string): Promise<void> => {
   await api.put(`/api/friends/${requestId}/accept`)
 }
 
@@ -51,7 +51,7 @@ export const acceptFriendRequest = async (requestId: number): Promise<void> => {
  * @param requestId Friend request ID
  * @returns Promise<void>
  */
-export const rejectFriendRequest = async (requestId: number): Promise<void> => {
+export const rejectFriendRequest = async (requestId: string): Promise<void> => {
   await api.put(`/api/friends/${requestId}/reject`)
 }
 
@@ -60,7 +60,7 @@ export const rejectFriendRequest = async (requestId: number): Promise<void> => {
  * @param friendId Friend ID
  * @returns Promise<void>
  */
-export const deleteFriend = async (friendId: number): Promise<void> => {
+export const deleteFriend = async (friendId: string): Promise<void> => {
   await api.delete(`/api/friends/${friendId}`)
 }
 

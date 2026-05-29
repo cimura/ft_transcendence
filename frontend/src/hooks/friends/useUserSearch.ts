@@ -43,7 +43,7 @@ export function useUserSearch() {
   }, [query])
 
   // フレンド申請を送信
-  const handleSendRequest = async (userId: number) => {
+  const handleSendRequest = async (userId: string) => {
     await sendRequest(userId)
     // 検索結果を更新（申請済みに変更）
     setResults((prev) =>

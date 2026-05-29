@@ -1,44 +1,64 @@
 import { useState } from 'react'
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import Login from './components/Login'
-import Scene from './components/Scene'
+import {
+  BrowserRouter,
+  Navigate,
+  Route,
+  Routes,
+  useNavigate,
+} from 'react-router-dom'
+import { Lobby } from './pages/Lobby'
+import { WaitingRoom } from './pages/WaitingRoom'
+import { Home } from './pages/Home'
 import { FriendsMenuPage } from './pages/friends/FriendsMenuPage'
 import { FriendsListPage } from './pages/friends/FriendsListPage'
 import { FriendRequestsPage } from './pages/friends/FriendRequestsPage'
 import { UserSearchPage } from './pages/friends/UserSearchPage'
 
 function App() {
+  return (
+    <BrowserRouter>
+      <AppRoutes />
+    </BrowserRouter>
+  )
+}
+
+function AppRoutes() {
   const [isLoggedIn, setIsLoggedIn] = useState(false)
+  const navigate = useNavigate()
 
   const handleLoginSuccess = () => {
     setIsLoggedIn(true)
+    navigate('/home')
+  }
+
+  if (!isLoggedIn) {
+    return <Login onLoginSuccess={handleLoginSuccess} />
   }
 
   return (
-    <BrowserRouter>
-      <Routes>
-        {/* フレンド機能 */}
-        <Route path="/friends" element={<FriendsMenuPage />} />
-        <Route path="/friends/list" element={<FriendsListPage />} />
-        <Route path="/friends/requests" element={<FriendRequestsPage />} />
-        <Route path="/friends/search" element={<UserSearchPage />} />
+    <Routes>
+      <Route path="/" element={<Navigate to="/home" replace />} />
+      <Route path="/home" element={<Home />} />
+      <Route path="/lobby" element={<Lobby />} />
+      <Route path="/room/:roomId" element={<WaitingRoom />} />
 
-        {/* 既存のルート */}
-        <Route
-          path="/"
-          element={
-            isLoggedIn ? (
-              <Scene />
-            ) : (
-              <Login onLoginSuccess={handleLoginSuccess} />
-            )
-          }
-        />
+      {/* フレンド機能 */}
+      <Route path="/friends" element={<FriendsMenuPage />} />
+      <Route path="/friends/list" element={<FriendsListPage />} />
+      <Route path="/friends/requests" element={<FriendRequestsPage />} />
+      <Route path="/friends/search" element={<UserSearchPage />} />
 
-        {/* 404ページ */}
-        <Route path="*" element={<Navigate to="/" replace />} />
-      </Routes>
-    </BrowserRouter>
+      {/* その他のページ */}
+      <Route
+        path="/history"
+        element={<div className="p-8">対戦履歴画面（準備中）</div>}
+      />
+      <Route
+        path="/settings"
+        element={<div className="p-8">設定画面（準備中）</div>}
+      />
+    </Routes>
   )
 }
 

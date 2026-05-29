@@ -11,13 +11,13 @@ interface FriendState {
   // Actions - フレンド関連
   setFriends: (friends: Friend[]) => void
   addFriend: (friend: Friend) => void
-  removeFriend: (friendId: number) => void
-  updateFriendStatus: (userId: number, status: Friend['status']) => void
+  removeFriend: (friendId: string) => void
+  updateFriendStatus: (userId: string, status: Friend['status']) => void
 
   // Actions - リクエスト関連
   setRequests: (requests: FriendRequest[]) => void
   addRequest: (request: FriendRequest) => void
-  removeRequest: (requestId: number) => void
+  removeRequest: (requestId: string) => void
 
   // Actions - ローディング・エラー
   setLoading: (loading: boolean) => void
@@ -26,10 +26,10 @@ interface FriendState {
   // Actions - API呼び出し
   fetchFriends: () => Promise<void>
   fetchRequests: () => Promise<void>
-  sendRequest: (userId: number) => Promise<void>
-  acceptRequest: (requestId: number) => Promise<void>
-  rejectRequest: (requestId: number) => Promise<void>
-  deleteFriend: (friendId: number) => Promise<void>
+  sendRequest: (userId: string) => Promise<void>
+  acceptRequest: (requestId: string) => Promise<void>
+  rejectRequest: (requestId: string) => Promise<void>
+  deleteFriend: (friendId: string) => Promise<void>
 }
 
 /**
