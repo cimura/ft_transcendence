@@ -2,7 +2,10 @@ import { IsEmail, IsNotEmpty, IsString, MinLength } from 'class-validator';
 
 // 1. SignUp（新規登録）
 export class SignUpDto {
-  @IsEmail({}, { message: 'Please enter your email address in the correct format.' })
+  @IsEmail(
+    {},
+    { message: 'Please enter your email address in the correct format.' },
+  )
   @IsNotEmpty({ message: 'Email is required.' })
   email: string;
 
@@ -20,7 +23,10 @@ export class SignUpDto {
 // 2. SignIn（ログイン）
 // （(今回はSignUpと同じだが、将来的に異なるルールを追加する可能性があるため定義)
 export class SignInDto {
-  @IsEmail({}, { message: 'Please enter your email address in the correct format.' })
+  @IsEmail(
+    {},
+    { message: 'Please enter your email address in the correct format.' },
+  )
   @IsNotEmpty({ message: 'Email is required.' })
   email: string;
 

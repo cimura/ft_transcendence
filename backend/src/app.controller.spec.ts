@@ -16,7 +16,9 @@ describe('AppController', () => {
 
   describe('root', () => {
     it('should return "Hello World! This is the NestJS backend."', () => {
-      expect(appController.getHello()).toBe('Hello World! This is the NestJS backend.');
+      expect(appController.getHello()).toBe(
+        'Hello World! This is the NestJS backend.',
+      );
     });
   });
 });
