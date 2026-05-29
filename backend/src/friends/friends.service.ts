@@ -13,7 +13,46 @@ export class FriendsService {
   constructor(private readonly prisma: PrismaService) {}
 
   async getFriends(currentUserId: string) {
-    return [];
+    const friendship = await this.prisma.friendship.findMany({
+      where: {
+        status: 'ACCEPTED',
+        OR: [{ requesterId: currentUserId }, { receiverId: currentUserId }],
+      },
+      include: {
+        receiver: {
+          select: {
+            id: true,
+            email: true,
+            displayName: true,
+            avatarUrl: true,
+          },
+        },
+        requester: {
+          select: {
+            id: true,
+            email: true,
+            displayName: true,
+            avatarUrl: true,
+          },
+        },
+      },
+    });
+
+    return friendship.map((friendship: any) => {
+      const friend =
+        friendship.requesterId === currentUserId
+          ? friendship.receiver
+          : friendship.requester;
+
+      return {
+        id: friend.id,
+        username: friend.displayName ?? friend.email,
+        email: friend.email,
+        avatarUrl: friend.avatarUrl,
+        isOnline: false,
+        status: 'offline',
+      };
+    });
   }
 
   async sendRequest(currentUserId: string, targetUserId: string) {
@@ -112,5 +151,18 @@ export class FriendsService {
     return friendship;
   }
 
-  async deleteFriend(currentUserId: string, targetUserId: string) {}
+  async deleteFriend(currentUserId: string, targetUserId: string) {
+    const result = await this.prisma.friendship.deleteMany({
+      where: {
+        status: 'ACCEPTED',
+        OR: [
+          { requesterId: currentUserId, receiverId: targetUserId },
+          { receiverId: currentUserId, requesterId: targetUserId },
+        ],
+      },
+    });
+    if (result.count === 0)
+      throw new BadRequestException('You are not friends');
+    return result;
+  }
 }
