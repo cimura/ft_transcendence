@@ -44,6 +44,7 @@ model Friendship {
   createdAt   DateTime            @default(now())
   updatedAt   DateTime            @updatedAt
 
+  // Relation helper
   requester User @relation("FriendRequester", fields: [requesterId], references: [id])
   receiver  User @relation("FriendReceiver", fields: [receiverId], references: [id])
 

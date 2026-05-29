@@ -23,6 +23,7 @@ export class FriendsController {
     return this.friendsService.getFriends(currentUserId);
   }
 
+  // send request
   @Post('request')
   friendsRequest(@Request() req: any, @Body() body: any) {
     const currentUserId = req.user.userId;
@@ -30,6 +31,7 @@ export class FriendsController {
     return this.friendsService.sendRequest(currentUserId, targetUserId);
   }
 
+  // get all request(list)
   @Get('requests')
   friendsRequests(@Request() req: any) {
     const currentUserId = req.user.userId;
