@@ -14,6 +14,7 @@ import { FriendsMenuPage } from './pages/friends/FriendsMenuPage'
 import { FriendsListPage } from './pages/friends/FriendsListPage'
 import { FriendRequestsPage } from './pages/friends/FriendRequestsPage'
 import { UserSearchPage } from './pages/friends/UserSearchPage'
+import { ProfilePage } from './pages/ProfilePage'
 
 function App() {
   return (
@@ -49,7 +50,10 @@ function AppRoutes() {
       <Route path="/friends/requests" element={<FriendRequestsPage />} />
       <Route path="/friends/search" element={<UserSearchPage />} />
 
-      {/* その他のページ */}
+      {/* プロフィール */}
+      <Route path="/profile/:userId" element={<ProfilePage />} />
+
+      {/* 以下は後で実装 */}
       <Route
         path="/history"
         element={<div className="p-8">対戦履歴画面（準備中）</div>}
