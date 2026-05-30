@@ -5,17 +5,16 @@ import { ConfigModule, ConfigService } from '@nestjs/config';
 import { AuthService } from './auth.service';
 import { AuthController } from './auth.controller';
 import { JwtStrategy } from './jwt.strategy';
+import { PrismaService } from 'src/prisma.service';
 
 @Module({
   imports: [
     PassportModule,
     JwtModule.registerAsync({
+      global: true,
       imports: [ConfigModule],
       inject: [ConfigService],
-      useFactory: async (
-        configService: ConfigService,
-      ): Promise<JwtModuleOptions> => ({
-        global: true,
+      useFactory: (configService: ConfigService) => ({
         // JWT_SECRET は env.validation.ts で必須チェックしているため、ここでは存在する前提で扱う
         secret: configService.get<string>('JWT_SECRET')!,
         signOptions: {
@@ -27,7 +26,7 @@ import { JwtStrategy } from './jwt.strategy';
       }),
     }),
   ],
-  providers: [AuthService, JwtStrategy],
+  providers: [AuthService, JwtStrategy, PrismaService],
   controllers: [AuthController],
 })
 export class AuthModule {}

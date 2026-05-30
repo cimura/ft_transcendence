@@ -45,9 +45,7 @@ export class UploadsService {
 
   private validateImage(file: Express.Multer.File) {
     if (!ALLOWED_IMAGE_EXTENSIONS[file.mimetype]) {
-      throw new BadRequestException(
-        'file must be a jpeg, png, or webp image',
-      );
+      throw new BadRequestException('file must be a jpeg, png, or webp image');
     }
 
     if (file.size > MAX_IMAGE_SIZE_BYTES) {

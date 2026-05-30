@@ -1,17 +1,38 @@
+// src/auth/auth.controller.spec.ts
 import { Test, TestingModule } from '@nestjs/testing';
 import { AuthController } from './auth.controller';
 import { AuthService } from './auth.service';
+import { SignUpRequestDto } from './dto/signup.dto';
+import { SignInRequestDto } from './dto/signin.dto';
 
 describe('AuthController', () => {
   let controller: AuthController;
   let authService: AuthService;
 
+  // テスト内で使い回す共通のモックデータ
+  const mockUser = {
+    id: 'user-123',
+    email: 'test@example.com',
+    displayName: 'Bob',
+    avatarUrl: 'http://example.com',
+  };
+
+  const expectedProfileResponse = {
+    message: 'This is a protected route. You are authenticated.',
+    user: mockUser,
+  };
+
   beforeEach(async () => {
     // AuthServiceの偽物（ダミー）を定義
-    // 呼ばれたら、固定のオブジェクトを即座に返すように設定（モック化）
     const mockAuthService = {
-      signUp: jest.fn().mockResolvedValue({ message: 'Mocked sign up' }),
-      signIn: jest.fn().mockResolvedValue({ access_token: 'mock_token' }),
+      signUp: jest.fn().mockResolvedValue({
+        id: 'Mocked UserID', // タイポを修正
+        email: 'mock@mock.com',
+        accessToken: 'mock_token',
+      }),
+      signIn: jest.fn().mockResolvedValue({ accessToken: 'mock_token' }),
+      // ★ 修正: Controller が内側を組み立てるので、ここでは純粋な user データだけを返す
+      profile: jest.fn().mockResolvedValue(mockUser),
     };
 
     const module: TestingModule = await Test.createTestingModule({
@@ -19,7 +40,7 @@ describe('AuthController', () => {
       providers: [
         {
           provide: AuthService,
-          useValue: mockAuthService, // 本物のAuthServiceの代わりに偽物を注入
+          useValue: mockAuthService,
         },
       ],
     }).compile();
@@ -28,21 +49,51 @@ describe('AuthController', () => {
     authService = module.get<AuthService>(AuthService);
   });
 
-  // テストケース1: SignUp時のJWTトークン生成の確認
+  // テストケース1: SignUp
   it('should pass data to authService.signUp', async () => {
-    const dto = { email: 'test@example.com', password: 'pass' };
+    const dto: SignUpRequestDto = {
+      email: 'test@example.com',
+      password: 'password123',
+    };
     const result = await controller.signUp(dto);
-    // 1. コントローラーが、ServiceのsignUp関数を正しい引数で呼び出したかを確認
-    expect(authService.signUp).toHaveBeenCalledWith('test@example.com', 'pass');
-    // 2. 返り値がServiceからの返り値と一致しているかを確認
-    expect(result).toEqual({ message: 'Mocked sign up' });
+
+    // 1. Service の signUp 関数が、DTOを引数に正しく呼ばれたか検証
+    expect(authService.signUp).toHaveBeenCalledWith(dto);
+
+    // 2. 戻り値全体が、モックのデータと完全一致するかを1回で検証
+    expect(result).toEqual({
+      id: 'Mocked UserID',
+      email: 'mock@mock.com',
+      accessToken: 'mock_token',
+    });
   });
 
-  // テストケース2: SignIn時のJWTトークン生成の確認
+  // テストケース2: SignIn
   it('should pass data to authService.signIn', async () => {
-    const dto = { email: 'test@example.com', password: 'pass' };
+    const dto: SignInRequestDto = {
+      email: 'test@example.com',
+      password: 'password123',
+    };
     const result = await controller.signIn(dto);
-    expect(authService.signIn).toHaveBeenCalledWith('test@example.com', 'pass');
-    expect(result).toEqual({ access_token: 'mock_token' });
+
+    expect(authService.signIn).toHaveBeenCalledWith(dto);
+    expect(result).toEqual({ accessToken: 'mock_token' });
+  });
+
+  // テストケース3: Profile
+  it('should pass data to authService.profile', async () => {
+    const mockReq = {
+      user: {
+        userId: 'user-123',
+      },
+    } as any;
+
+    const result = await controller.profile(mockReq);
+
+    // 1. トークンから抽出された userId が正しく Service に渡っているか検証
+    expect(authService.profile).toHaveBeenCalledWith('user-123');
+
+    // 2. Controller によって綺麗にメッセージがラップされた結果を検証
+    expect(result).toEqual(expectedProfileResponse);
   });
 });

@@ -28,4 +28,4 @@ Content-Type: application/json
 
 ### プロフィール取得（認証が必要）
 GET https://localhost:8443/api/auth/profile
-Authorization: Bearer <YOUR_JWT_TOKEN_HERE>
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJiNDViZmY0Yi04MTkyLTQ3NzgtYjc0ZS1mNmZhYTQ0ZDE3ZTIiLCJlbWFpbCI6InRlc3RAZXhhbXBsZS5jb20iLCJpYXQiOjE3NzkzNTg3ODYsImV4cCI6MTc3OTQ0NTE4Nn0.nS-e_JQ29rDKx6eoUbx0Biji2bN0P-4w9C1p-g96bNA
