@@ -4,14 +4,17 @@ import { ApiProperty } from '@nestjs/swagger';
 export class SignInRequestDto {
   @ApiProperty({
     example: 'example@example.com',
-    description: 'ユーザーのメールアドレス (ユニーク)',
+    description: 'ユーザーのメールアドレスまたはユーザーネーム (ユニーク)',
   })
   @IsEmail(
     {},
-    { message: 'Please enter your email address in the correct format.' },
+    {
+      message:
+        'Please enter your email address or username in the correct format.',
+    },
   )
-  @IsNotEmpty({ message: 'Email is required.' })
-  email: string;
+  @IsNotEmpty({ message: 'email or password is required.' })
+  identifier: string;
 
   @ApiProperty({
     example: 'password123',

@@ -18,14 +18,32 @@ export class AuthService {
 
   // 1. サインアップ（新規登録）
   async signUp(dto: SignUpRequestDto): Promise<SignUpResponseDto> {
+    const duplicateFields: string[] = [];
+
     // 重複チェック: すでに同じメールアドレスが存在するか
-    const existingUser = await this.prisma.user.findUnique({
+    const existingEmail = await this.prisma.user.findUnique({
       where: { email: dto.email },
     });
-    if (existingUser) {
-      // 存在した場合は 409 Conflict
-      throw new ConflictException('email already exists!');
+    if (existingEmail) {
+      duplicateFields.push('email');
     }
+    // 重複チェック: すでに同じユーザーネームが存在するか
+    const existingUsername = await this.prisma.user.findUnique({
+      where: { username: dto.username },
+    });
+    if (existingUsername) {
+      duplicateFields.push('username');
+    }
+    // どちらかの重複があれば 409 Conflict
+    if (duplicateFields.length > 0) {
+      throw new ConflictException({
+        statusCode: 409,
+        error: 'Conflict',
+        message: 'Email or Username already exists.',
+        fields: duplicateFields,
+      });
+    }
+
     // ソルト（ランダムな文字列）を生成し、パスワードと混ぜてハッシュ化
     const saltRounds = 10;
     const hashedPassword = await bcrypt.hash(dto.password, saltRounds);
@@ -33,17 +51,16 @@ export class AuthService {
     const user = await this.prisma.user.create({
       data: {
         email: dto.email,
+        username: dto.username,
         passwordHash: hashedPassword,
       },
       select: {
         id: true,
-        email: true,
       },
     });
 
     return {
       id: user.id,
-      email: user.email,
       accessToken: await this.generateToken(user.id),
     };
   }
@@ -51,8 +68,10 @@ export class AuthService {
   // 2. サインイン（ログイン）
   async signIn(dto: SignInRequestDto): Promise<SignInResponseDto> {
     // DBからユーザーを探す
-    const user = await this.prisma.user.findUnique({
-      where: { email: dto.email },
+    const user = await this.prisma.user.findFirst({
+      where: {
+        OR: [{ email: dto.identifier }, { username: dto.identifier }],
+      },
     });
     if (!user) {
       throw new UnauthorizedException('Invalid credentials');

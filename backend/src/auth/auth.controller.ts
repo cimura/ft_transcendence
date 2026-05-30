@@ -1,7 +1,16 @@
 import { Body, Controller, Post, HttpCode, HttpStatus } from '@nestjs/common';
 import { AuthService } from './auth.service';
-import { ApiTags, ApiOperation, ApiResponse } from '@nestjs/swagger';
-import { SignUpRequestDto, SignUpResponseDto } from './dto/signup.dto';
+import {
+  ApiTags,
+  ApiOperation,
+  ApiResponse,
+  ApiConflictResponse,
+} from '@nestjs/swagger';
+import {
+  SignUpRequestDto,
+  SignUpResponseDto,
+  SignUpConflictResponseDto,
+} from './dto/signup.dto';
 import { SignInRequestDto, SignInResponseDto } from './dto/signin.dto';
 
 @ApiTags('auth')
@@ -12,7 +21,10 @@ export class AuthController {
   @Post('signup')
   @ApiOperation({ summary: 'SignUp (新規登録)' })
   @ApiResponse({ status: 201, description: '成功時', type: SignUpResponseDto })
-  @ApiResponse({ status: 409, description: 'メールアドレスが既に存在する時' })
+  @ApiConflictResponse({
+    type: SignUpConflictResponseDto,
+    description: 'メールアドレス、またはユーザー名が既に存在する時',
+  })
   signUp(@Body() dto: SignUpRequestDto) {
     return this.authService.signUp(dto);
   }
