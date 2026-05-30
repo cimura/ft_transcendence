@@ -31,7 +31,7 @@ describe('AuthService', () => {
   });
 
   // テストケース2: 正常なサインイン
-  it('should login and return a token', async () => {
+  it('should sign in and return a token', async () => {
     // 準備: まずユーザーを登録する
     await service.signUp('test2@example.com', 'password123');
     // 実行: サインインを試みる
