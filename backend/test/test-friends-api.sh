@@ -20,10 +20,9 @@ signup_user()
     echo
     echo "=== Signup: $email ==="
 
-    curl -kiX POST "$BASE_URL/auth/signup" \
+    curl -k -i -fsS -X POST "$BASE_URL/auth/signup" \
         -H "Content-Type: application/json" \
         -d "{\"email\":\"$email\",\"password\":\"$PASSWORD\"}"
-}
 
 signin_user()
 {
