@@ -1,4 +1,8 @@
+// src/components/Signup.tsx
 import { useState } from 'react'
+import { signUpApi } from '../api/auth'
+import type { ApiConflictError } from '../api/auth'
+import axios from 'axios'
 
 interface SignupProps {
   onSignupSuccess: () => void
@@ -10,6 +14,11 @@ export default function Signup({
   onSwitchToSignIn,
 }: SignupProps) {
   const [error, setError] = useState('')
+  const [fieldErrors, setFieldErrors] = useState<{
+    email?: string
+    username?: string
+  }>({})
+  const [loading, setLoading] = useState(false) // 連打防止用
 
   const handleSignup = async (formData: FormData) => {
     const email = formData.get('email') as string
@@ -17,27 +26,39 @@ export default function Signup({
     const password = formData.get('password') as string
     const confirmPassword = formData.get('confirmPassword') as string
 
-    // パスワード確認のバリデーション
     if (password !== confirmPassword) {
       setError('Passwords do not match')
       return
     }
 
-    console.log('Signup attempt: ', { email, username, password })
     try {
       setError('')
-      // TODO: backend API（バックエンドと繋げたら実装）
-      // const response = await fetch('/api/auth/signup', {
-      //   method: 'POST',
-      //   headers: { 'Content-Type': 'application/json' },
-      //   body: JSON.stringify({ email, username, password })
-      // })
+      setFieldErrors({})
+      setLoading(true)
 
-      // 仮の成功
-      console.log('Signup successful: ', { email, username })
+      const data = await signUpApi({ email, username, password })
+
+      localStorage.setItem('accessToken', data.accessToken)
+
+      console.log('Signup successful!')
       onSignupSuccess()
-    } catch {
-      setError('サインアップに失敗しました')
+    } catch (err) {
+      if (axios.isAxiosError(err) && err.response?.status === 409) {
+        const conflictData = err.response.data as ApiConflictError
+        const newFieldErrors: { email?: string; username?: string } = {}
+
+        if (conflictData.fields.includes('email')) {
+          newFieldErrors.email = 'This email is already registered.'
+        }
+        if (conflictData.fields.includes('username')) {
+          newFieldErrors.username = 'This username is already taken.'
+        }
+        setFieldErrors(newFieldErrors)
+      } else {
+        setError('サインアップに失敗しました。サーバー環境を確認してください。')
+      }
+    } finally {
+      setLoading(false)
     }
   }
 
@@ -46,7 +67,6 @@ export default function Signup({
       <div className="bg-white p-8 rounded-lg shadow-md w-96">
         <h1 className="text-2xl font-bold mb-6 text-center">Sign Up</h1>
         <form action={handleSignup} className="space-y-4">
-          {/** error message */}
           {error && (
             <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded">
               {error}
@@ -65,8 +85,16 @@ export default function Signup({
               id="email"
               name="email"
               required
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 ${
+                fieldErrors.email
+                  ? 'border-red-500 focus:ring-red-500'
+                  : 'border-gray-300'
+              }`}
             />
+            {/* ★ Emailの被りエラー表示 */}
+            {fieldErrors.email && (
+              <p className="text-red-500 text-xs mt-1">{fieldErrors.email}</p>
+            )}
           </div>
           {/** Username */}
           <div>
@@ -82,8 +110,18 @@ export default function Signup({
               name="username"
               required
               minLength={3}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 ${
+                fieldErrors.username
+                  ? 'border-red-500 focus:ring-red-500'
+                  : 'border-gray-300'
+              }`}
             />
+            {/* ★ Usernameの被りエラー表示 */}
+            {fieldErrors.username && (
+              <p className="text-red-500 text-xs mt-1">
+                {fieldErrors.username}
+              </p>
+            )}
           </div>
           {/** Password */}
           <div>
@@ -122,12 +160,12 @@ export default function Signup({
           {/** Signup Button */}
           <button
             type="submit"
-            className="w-full bg-blue-600 text-white py-2 px-4 rounded-md hover:bg-blue-700 transition-colors"
+            disabled={loading}
+            className="w-full bg-blue-600 text-white py-2 px-4 rounded-md hover:bg-blue-700 transition-colors disabled:bg-gray-400"
           >
-            Sign Up
+            {loading ? 'Registering...' : 'Sign Up'}
           </button>
         </form>
-        {/** Switch to SignIn */}
         <div className="mt-4 text-center text-sm text-gray-600">
           Already have an account?{' '}
           <button
