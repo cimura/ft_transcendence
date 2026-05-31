@@ -6,7 +6,20 @@ import {
   ConflictException,
 } from '@nestjs/common';
 import { PrismaService } from '../prisma.service';
-import { FriendRequestStatus } from '../generated/prisma/enums';
+
+type FriendUser = {
+  id: string;
+  email: string;
+  displayName: string | null;
+  avatarUrl: string | null;
+};
+
+type FriendshipWithUsers = {
+  requesterId: string;
+  receiverId: string;
+  requester: FriendUser;
+  receiver: FriendUser;
+};
 
 @Injectable()
 export class FriendsService {
@@ -38,7 +51,7 @@ export class FriendsService {
       },
     });
 
-    return friendship.map((friendship: any) => {
+    return friendship.map((friendship: FriendshipWithUsers) => {
       const friend =
         friendship.requesterId === currentUserId
           ? friendship.receiver
@@ -56,12 +69,12 @@ export class FriendsService {
   }
 
   async sendRequest(currentUserId: string, targetUserId: string) {
-    if (currentUserId == targetUserId)
+    if (currentUserId === targetUserId)
       throw new BadRequestException(
         'You cannot send a friend request to yourself',
       );
 
-    const receiver = this.prisma.friendship.findUnique({
+    const receiver = await this.prisma.user.findUnique({
       where: { id: targetUserId },
     });
     if (!receiver) throw new NotFoundException('Target user not found');
@@ -76,7 +89,7 @@ export class FriendsService {
     });
     if (existing)
       throw new BadRequestException(
-        'Friend request or freindship already exists',
+        'Friend request or friendship already exists',
       );
 
     return this.prisma.friendship.create({
