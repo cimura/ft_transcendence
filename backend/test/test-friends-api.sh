@@ -29,10 +29,10 @@ signin_user()
 {
 	email="$1"
 
-	curl -k -s -X POST "$BASE_URL/auth/signin" \
+	curl -k -fsS -X POST "$BASE_URL/auth/signin" \
 		-H "Content-Type: application/json" \
 		-d "{\"email\":\"$email\",\"password\":\"$PASSWORD\"}" \
-		| jq -r '.accessToken'
+		| jq -er '.accessToken'
 }
 
 get_user_id_from_token()
