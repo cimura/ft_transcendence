@@ -5,7 +5,6 @@ set -euo pipefail
 BASE_URL="https://localhost:8443/api"
 PASSWORD="password123"
 
-
 # generate unique email suffix
 SUFFIX=$(date +%s)
 
@@ -125,6 +124,23 @@ assert_contains_email()
 	fi
 }
 
+assert_empty_array()
+{
+	json="$1"
+	message="$2"
+
+	if echo "$json" | jq -e 'type == "array" and length == 0' >/dev/null; then
+		echo "PASS: $message"
+	else
+		echo "FAIL: $message"
+		echo "Expected empty array: []"
+		echo "Actual JSON:"
+		echo "$json" | jq
+		exit 1
+	fi
+}
+
+
 delete_friend()
 {
 	token="$1"
@@ -138,13 +154,21 @@ delete_friend()
 		-H "Authorization: Bearer $token"
 }
 
+fetch_friends()
+{
+	token="$1"
+
+	curl -k -s -X GET "$BASE_URL/friends" \
+		-H "Authorization: Bearer $token"
+}
+
 # signup
 signup_user "$ALICE_EMAIL"
 signup_user "$BOB_EMAIL"
 
 # signin
 echo
-echo "== Singin users =="
+echo "== Signin users =="
 
 TOKEN_ALICE=$(signin_user "$ALICE_EMAIL")
 TOKEN_BOB=$(signin_user "$BOB_EMAIL")
@@ -169,16 +193,40 @@ accept_friend_request "$TOKEN_BOB" "$REQUEST_ID"
 
 # Alice GET /friends should contain Bob
 # Bob GET /friends should contain Alice
-get_friends "$TOKEN_ALICE" "Alice"
-get_friends "$TOKEN_BOB" "Bob"
+echo
+echo "== Get friends: Alice =="
+
+ALICE_FRIENDS=$(fetch_friends "$TOKEN_ALICE")
+echo "$ALICE_FRIENDS" | jq
+assert_contains_email "$ALICE_FRIENDS" "$BOB_EMAIL" "Alice should see Bob after accept"
+
+echo
+echo "== Get friends: Bob =="
+
+BOB_FRIENDS=$(fetch_friends "$TOKEN_BOB")
+echo "$BOB_FRIENDS" | jq
+assert_contains_email "$BOB_FRIENDS" "$ALICE_EMAIL" "Bob should see Alice after accept"
+
+
 
 # Alice deletes Bob
 delete_friend "$TOKEN_ALICE" "$BOB_ID" "Alice deletes Bob"
 
 # Alice GET /friends should be empty
 # Bob GET /friends should be empty
-get_friends "$TOKEN_ALICE" "Alice after delete"
-get_friends "$TOKEN_BOB" "Bob after delete"
+echo
+echo "== Get friends: Alice after delete =="
+
+ALICE_FRIENDS_AFTER_DELETE=$(fetch_friends "$TOKEN_ALICE")
+echo "$ALICE_FRIENDS_AFTER_DELETE" | jq
+assert_empty_array "$ALICE_FRIENDS_AFTER_DELETE" "Alice should have no friends after delete"
+
+echo
+echo "== Get friends: Bob after delete =="
+
+BOB_FRIENDS_AFTER_DELETE=$(fetch_friends "$TOKEN_BOB")
+echo "$BOB_FRIENDS_AFTER_DELETE" | jq
+assert_empty_array "$BOB_FRIENDS_AFTER_DELETE" "Bob should have no friends after delete"
 
 echo
 echo "Friends API smoke test completed successfully."
