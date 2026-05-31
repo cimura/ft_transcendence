@@ -54,11 +54,10 @@ send_friend_request()
 	echo
 	echo "== Send friend request =="
 
-	curl -k -i -X POST "$BASE_URL/friends/request" \
+	curl -k -i -fsS -X POST "$BASE_URL/friends/request" \
 		-H "Content-Type: application/json" \
 		-H "Authorization: Bearer $token" \
 		-d "{\"userId\":\"$target_user_id\"}"
-}
 
 get_friend_requests()
 {
