@@ -11,7 +11,7 @@ export function WaitingRoom() {
   const [isReady, setIsReady] = useState(false)
 
   // current userId(temporary)
-  const currentUserId = 0
+  const currentUserId = '0'
 
   useEffect(() => {
     // ルーム情報がない場合はロビーへ戻る

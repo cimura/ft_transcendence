@@ -4,9 +4,11 @@ export const mockRooms: GameRoom[] = [
   {
     id: '1',
     name: 'あつまれボンバーマン',
-    hostId: 1,
+    hostId: 'user-1',
     hostName: 'player1',
-    players: [{ userId: 1, username: 'player1', isReady: true, isHost: true }],
+    players: [
+      { userId: 'user-1', username: 'player1', isReady: true, isHost: true },
+    ],
     maxPlayers: 4,
     status: 'waiting',
     createdAt: new Date(),
@@ -14,9 +16,11 @@ export const mockRooms: GameRoom[] = [
   {
     id: '2',
     name: 'たのしくボンバーマン',
-    hostId: 2,
+    hostId: 'user-2',
     hostName: 'player2',
-    players: [{ userId: 2, username: 'player2', isReady: true, isHost: true }],
+    players: [
+      { userId: 'user-2', username: 'player2', isReady: true, isHost: true },
+    ],
     maxPlayers: 2,
     status: 'playing',
     createdAt: new Date(),

@@ -1,7 +1,7 @@
 export interface GameRoom {
   id: string
   name: string
-  hostId: number
+  hostId: string
   hostName: string
   players: RoomPlayer[]
   maxPlayers: 2 | 3 | 4
@@ -11,7 +11,7 @@ export interface GameRoom {
 }
 
 export interface RoomPlayer {
-  userId: number
+  userId: string
   username: string
   avatarUrl?: string
   isReady: boolean

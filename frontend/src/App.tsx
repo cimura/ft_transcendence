@@ -11,6 +11,10 @@ import {
 import { Lobby } from './pages/Lobby'
 import { WaitingRoom } from './pages/WaitingRoom'
 import { Home } from './pages/Home'
+import { FriendsMenuPage } from './pages/friends/FriendsMenuPage'
+import { FriendsListPage } from './pages/friends/FriendsListPage'
+import { FriendRequestsPage } from './pages/friends/FriendRequestsPage'
+import { UserSearchPage } from './pages/friends/UserSearchPage'
 
 type AuthView = 'SignIn' | 'signup'
 
@@ -29,7 +33,7 @@ function AppRoutes() {
 
   const handleSignInSuccess = () => {
     setIsLoggedIn(true)
-    navigate('/home') // ログイン後は必ずホームに遷移
+    navigate('/home')
   }
 
   const handleSignupSuccess = () => {
@@ -60,11 +64,14 @@ function AppRoutes() {
       <Route path="/home" element={<Home />} />
       <Route path="/lobby" element={<Lobby />} />
       <Route path="/room/:roomId" element={<WaitingRoom />} />
-      {/* 以下は後で実装 */}
-      <Route
-        path="/friends"
-        element={<div className="p-8">フレンド画面（準備中）</div>}
-      />
+
+      {/* フレンド機能 */}
+      <Route path="/friends" element={<FriendsMenuPage />} />
+      <Route path="/friends/list" element={<FriendsListPage />} />
+      <Route path="/friends/requests" element={<FriendRequestsPage />} />
+      <Route path="/friends/search" element={<UserSearchPage />} />
+
+      {/* その他のページ */}
       <Route
         path="/history"
         element={<div className="p-8">対戦履歴画面（準備中）</div>}
