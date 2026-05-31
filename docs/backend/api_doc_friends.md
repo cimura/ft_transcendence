@@ -2,7 +2,7 @@
 
 ## Auth
 All endpoints require JWT:
-Authorization: Bearer <accessToken>
+`Authorization: Bearer <accessToken>`
 
 ## Endpoints
 

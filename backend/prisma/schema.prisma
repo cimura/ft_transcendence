@@ -17,7 +17,7 @@ model User {
   createdAt              DateTime     @default(now())
   updatedAt              DateTime     @updatedAt
   sentFriendRequests     Friendship[] @relation("FriendRequester")
-  recievedFriendRequests Friendship[] @relation("FriendReceiver")
+  receivedFriendRequests Friendship[] @relation("FriendReceiver")
 }
 
 enum FriendRequestStatus {
