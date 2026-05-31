@@ -11,16 +11,8 @@ import {
 } from '@nestjs/common';
 import { FriendsService } from './friends.service';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
-
-type AuthenticatedRequest = {
-  user: {
-    userId: string;
-  };
-};
-
-type FriendsRequestBody = {
-  userId: string;
-};
+import { SendFriendRequestDto } from './dto/send-friend-request.dto';
+import type { AuthenticatedRequest } from '../auth/interfaces/auth.interface';
 
 @Controller('friends')
 @UseGuards(JwtAuthGuard)
@@ -37,10 +29,10 @@ export class FriendsController {
   @Post('request')
   friendsRequest(
     @Request() req: AuthenticatedRequest,
-    @Body() body: FriendsRequestBody,
+    @Body() body: SendFriendRequestDto,
   ) {
     const currentUserId = req.user.userId;
-    const targetUserId = body.userId;
+    const targetUserId = body.targetUserId;
     return this.friendsService.sendRequest(currentUserId, targetUserId);
   }
 

@@ -20,18 +20,19 @@ signup_user()
     echo
     echo "=== Signup: $email ==="
 
-    curl -k -i -fsS -X POST "$BASE_URL/auth/signup" \
+    curl -kiX POST "$BASE_URL/auth/signup" \
         -H "Content-Type: application/json" \
         -d "{\"email\":\"$email\",\"password\":\"$PASSWORD\"}"
+}
 
 signin_user()
 {
 	email="$1"
 
-	curl -k -fsS -X POST "$BASE_URL/auth/signin" \
+	curl -k -s -X POST "$BASE_URL/auth/signin" \
 		-H "Content-Type: application/json" \
 		-d "{\"email\":\"$email\",\"password\":\"$PASSWORD\"}" \
-		| jq -er '.accessToken'
+		| jq -r '.accessToken'
 }
 
 get_user_id_from_token()
@@ -54,10 +55,11 @@ send_friend_request()
 	echo
 	echo "== Send friend request =="
 
-	curl -k -i -fsS -X POST "$BASE_URL/friends/request" \
+	curl -k -i -X POST "$BASE_URL/friends/request" \
 		-H "Content-Type: application/json" \
 		-H "Authorization: Bearer $token" \
-		-d "{\"userId\":\"$target_user_id\"}"
+		-d "{\"targetUserId\":\"$target_user_id\"}"
+}
 
 get_friend_requests()
 {
@@ -88,8 +90,9 @@ accept_friend_request()
 	echo
 	echo "== Accept friend request =="
 
-	curl -k -i -fsS -X PUT "$BASE_URL/friends/$request_id/accept" \
+	curl -k -i -X PUT "$BASE_URL/friends/$request_id/accept" \
 		-H "Authorization: Bearer $token"
+}
 
 get_friends()
 {
