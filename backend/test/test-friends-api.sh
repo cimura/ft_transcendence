@@ -108,6 +108,23 @@ get_friends()
 		| jq
 }
 
+assert_contains_email()
+{
+	json="$1"
+	email="$2"
+	message="$3"
+
+	if echo "$json" | jq -e --arg email "$email" '.[] | select(.email == $email)' >/dev/null; then
+		echo "PASS: $message"
+	else
+		echo "FAIL: $message"
+		echo "Expected email: $email"
+		echo "Actual JSON:"
+		echo "$json" | jq
+		exit 1
+	fi
+}
+
 delete_friend()
 {
 	token="$1"
