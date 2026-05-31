@@ -130,16 +130,18 @@ export class FriendsService {
     });
 
     if (!friendship) throw new NotFoundException('Request not found');
-    if (friendship.receiverId != currentUserId)
-      throw new ForbiddenException('Log-in user is not the receiver');
+    if (friendship.receiverId !== currentUserId)
+      throw new ForbiddenException('Logged-in user is not the receiver');
     if (friendship.status !== 'PENDING')
-      throw new ConflictException('Request has already accepted or rejected');
+      throw new ConflictException(
+        'Request has already been accepted or rejected',
+      );
 
-    await this.prisma.friendship.update({
+    const updated = await this.prisma.friendship.update({
       where: { id: requestId },
       data: { status: 'ACCEPTED' },
     });
-    return friendship;
+    return updated;
   }
 
   async rejectRequest(currentUserId: string, requestId: string) {
@@ -152,16 +154,18 @@ export class FriendsService {
     });
 
     if (!friendship) throw new NotFoundException('Request not found');
-    if (friendship.receiverId != currentUserId)
-      throw new ForbiddenException('Log-in user is not the receiver');
+    if (friendship.receiverId !== currentUserId)
+      throw new ForbiddenException('Logged-in user is not the receiver');
     if (friendship.status !== 'PENDING')
-      throw new ConflictException('Request has already accepted or rejected');
+      throw new ConflictException(
+        'Request has already been accepted or rejected',
+      );
 
-    await this.prisma.friendship.update({
+    const update = await this.prisma.friendship.update({
       where: { id: requestId },
       data: { status: 'REJECTED' },
     });
-    return friendship;
+    return update;
   }
 
   async deleteFriend(currentUserId: string, targetUserId: string) {
