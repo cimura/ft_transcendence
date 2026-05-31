@@ -88,9 +88,8 @@ accept_friend_request()
 	echo
 	echo "== Accept friend request =="
 
-	curl -k -i -X PUT "$BASE_URL/friends/$request_id/accept" \
+	curl -k -i -fsS -X PUT "$BASE_URL/friends/$request_id/accept" \
 		-H "Authorization: Bearer $token"
-}
 
 get_friends()
 {
