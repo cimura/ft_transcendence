@@ -79,25 +79,40 @@ export class FriendsService {
     });
     if (!receiver) throw new NotFoundException('Target user not found');
 
-    const existing = await this.prisma.friendship.findFirst({
-      where: {
-        OR: [
-          { requesterId: currentUserId, receiverId: targetUserId },
-          { requesterId: targetUserId, receiverId: currentUserId },
-        ],
-      },
+    let pairKey: string;
+    if (currentUserId < targetUserId)
+      pairKey = currentUserId + ':' + targetUserId;
+    else pairKey = targetUserId + ':' + currentUserId;
+
+    function isPrismaErrorCode(error: unknown, code: string): boolean {
+      if (typeof error === 'object') return false;
+      if (error === null) return false;
+      if (!Object.prototype.hasOwnProperty.call(error, 'code')) return false;
+      return (error as { code: unknown }).code === code;
+    }
+
+    const existing = await this.prisma.friendship.findUnique({
+      where: { pairKey },
     });
     if (existing)
       throw new BadRequestException(
         'Friend request or friendship already exists',
       );
 
-    return this.prisma.friendship.create({
-      data: {
-        requesterId: currentUserId,
-        receiverId: targetUserId,
-      },
-    });
+    try {
+      return await this.prisma.friendship.create({
+        data: {
+          requesterId: currentUserId,
+          receiverId: targetUserId,
+          pairKey,
+        },
+      });
+    } catch (error: unknown) {
+      if (isPrismaErrorCode(error, 'P2002')) {
+        throw new ConflictException('This request is duplicated');
+      }
+      throw error;
+    }
   }
 
   async getFriendsRequests(currentUserId: string) {
