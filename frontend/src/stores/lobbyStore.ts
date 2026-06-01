@@ -19,7 +19,7 @@ export const useLobbyStore = create<LobbyStore>()(
     setRooms: (rooms) => set({ rooms }),
     upsertRoom: (room) =>
       set((state) => {
-        const index = state.rooms.findIndex((r) => r.id === room.id)
+        const index = state.rooms.findIndex((r: GameRoom) => r.id === room.id)
         if (index >= 0) {
           state.rooms[index] = room // update
         } else {
@@ -28,7 +28,7 @@ export const useLobbyStore = create<LobbyStore>()(
       }),
     removeRoom: (id) =>
       set((state) => {
-        state.rooms = state.rooms.filter((r) => r.id !== id)
+        state.rooms = state.rooms.filter((r: GameRoom) => r.id !== id)
       }),
     setCurrentRoom: (room) => set({ currentRoom: room }),
   }))

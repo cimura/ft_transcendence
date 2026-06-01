@@ -3,17 +3,20 @@ name: Backend CI
 on:
   pull_request:
     paths:
-      - 'backend/**'
+      - "backend/**"
   push:
     branches:
       - main
       - develop
     paths:
-      - 'backend/**'
+      - "backend/**"
 
 jobs:
   lint-and-format:
     runs-on: ubuntu-latest
+
+    env:
+      DATABASE_URL: "postgresql://transcendence:transcendence@postgres:5432/transcendence?schema=public"
 
     steps:
       - name: Checkout code
@@ -22,13 +25,17 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '22'
-          cache: 'npm'
+          node-version: "22"
+          cache: "npm"
           cache-dependency-path: backend/package-lock.json
 
       - name: Install dependencies
         working-directory: backend
         run: npm ci
+
+      - name: Generate Prisma Client
+        working-directory: backend
+        run: npx prisma generate
 
       - name: Run ESLint
         working-directory: backend

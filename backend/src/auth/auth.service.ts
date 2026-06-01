@@ -4,56 +4,93 @@ import {
   ConflictException,
 } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
+import { PrismaService } from '../prisma.service';
+import { SignUpRequestDto, SignUpResponseDto } from './dto/signup.dto';
+import { SignInRequestDto, SignInResponseDto } from './dto/signin.dto';
+import { ProfileUserDto } from './dto/profile.dto';
 import * as bcrypt from 'bcrypt';
-
-// DBが完成するまでの仮の保存場所（メモリ上の配列）
-const mockUsers: any[] = [];
 
 @Injectable()
 export class AuthService {
-  constructor(private jwtService: JwtService) {}
+  constructor(
+    private jwtService: JwtService,
+    private prisma: PrismaService,
+  ) {}
 
   // 1. サインアップ（新規登録）
-  async signUp(email: string, pass: string): Promise<any> {
+  async signUp(dto: SignUpRequestDto): Promise<SignUpResponseDto> {
     // 重複チェック: すでに同じメールアドレスが存在するか
-    const existingUser = mockUsers.find((u) => u.email === email);
+    const existingUser = await this.prisma.user.findUnique({
+      where: { email: dto.email },
+    });
     if (existingUser) {
-      // 存在した場合は、409 Conflict
-      throw new ConflictException('Email already exists!');
+      // 存在した場合は 409 Conflict
+      throw new ConflictException('email already exists!');
     }
     // ソルト（ランダムな文字列）を生成し、パスワードと混ぜてハッシュ化
     const saltRounds = 10;
-    const hashedPassword = await bcrypt.hash(pass, saltRounds);
+    const hashedPassword = await bcrypt.hash(dto.password, saltRounds);
 
-    // モックDBに保存
-    const newUser = {
-      id: Date.now().toString(),
-      email,
-      password: hashedPassword,
+    const user = await this.prisma.user.create({
+      data: {
+        email: dto.email,
+        passwordHash: hashedPassword,
+      },
+      select: {
+        id: true,
+        email: true,
+      },
+    });
+
+    return {
+      id: user.id,
+      email: user.email,
+      accessToken: await this.generateToken(user.id),
     };
-    mockUsers.push(newUser);
-
-    return { message: 'User successfully registered!' };
   }
 
   // 2. サインイン（ログイン）
-  async signIn(email: string, pass: string): Promise<any> {
-    // DB（モック）からユーザーを探す
-    const user = mockUsers.find((u) => u.email === email);
+  async signIn(dto: SignInRequestDto): Promise<SignInResponseDto> {
+    // DBからユーザーを探す
+    const user = await this.prisma.user.findUnique({
+      where: { email: dto.email },
+    });
     if (!user) {
       throw new UnauthorizedException('Invalid credentials');
     }
 
     // 送られてきたパスワードをハッシュ化し、保存されているハッシュ値と「一致」するか比較
-    const isMatch = await bcrypt.compare(pass, user.password);
+    const isMatch = await bcrypt.compare(dto.password, user.passwordHash);
     if (!isMatch) {
       throw new UnauthorizedException('Invalid credentials');
     }
 
     // 一致したら、JWT（デジタルの通行証）を発行
-    const payload = { sub: user.id, email: user.email };
     return {
-      access_token: await this.jwtService.signAsync(payload),
+      accessToken: await this.generateToken(user.id),
     };
+  }
+
+  // 3. プロフィール（ユーザー情報取得）
+  async profile(userId: string): Promise<ProfileUserDto> {
+    const user = await this.prisma.user.findUnique({
+      where: { id: userId },
+      select: {
+        id: true,
+        email: true,
+        displayName: true,
+        avatarUrl: true,
+      },
+    });
+
+    if (!user) {
+      throw new UnauthorizedException('User not found');
+    }
+
+    return user;
+  }
+
+  private generateToken(userId: string): Promise<string> {
+    return this.jwtService.signAsync({ sub: userId });
   }
 }

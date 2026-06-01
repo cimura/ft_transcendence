@@ -1,5 +1,6 @@
 import { useState } from 'react'
-import Login from './components/Login'
+import SignIn from './components/SignIn'
+import Signup from './components/Signup'
 import {
   BrowserRouter,
   Navigate,
@@ -16,6 +17,8 @@ import { FriendRequestsPage } from './pages/friends/FriendRequestsPage'
 import { UserSearchPage } from './pages/friends/UserSearchPage'
 import { ProfilePage } from './pages/ProfilePage'
 
+type AuthView = 'SignIn' | 'signup'
+
 function App() {
   return (
     <BrowserRouter>
@@ -26,15 +29,34 @@ function App() {
 
 function AppRoutes() {
   const [isLoggedIn, setIsLoggedIn] = useState(false)
+  const [authView, setAuthView] = useState<AuthView>('SignIn')
   const navigate = useNavigate()
 
-  const handleLoginSuccess = () => {
+  const handleSignInSuccess = () => {
     setIsLoggedIn(true)
     navigate('/home')
   }
 
+  const handleSignupSuccess = () => {
+    // サインアップ成功後はログイン画面に遷移
+    setAuthView('SignIn')
+  }
+
   if (!isLoggedIn) {
-    return <Login onLoginSuccess={handleLoginSuccess} />
+    if (authView === 'signup') {
+      return (
+        <Signup
+          onSignupSuccess={handleSignupSuccess}
+          onSwitchToSignIn={() => setAuthView('SignIn')}
+        />
+      )
+    }
+    return (
+      <SignIn
+        onSignInSuccess={handleSignInSuccess}
+        onSwitchToSignup={() => setAuthView('signup')}
+      />
+    )
   }
 
   return (
