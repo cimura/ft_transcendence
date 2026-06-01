@@ -43,22 +43,31 @@ export class FriendsController {
     return this.friendsService.getFriendsRequests(currentUserId);
   }
 
-  @Put(':id/accept')
-  friendsAccept(@Request() req: AuthenticatedRequest, @Param('id') id: string) {
+  @Put(':requestId/accept')
+  friendsAccept(
+    @Request() req: AuthenticatedRequest,
+    @Param('requestId') id: string,
+  ) {
     const currentUserId = req.user.userId;
     const friendshipId = id;
     return this.friendsService.acceptRequest(currentUserId, friendshipId);
   }
 
-  @Put(':id/reject')
-  friendsReject(@Request() req: AuthenticatedRequest, @Param('id') id: string) {
+  @Put(':requestId/reject')
+  friendsReject(
+    @Request() req: AuthenticatedRequest,
+    @Param('requestId') id: string,
+  ) {
     const currentUserId = req.user.userId;
     const friendshipId = id;
     return this.friendsService.rejectRequest(currentUserId, friendshipId);
   }
 
-  @Delete(':id')
-  friendsDelete(@Request() req: AuthenticatedRequest, @Param('id') id: string) {
+  @Delete(':userId')
+  friendsDelete(
+    @Request() req: AuthenticatedRequest,
+    @Param('userId') id: string,
+  ) {
     const currentUserId = req.user.userId;
     const friendUserId = id;
     return this.friendsService.deleteFriend(currentUserId, friendUserId);
