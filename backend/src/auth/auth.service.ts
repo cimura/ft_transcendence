@@ -7,7 +7,6 @@ import { JwtService } from '@nestjs/jwt';
 import { PrismaService } from '../prisma.service';
 import { SignUpRequestDto, SignUpResponseDto } from './dto/signup.dto';
 import { SignInRequestDto, SignInResponseDto } from './dto/signin.dto';
-import { ProfileUserDto } from './dto/profile.dto';
 import * as bcrypt from 'bcrypt';
 
 @Injectable()
@@ -71,26 +70,7 @@ export class AuthService {
     };
   }
 
-  // 3. プロフィール（ユーザー情報取得）
-  async profile(userId: string): Promise<ProfileUserDto> {
-    const user = await this.prisma.user.findUnique({
-      where: { id: userId },
-      select: {
-        id: true,
-        email: true,
-        displayName: true,
-        avatarUrl: true,
-      },
-    });
-
-    if (!user) {
-      throw new UnauthorizedException('User not found');
-    }
-
-    return user;
-  }
-
-  private generateToken(userId: string): Promise<string> {
-    return this.jwtService.signAsync({ sub: userId });
+  private async generateToken(userId: string): Promise<string> {
+    return await this.jwtService.signAsync({ sub: userId });
   }
 }
