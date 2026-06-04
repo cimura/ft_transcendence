@@ -47,9 +47,7 @@ export function GameRoomPage() {
       <header className="border-b border-gray-800 bg-gray-900">
         <div className="mx-auto flex max-w-7xl flex-wrap items-center justify-between gap-4 px-4 py-4 sm:px-6 lg:px-8">
           <div>
-            <p className="text-sm font-semibold text-cyan-300">
-              ボンバーマン
-            </p>
+            <p className="text-sm font-semibold text-cyan-300">ボンバーマン</p>
             <h1 className="text-2xl font-bold">{currentRoom.name}</h1>
           </div>
           <div className="flex items-center gap-3">

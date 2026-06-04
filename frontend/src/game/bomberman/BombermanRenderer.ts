@@ -1,7 +1,4 @@
-import type {
-  BombermanMap,
-  BombermanPlayerPreview,
-} from './bombermanTypes'
+import type { BombermanMap, BombermanPlayerPreview } from './bombermanTypes'
 
 type RenderBombermanSceneOptions = {
   ctx: CanvasRenderingContext2D

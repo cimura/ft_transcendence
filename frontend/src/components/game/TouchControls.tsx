@@ -1,4 +1,7 @@
-import type { BombermanInput, Direction } from '../../game/bomberman/bombermanTypes'
+import type {
+  BombermanInput,
+  Direction,
+} from '../../game/bomberman/bombermanTypes'
 
 export type ActiveControl = Direction | 'bomb' | null
 
@@ -7,12 +10,13 @@ type TouchControlsProps = {
   activeControl: ActiveControl
 }
 
-const directions: { label: string; direction: Direction; className: string }[] = [
-  { label: '上', direction: 'up', className: 'col-start-2 row-start-1' },
-  { label: '左', direction: 'left', className: 'col-start-1 row-start-2' },
-  { label: '下', direction: 'down', className: 'col-start-2 row-start-2' },
-  { label: '右', direction: 'right', className: 'col-start-3 row-start-2' },
-]
+const directions: { label: string; direction: Direction; className: string }[] =
+  [
+    { label: '上', direction: 'up', className: 'col-start-2 row-start-1' },
+    { label: '左', direction: 'left', className: 'col-start-1 row-start-2' },
+    { label: '下', direction: 'down', className: 'col-start-2 row-start-2' },
+    { label: '右', direction: 'right', className: 'col-start-3 row-start-2' },
+  ]
 
 const panelStyles =
   'flex touch-none select-none flex-col gap-3 rounded-lg border border-gray-200 bg-white p-4 shadow-sm'
