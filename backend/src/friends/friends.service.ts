@@ -6,6 +6,7 @@ import {
   ConflictException,
 } from '@nestjs/common';
 import { PrismaService } from '../prisma.service';
+import { FriendRequestStatus } from '../generated/prisma/enums';
 
 type FriendUser = {
   id: string;
@@ -28,7 +29,7 @@ export class FriendsService {
   async getFriends(currentUserId: string) {
     const friendships = await this.prisma.friendship.findMany({
       where: {
-        status: 'ACCEPTED',
+        status: FriendRequestStatus.ACCEPTED,
         OR: [{ requesterId: currentUserId }, { receiverId: currentUserId }],
       },
       include: {
@@ -119,7 +120,7 @@ export class FriendsService {
     const requesters = await this.prisma.friendship.findMany({
       where: {
         receiverId: currentUserId,
-        status: 'PENDING',
+        status: FriendRequestStatus.PENDING,
       },
       include: {
         requester: {
@@ -147,14 +148,14 @@ export class FriendsService {
     if (!friendship) throw new NotFoundException('Request not found');
     if (friendship.receiverId !== currentUserId)
       throw new ForbiddenException('Logged-in user is not the receiver');
-    if (friendship.status !== 'PENDING')
+    if (friendship.status !== FriendRequestStatus.PENDING)
       throw new ConflictException(
         'Request has already been accepted or rejected',
       );
 
     const updated = await this.prisma.friendship.update({
       where: { id: requestId },
-      data: { status: 'ACCEPTED' },
+      data: { status: FriendRequestStatus.ACCEPTED },
     });
     return updated;
   }
@@ -171,14 +172,14 @@ export class FriendsService {
     if (!friendship) throw new NotFoundException('Request not found');
     if (friendship.receiverId !== currentUserId)
       throw new ForbiddenException('Logged-in user is not the receiver');
-    if (friendship.status !== 'PENDING')
+    if (friendship.status !== FriendRequestStatus.PENDING)
       throw new ConflictException(
         'Request has already been accepted or rejected',
       );
 
     const updated = await this.prisma.friendship.update({
       where: { id: requestId },
-      data: { status: 'REJECTED' },
+      data: { status: FriendRequestStatus.REJECTED },
     });
     return updated;
   }
@@ -186,7 +187,7 @@ export class FriendsService {
   async deleteFriend(currentUserId: string, targetUserId: string) {
     const result = await this.prisma.friendship.deleteMany({
       where: {
-        status: 'ACCEPTED',
+        status: FriendRequestStatus.ACCEPTED,
         OR: [
           { requesterId: currentUserId, receiverId: targetUserId },
           { receiverId: currentUserId, requesterId: targetUserId },
