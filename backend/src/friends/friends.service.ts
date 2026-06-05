@@ -26,7 +26,7 @@ export class FriendsService {
   constructor(private readonly prisma: PrismaService) {}
 
   async getFriends(currentUserId: string) {
-    const friendship = await this.prisma.friendship.findMany({
+    const friendships = await this.prisma.friendship.findMany({
       where: {
         status: 'ACCEPTED',
         OR: [{ requesterId: currentUserId }, { receiverId: currentUserId }],
@@ -51,7 +51,7 @@ export class FriendsService {
       },
     });
 
-    return friendship.map((friendship: FriendshipWithUsers) => {
+    return friendships.map((friendship: FriendshipWithUsers) => {
       const friend =
         friendship.requesterId === currentUserId
           ? friendship.receiver
@@ -81,11 +81,11 @@ export class FriendsService {
 
     let pairKey: string;
     if (currentUserId < targetUserId)
-      pairKey = currentUserId + ':' + targetUserId;
-    else pairKey = targetUserId + ':' + currentUserId;
+      pairKey = `${currentUserId}:${targetUserId}`;
+    else pairKey = `{targetUserId} : ${currentUserId}`;
 
     function isPrismaErrorCode(error: unknown, code: string): boolean {
-      if (typeof error === 'object') return false;
+      if (typeof error !== 'object') return false;
       if (error === null) return false;
       if (!Object.prototype.hasOwnProperty.call(error, 'code')) return false;
       return (error as { code: unknown }).code === code;
@@ -176,11 +176,11 @@ export class FriendsService {
         'Request has already been accepted or rejected',
       );
 
-    const update = await this.prisma.friendship.update({
+    const updated = await this.prisma.friendship.update({
       where: { id: requestId },
       data: { status: 'REJECTED' },
     });
-    return update;
+    return updated;
   }
 
   async deleteFriend(currentUserId: string, targetUserId: string) {
