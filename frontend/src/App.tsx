@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react' // ★ useEffect を追加
 import SignIn from './components/SignIn'
 import Signup from './components/Signup'
 import {
@@ -7,15 +7,11 @@ import {
   Route,
   Routes,
   useNavigate,
+  useLocation,
 } from 'react-router-dom'
 import { Lobby } from './pages/Lobby'
 import { WaitingRoom } from './pages/WaitingRoom'
 import { Home } from './pages/Home'
-import { FriendsMenuPage } from './pages/friends/FriendsMenuPage'
-import { FriendsListPage } from './pages/friends/FriendsListPage'
-import { FriendRequestsPage } from './pages/friends/FriendRequestsPage'
-import { UserSearchPage } from './pages/friends/UserSearchPage'
-import { ProfilePage } from './pages/ProfilePage'
 
 type AuthView = 'SignIn' | 'signup'
 
@@ -30,7 +26,23 @@ function App() {
 function AppRoutes() {
   const [isLoggedIn, setIsLoggedIn] = useState(false)
   const [authView, setAuthView] = useState<AuthView>('SignIn')
+  const [isInitializing, setIsInitializing] = useState(true)
   const navigate = useNavigate()
+  const location = useLocation()
+
+  useEffect(() => {
+    const token = localStorage.getItem('accessToken')
+
+    if (token) {
+      setIsLoggedIn(true)
+
+      if (location.pathname === '/' || location.pathname === '/signup') {
+        navigate('/home', { replace: true })
+      }
+    }
+
+    setIsInitializing(false)
+  }, [navigate, location.pathname])
 
   const handleSignInSuccess = () => {
     setIsLoggedIn(true)
@@ -38,8 +50,18 @@ function AppRoutes() {
   }
 
   const handleSignupSuccess = () => {
-    // サインアップ成功後はログイン画面に遷移
-    setAuthView('SignIn')
+    setIsLoggedIn(true)
+    navigate('/home')
+  }
+
+  if (isInitializing) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gray-100">
+        <div className="text-xl font-semibold text-gray-600 animate-pulse">
+          Loading Session...
+        </div>
+      </div>
+    )
   }
 
   if (!isLoggedIn) {
@@ -65,17 +87,11 @@ function AppRoutes() {
       <Route path="/home" element={<Home />} />
       <Route path="/lobby" element={<Lobby />} />
       <Route path="/room/:roomId" element={<WaitingRoom />} />
-
-      {/* フレンド機能 */}
-      <Route path="/friends" element={<FriendsMenuPage />} />
-      <Route path="/friends/list" element={<FriendsListPage />} />
-      <Route path="/friends/requests" element={<FriendRequestsPage />} />
-      <Route path="/friends/search" element={<UserSearchPage />} />
-
-      {/* プロフィール */}
-      <Route path="/profile/:userId" element={<ProfilePage />} />
-
       {/* 以下は後で実装 */}
+      <Route
+        path="/friends"
+        element={<div className="p-8">フレンド画面（準備中）</div>}
+      />
       <Route
         path="/history"
         element={<div className="p-8">対戦履歴画面（準備中）</div>}
