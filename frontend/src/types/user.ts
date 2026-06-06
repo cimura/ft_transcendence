@@ -3,7 +3,7 @@
  */
 
 export interface User {
-  id: number
+  id: string
   email: string
   username: string
   displayName?: string
@@ -30,4 +30,9 @@ export interface RegisterCredentials {
   username: string
   password: string
   passwordConfirm: string
+}
+
+export interface UserProfile extends User {
+  isFriend: boolean
+  isCurrentUser: boolean
 }
