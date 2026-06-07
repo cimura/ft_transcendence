@@ -91,7 +91,7 @@ export default function Signup({
                   : 'border-gray-300'
               }`}
             />
-            {/* ★ Emailの被りエラー表示 */}
+            {/* Email conflict error */}
             {fieldErrors.email && (
               <p className="text-red-500 text-xs mt-1">{fieldErrors.email}</p>
             )}
@@ -116,7 +116,7 @@ export default function Signup({
                   : 'border-gray-300'
               }`}
             />
-            {/* ★ Usernameの被りエラー表示 */}
+            {/* Username conflict error */}
             {fieldErrors.username && (
               <p className="text-red-500 text-xs mt-1">
                 {fieldErrors.username}

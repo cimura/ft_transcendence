@@ -24,25 +24,26 @@ function App() {
 }
 
 function AppRoutes() {
-  const [isLoggedIn, setIsLoggedIn] = useState(false)
-  const [authView, setAuthView] = useState<AuthView>('SignIn')
-  const [isInitializing, setIsInitializing] = useState(true)
   const navigate = useNavigate()
   const location = useLocation()
 
-  useEffect(() => {
-    const token = localStorage.getItem('accessToken')
-
-    if (token) {
-      setIsLoggedIn(true)
-
-      if (location.pathname === '/' || location.pathname === '/signup') {
-        navigate('/home', { replace: true })
-      }
+  const [isLoggedIn, setIsLoggedIn] = useState(() => {
+    if (typeof window !== 'undefined') {
+      return !!localStorage.getItem('accessToken')
     }
+    return false
+  })
 
-    setIsInitializing(false)
-  }, [navigate, location.pathname])
+  useEffect(() => {
+    if (
+      isLoggedIn &&
+      (location.pathname === '/' ||
+        location.pathname === '/signup' ||
+        location.pathname === '/signin')
+    ) {
+      navigate('/home', { replace: true })
+    }
+  }, [isLoggedIn, location.pathname, navigate])
 
   const handleSignInSuccess = () => {
     setIsLoggedIn(true)
@@ -54,30 +55,32 @@ function AppRoutes() {
     navigate('/home')
   }
 
-  if (isInitializing) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-100">
-        <div className="text-xl font-semibold text-gray-600 animate-pulse">
-          Loading Session...
-        </div>
-      </div>
-    )
-  }
-
   if (!isLoggedIn) {
-    if (authView === 'signup') {
-      return (
-        <Signup
-          onSignupSuccess={handleSignupSuccess}
-          onSwitchToSignIn={() => setAuthView('SignIn')}
-        />
-      )
-    }
     return (
-      <SignIn
-        onSignInSuccess={handleSignInSuccess}
-        onSwitchToSignup={() => setAuthView('signup')}
-      />
+      <Routes>
+        {/* / に来たら /signin にリダイレクトして、URLを書き換える */}
+        <Route path="/" element={<Navigate to="/signin" replace />} />
+        <Route
+          path="/signin"
+          element={
+            <SignIn
+              onSignInSuccess={handleSignInSuccess}
+              onSwitchToSignup={() => navigate('/signup')}
+            />
+          }
+        />
+        <Route
+          path="/signup"
+          element={
+            <Signup
+              onSignupSuccess={handleSignupSuccess}
+              onSwitchToSignIn={() => navigate('/signin')}
+            />
+          }
+        />
+        {/* 未ログイン状態で他のURLにアクセスされたらすべてSignInにリダイレクト */}
+        <Route path="*" element={<Navigate to="/signin" replace />} />
+      </Routes>
     )
   }
 
@@ -100,6 +103,9 @@ function AppRoutes() {
         path="/settings"
         element={<div className="p-8">設定画面（準備中）</div>}
       />
+
+      {/* ログイン状態で存在しないURLに入ったら /home にリダイレクト */}
+      <Route path="*" element={<Navigate to="/home" replace />} />
     </Routes>
   )
 }

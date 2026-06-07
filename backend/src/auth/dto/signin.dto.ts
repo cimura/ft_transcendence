@@ -6,13 +6,6 @@ export class SignInRequestDto {
     example: 'example@example.com',
     description: 'ユーザーのメールアドレスまたはユーザーネーム (ユニーク)',
   })
-  @IsEmail(
-    {},
-    {
-      message:
-        'Please enter your email address or username in the correct format.',
-    },
-  )
   @IsNotEmpty({ message: 'email or password is required.' })
   identifier: string;
 
