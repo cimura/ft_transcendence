@@ -3,21 +3,55 @@ import { useNavigate, useParams } from 'react-router-dom'
 import { Button } from '../components/common/Button'
 import { GameCanvas } from '../components/game/GameCanvas'
 import { useLobbyStore } from '../stores/lobbyStore'
-import type { BombermanInput } from '../game/bomberman/bombermanTypes'
+import type {
+  BombermanGameState,
+  BombermanInput,
+} from '../game/bomberman/bombermanTypes'
 
 type DisplayInput = Exclude<BombermanInput, { type: 'stop' }>
 
 export function GameRoomPage() {
   const { roomId } = useParams<{ roomId: string }>()
   const navigate = useNavigate()
-  const { currentRoom } = useLobbyStore()
+  const { currentRoom, rooms, setCurrentRoom } = useLobbyStore()
   const [lastInput, setLastInput] = useState<DisplayInput | null>(null)
+  const [gameState, setGameState] = useState<BombermanGameState | null>(null)
 
   useEffect(() => {
-    if (!currentRoom || currentRoom.id !== roomId) {
+    if (!roomId) {
       navigate('/lobby')
+      return
     }
-  }, [currentRoom, roomId, navigate])
+
+    if (currentRoom?.id === roomId) {
+      return
+    }
+
+    const room = rooms.find((item) => item.id === roomId)
+    if (room) {
+      setCurrentRoom(room)
+      return
+    }
+
+    setCurrentRoom({
+      id: roomId,
+      name: 'Local Bomberman',
+      hostId: '0',
+      hostName: 'current_user',
+      players: [
+        {
+          userId: '0',
+          username: 'current_user',
+          isReady: true,
+          isHost: true,
+        },
+      ],
+      maxPlayers: 4,
+      status: 'playing',
+      mapId: 'local-bomberman',
+      createdAt: new Date(),
+    })
+  }, [currentRoom, navigate, roomId, rooms, setCurrentRoom])
 
   if (!currentRoom) {
     return null
@@ -42,6 +76,17 @@ export function GameRoomPage() {
     return directionLabels[lastInput.direction]
   }
 
+  const formatGameStatus = () => {
+    if (!gameState) return '準備中'
+    if (gameState.status === 'playing') return '対戦中'
+    if (gameState.status === 'win') return 'YOU WIN'
+    if (gameState.status === 'lose') return 'GAME OVER'
+    return 'DRAW'
+  }
+
+  const livingPlayers =
+    gameState?.players.filter((player) => player.alive).length ?? 0
+
   return (
     <div className="min-h-screen bg-gray-950 text-white">
       <header className="border-b border-gray-800 bg-gray-900">
@@ -51,6 +96,12 @@ export function GameRoomPage() {
             <h1 className="text-2xl font-bold">{currentRoom.name}</h1>
           </div>
           <div className="flex items-center gap-3">
+            <div className="flex h-10 w-24 items-center justify-center whitespace-nowrap rounded-md bg-cyan-500/15 px-3 text-sm font-semibold text-cyan-100">
+              {formatGameStatus()}
+            </div>
+            <div className="flex h-10 w-20 items-center justify-center whitespace-nowrap rounded-md bg-gray-800 px-3 text-sm font-semibold text-gray-100">
+              生存 {livingPlayers}
+            </div>
             <div className="flex h-10 w-32 items-center justify-center whitespace-nowrap rounded-md bg-gray-800 px-3 text-sm font-semibold text-gray-100">
               {formatLastInput()}
             </div>
@@ -65,8 +116,20 @@ export function GameRoomPage() {
         </div>
       </header>
 
-      <main className="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8">
-        <GameCanvas onInput={handleGameInput} />
+      <main className="relative mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8">
+        <GameCanvas onInput={handleGameInput} onStateChange={setGameState} />
+        {gameState && gameState.status !== 'playing' && (
+          <div className="pointer-events-none absolute inset-x-4 top-1/2 z-10 flex -translate-y-1/2 justify-center sm:inset-x-6 lg:inset-x-8">
+            <div className="rounded-lg border border-cyan-300/40 bg-gray-950/85 px-8 py-6 text-center shadow-2xl shadow-cyan-500/20">
+              <p className="text-5xl font-black italic tracking-normal text-cyan-200 drop-shadow-[0_0_18px_rgba(34,211,238,0.9)]">
+                {formatGameStatus()}
+              </p>
+              <p className="mt-3 text-sm font-semibold text-gray-300">
+                待機室へ戻って再開できます
+              </p>
+            </div>
+          </div>
+        )}
       </main>
     </div>
   )
