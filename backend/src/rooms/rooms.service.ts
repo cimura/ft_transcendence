@@ -8,7 +8,7 @@ import {
 import { PrismaService } from '../prisma.service';
 import { GamesService } from '../games/games.service';
 import { BOMBERMAN_GAME_ID } from '../games/games.constants';
-import { RoomStatus } from '../generated/prisma/enums';
+import { RoomMode, RoomStatus } from '../generated/prisma/enums';
 import { CreateRoomDto } from './dto/create-room.dto';
 import { CreateRoomMessageDto } from './dto/create-room-message.dto';
 
@@ -16,6 +16,7 @@ const MAX_MESSAGES_PER_ROOM = 50;
 const MESSAGE_COOLDOWN_MS = 1000;
 
 type RoomStatusResponse = 'waiting' | 'playing' | 'finished';
+type RoomModeResponse = 'online' | 'local_cpu';
 
 type RoomWithParticipants = {
   id: string;
@@ -24,6 +25,7 @@ type RoomWithParticipants = {
   hostId: string;
   maxPlayers: number;
   status: RoomStatus;
+  mode: RoomMode;
   settingsSnapshot: unknown;
   createdAt: Date;
   updatedAt: Date;
@@ -75,6 +77,7 @@ export class RoomsService {
 
     const gameId = dto.gameId ?? BOMBERMAN_GAME_ID;
     const game = this.gamesService.findById(gameId);
+    const mode = this.toRoomMode(dto.mode ?? 'online');
 
     if (!game.supportedPlayers.includes(dto.maxPlayers)) {
       throw new BadRequestException('Unsupported maxPlayers for this game');
@@ -86,6 +89,7 @@ export class RoomsService {
         name,
         hostId: userId,
         maxPlayers: dto.maxPlayers,
+        mode,
         settingsSnapshot: game.settings,
         participants: {
           create: {
@@ -215,13 +219,7 @@ export class RoomsService {
       throw new ForbiddenException('Only the host can start the room');
     }
 
-    if (room.participants.length !== room.maxPlayers) {
-      throw new ConflictException('Room is not full');
-    }
-
-    if (!room.participants.every((item) => item.isReady)) {
-      throw new ConflictException('All participants must be ready');
-    }
+    this.assertStartable(room);
 
     await this.prisma.gameRoom.update({
       where: { id: roomId },
@@ -409,6 +407,7 @@ export class RoomsService {
       hostName: this.userName(room.host),
       maxPlayers: room.maxPlayers,
       status: this.toStatusResponse(room.status),
+      mode: this.toModeResponse(room.mode),
       settingsSnapshot: room.settingsSnapshot,
       createdAt: room.createdAt,
       updatedAt: room.updatedAt,
@@ -432,10 +431,40 @@ export class RoomsService {
     throw new BadRequestException('Invalid room status');
   }
 
+  private toRoomMode(mode: string) {
+    if (mode === 'online') return RoomMode.ONLINE;
+    if (mode === 'local_cpu') return RoomMode.LOCAL_CPU;
+    throw new BadRequestException('Invalid room mode');
+  }
+
   private toStatusResponse(status: RoomStatus): RoomStatusResponse {
     if (status === RoomStatus.WAITING) return 'waiting';
     if (status === RoomStatus.PLAYING) return 'playing';
     return 'finished';
+  }
+
+  private toModeResponse(mode: RoomMode): RoomModeResponse {
+    if (mode === RoomMode.LOCAL_CPU) return 'local_cpu';
+    return 'online';
+  }
+
+  private assertStartable(room: RoomWithParticipants) {
+    if (room.mode === RoomMode.LOCAL_CPU) {
+      if (room.participants.length !== 1) {
+        throw new ConflictException(
+          'Local CPU rooms must have exactly one human player',
+        );
+      }
+      return;
+    }
+
+    if (room.participants.length !== room.maxPlayers) {
+      throw new ConflictException('Room is not full');
+    }
+
+    if (!room.participants.every((item) => item.isReady)) {
+      throw new ConflictException('All participants must be ready');
+    }
   }
 
   private userName(user: { email: string; displayName: string | null }) {
