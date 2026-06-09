@@ -49,7 +49,7 @@ describe('AuthService', () => {
   describe('signUp', () => {
     const signUpDto = {
       email: 'new@example.com',
-      username: 'takato',
+      username: 'userA',
       password: 'password123',
     };
 
@@ -119,7 +119,7 @@ describe('AuthService', () => {
     const dbUser = {
       id: 'user-uuid-999',
       email: 'login@example.com',
-      username: 'takato',
+      username: 'userA',
       passwordHash: 'hashed_password_in_db',
     };
 
@@ -132,7 +132,7 @@ describe('AuthService', () => {
     it('【正常系】ユーザー名（username）を入力してパスワードが一致すれば、アクセストークンを返すこと', async () => {
       // ➔ ユーザーネームが入力されたケース
       const signInWithUsernameDto = {
-        identifier: 'takato',
+        identifier: 'userA',
         password: 'password123',
       };
       mockPrismaService.user.findFirst.mockResolvedValue(dbUser);
@@ -191,7 +191,7 @@ describe('AuthService', () => {
     });
 
     it('【異常系】パスワードが一致しない場合、UnauthorizedExceptionを投げること', async () => {
-      const signInDto = { identifier: 'takato', password: 'wrong_password' };
+      const signInDto = { identifier: 'userA', password: 'wrong_password' };
       mockPrismaService.user.findFirst.mockResolvedValue(dbUser);
       (bcrypt.compare as jest.Mock).mockResolvedValue(false); // パスワード不一致！
 

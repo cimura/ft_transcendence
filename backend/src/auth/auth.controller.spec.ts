@@ -37,7 +37,7 @@ describe('AuthController', () => {
   it('should pass data to authService.signUp', async () => {
     const dto: SignUpRequestDto = {
       email: 'test@example.com',
-      username: 'takato', // username を追加
+      username: 'userA', // username を追加
       password: 'password123',
     };
     const result = await controller.signUp(dto);
