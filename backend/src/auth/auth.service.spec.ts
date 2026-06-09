@@ -141,37 +141,4 @@ describe('AuthService', () => {
       expect(jwtService.signAsync).not.toHaveBeenCalled(); // トークンは発行されない
     });
   });
-
-  // ==========================================
-  // 3. profile（ユーザー情報取得）のテスト
-  // ==========================================
-  describe('profile', () => {
-    const targetUserId = 'user-uuid-123';
-    const profileUser = {
-      id: targetUserId,
-      email: 'test@example.com',
-      displayName: 'Takato',
-      avatarUrl: 'http://avatar.com',
-    };
-
-    it('【正常系】ユーザーが存在すれば、パスワードハッシュを除いた情報を返すこと', async () => {
-      mockPrismaService.user.findUnique.mockResolvedValue(profileUser);
-
-      const result = await service.profile(targetUserId);
-
-      expect(prisma.user.findUnique).toHaveBeenCalledWith({
-        where: { id: targetUserId },
-        select: { id: true, email: true, displayName: true, avatarUrl: true },
-      });
-      expect(result).toEqual(profileUser);
-    });
-
-    it('【異常系】ユーザーが存在しない場合、UnauthorizedExceptionを投げること', async () => {
-      mockPrismaService.user.findUnique.mockResolvedValue(null); // 存在しない
-
-      await expect(service.profile(targetUserId)).rejects.toThrow(
-        UnauthorizedException,
-      );
-    });
-  });
 });

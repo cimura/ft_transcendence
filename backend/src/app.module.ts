@@ -8,6 +8,8 @@ import { PrismaService } from './prisma.service';
 import { UploadsModule } from './uploads/uploads.module';
 import { UsersModule } from './users/users.module';
 import { FriendsModule } from './friends/friends.module';
+import { GamesModule } from './games/games.module';
+import { RoomsModule } from './rooms/rooms.module';
 
 @Module({
   imports: [
@@ -19,6 +21,8 @@ import { FriendsModule } from './friends/friends.module';
     UploadsModule,
     UsersModule,
     FriendsModule,
+    GamesModule,
+    RoomsModule,
   ],
   controllers: [AppController],
   providers: [AppService, PrismaService],
