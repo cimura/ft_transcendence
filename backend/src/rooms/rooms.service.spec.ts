@@ -1,5 +1,5 @@
 import { ConflictException } from '@nestjs/common';
-import { RoomStatus } from '../generated/prisma/enums';
+import { RoomMode, RoomStatus } from '../generated/prisma/enums';
 import { PrismaService } from '../prisma.service';
 import { bombermanGame } from '../games/games.constants';
 import { GamesService } from '../games/games.service';
@@ -26,6 +26,7 @@ const createRoom = (
     id: string;
     maxPlayers: number;
     status: RoomStatus;
+    mode: RoomMode;
     participants: Array<{
       userId: string;
       isHost: boolean;
@@ -41,6 +42,7 @@ const createRoom = (
   hostId: user.id,
   maxPlayers: overrides.maxPlayers ?? 2,
   status: overrides.status ?? RoomStatus.WAITING,
+  mode: overrides.mode ?? RoomMode.ONLINE,
   settingsSnapshot: bombermanGame.settings,
   createdAt: now,
   updatedAt: now,
@@ -109,6 +111,7 @@ describe('RoomsService', () => {
         data: expect.objectContaining({
           name: 'Test Room',
           hostId: user.id,
+          mode: RoomMode.ONLINE,
           settingsSnapshot: bombermanGame.settings,
           participants: {
             create: {
@@ -123,6 +126,7 @@ describe('RoomsService', () => {
     expect(result).toEqual(
       expect.objectContaining({
         id: room.id,
+        mode: 'online',
         status: 'waiting',
         players: [
           expect.objectContaining({
@@ -142,6 +146,27 @@ describe('RoomsService', () => {
       ConflictException,
     );
     expect(prisma.gameRoom.update).not.toHaveBeenCalled();
+  });
+
+  it('creates a local CPU room when requested', async () => {
+    const room = createRoom({ mode: RoomMode.LOCAL_CPU, maxPlayers: 4 });
+    prisma.gameRoom.create.mockResolvedValue(room);
+
+    const result = await service.create(user.id, {
+      name: 'CPU Practice',
+      gameId: 'bomberman',
+      maxPlayers: 4,
+      mode: 'local_cpu',
+    });
+
+    expect(prisma.gameRoom.create).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({
+          mode: RoomMode.LOCAL_CPU,
+        }),
+      }),
+    );
+    expect(result.mode).toBe('local_cpu');
   });
 
   it('starts when the host requests it and all participants are ready', async () => {
@@ -182,6 +207,60 @@ describe('RoomsService', () => {
     expect(result.status).toBe('playing');
   });
 
+  it('starts a local CPU room with only the host participant', async () => {
+    const waitingRoom = createRoom({
+      mode: RoomMode.LOCAL_CPU,
+      maxPlayers: 4,
+    });
+    const playingRoom = { ...waitingRoom, status: RoomStatus.PLAYING };
+    prisma.gameRoom.findUnique
+      .mockResolvedValueOnce(waitingRoom)
+      .mockResolvedValueOnce(playingRoom);
+    prisma.gameRoom.update.mockResolvedValue(playingRoom);
+
+    const result = await service.start('room-1', user.id);
+
+    expect(prisma.gameRoom.update).toHaveBeenCalledWith({
+      where: { id: 'room-1' },
+      data: {
+        status: RoomStatus.PLAYING,
+        startedAt: expect.any(Date),
+      },
+    });
+    expect(result.status).toBe('playing');
+    expect(result.mode).toBe('local_cpu');
+  });
+
+  it('does not start a local CPU room after another human has joined', async () => {
+    prisma.gameRoom.findUnique.mockResolvedValue(
+      createRoom({
+        mode: RoomMode.LOCAL_CPU,
+        maxPlayers: 4,
+        participants: [
+          {
+            userId: user.id,
+            isHost: true,
+            isReady: true,
+            joinedAt: now,
+            user,
+          },
+          {
+            userId: guest.id,
+            isHost: false,
+            isReady: true,
+            joinedAt: now,
+            user: guest,
+          },
+        ],
+      }),
+    );
+
+    await expect(service.start('room-1', user.id)).rejects.toThrow(
+      ConflictException,
+    );
+    expect(prisma.gameRoom.update).not.toHaveBeenCalled();
+  });
+
   it('escapes chat content and prunes messages beyond the latest 50', async () => {
     const room = createRoom();
     prisma.gameRoom.findUnique.mockResolvedValue(room);
@@ -201,7 +280,10 @@ describe('RoomsService', () => {
         deleteMany: jest.fn(),
       },
     };
-    prisma.$transaction.mockImplementation((callback) => callback(tx));
+    prisma.$transaction.mockImplementation(
+      async (callback: (transaction: typeof tx) => Promise<unknown>) =>
+        callback(tx),
+    );
 
     const result = await service.createMessage(room.id, user.id, {
       content: '<b>hello</b>',

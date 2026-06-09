@@ -61,6 +61,11 @@ enum RoomStatus {
   FINISHED
 }
 
+enum RoomMode {
+  ONLINE
+  LOCAL_CPU
+}
+
 model GameRoom {
   id               String     @id @default(uuid())
   gameId           String
@@ -68,6 +73,7 @@ model GameRoom {
   hostId           String
   maxPlayers       Int
   status           RoomStatus @default(WAITING)
+  mode             RoomMode   @default(ONLINE)
   settingsSnapshot Json
   createdAt        DateTime   @default(now())
   updatedAt        DateTime   @updatedAt
@@ -81,6 +87,7 @@ model GameRoom {
   @@index([gameId])
   @@index([hostId])
   @@index([status])
+  @@index([mode])
 }
 
 model RoomParticipant {
