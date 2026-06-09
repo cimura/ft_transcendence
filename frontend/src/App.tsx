@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import SignIn from './components/SignIn'
-import Signup from './components/Signup'
+import Signup from './components/SignUp'
 import {
   BrowserRouter,
   Navigate,
