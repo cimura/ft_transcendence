@@ -1,5 +1,6 @@
 import api from './client'
 import axios from 'axios'
+import type { User } from '../types/user'
 
 export type AuthErrorType =
   | 'INVALID_CREDENTIALS' // ログイン失敗（401）
@@ -9,13 +10,19 @@ export type AuthErrorType =
   | 'UNKNOWN'
 
 export class AuthApiError extends Error {
+  public type: AuthErrorType
+  public fields: ('email' | 'username')[]
+
   constructor(
-    public type: AuthErrorType,
+    type: AuthErrorType,
     message: string,
-    public fields: ('email' | 'username')[] = [] // 409用の被ったフィールド情報
+    fields: ('email' | 'username')[] = []
   ) {
     super(message)
     this.name = 'AuthApiError'
+
+    this.type = type
+    this.fields = fields
 
     Object.setPrototypeOf(this, AuthApiError.prototype)
   }
@@ -86,4 +93,40 @@ export const signInApi = async (data: {
     }
     throw new AuthApiError('UNKNOWN', '予期せぬエラーが発生しました。')
   }
+}
+
+// ----- ここから下はバックエンドと未接続 -----
+
+/**
+ * Get current logged-in user
+ * @returns Promise<User> Current user data
+ */
+export const getCurrentUser = async (): Promise<User> => {
+  // モックデータを返す（実際のAPIエンドポイントは未実装）
+  return new Promise((resolve) => {
+    setTimeout(() => {
+      resolve({
+        id: 'current-user-id',
+        email: 'me@example.com',
+        username: 'current_user',
+        displayName: 'Current User',
+        avatarUrl: '/avatars/default-1.svg',
+        isGuest: false,
+        createdAt: new Date('2024-01-01'),
+        updatedAt: new Date(),
+      })
+    }, 300)
+  })
+
+  // 実際のAPI実装時はこちらを使用
+  // const response = await api.get<User>('/api/auth/me')
+  // return response.data
+}
+
+/**
+ * Logout current user
+ * @returns Promise<void>
+ */
+export const logout = async (): Promise<void> => {
+  await api.post('/api/auth/logout')
 }
