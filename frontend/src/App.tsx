@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react' // ★ useEffect を追加
+import { useState, useEffect } from 'react'
 import SignIn from './components/SignIn'
 import Signup from './components/Signup'
 import {
@@ -12,8 +12,6 @@ import {
 import { Lobby } from './pages/Lobby'
 import { WaitingRoom } from './pages/WaitingRoom'
 import { Home } from './pages/Home'
-
-type AuthView = 'SignIn' | 'signup'
 
 function App() {
   return (
