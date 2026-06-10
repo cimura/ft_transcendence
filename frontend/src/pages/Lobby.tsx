@@ -12,7 +12,7 @@ type FilterType = 'all' | 'waiting' | 'playing' | 'finished'
 
 export function Lobby() {
   const navigate = useNavigate()
-  const { rooms } = useLobbyStore()
+  const { rooms, setCurrentRoom, upsertRoom } = useLobbyStore()
   const [filter, setFilter] = useState<FilterType>('waiting')
   const [isModalOpen, setIsModalOpen] = useState(false)
 
@@ -29,12 +29,55 @@ export function Lobby() {
   // create rooms
   const handleCreateRoom = (dto: CreateRoomDto) => {
     console.log('create rooms...', dto)
-    // TODO: バックエンドと接続
+    const room = {
+      id: `local-${Date.now()}`,
+      name: dto.name,
+      hostId: '0',
+      hostName: 'current_user',
+      players: [
+        {
+          userId: '0',
+          username: 'current_user',
+          isReady: true,
+          isHost: true,
+        },
+      ],
+      maxPlayers: dto.maxPlayers,
+      status: 'waiting' as const,
+      mapId: dto.mapId,
+      createdAt: new Date(),
+    }
+
+    upsertRoom(room)
+    setCurrentRoom(room)
+    setIsModalOpen(false)
+    navigate(`/room/${room.id}`)
   }
   // join rooms
   const handleJoinRoom = (roomId: string) => {
     console.log('join rooms...', roomId)
-    // TODO: バックエンドと接続
+    const room = rooms.find((r) => r.id === roomId)
+    if (!room) return
+
+    const joinedRoom = {
+      ...room,
+      players: room.players.some((player) => player.userId === '0')
+        ? room.players
+        : [
+            ...room.players,
+            {
+              userId: '0',
+              username: 'current_user',
+              isReady: false,
+              isHost: false,
+            },
+          ],
+    }
+
+    upsertRoom(joinedRoom)
+    setCurrentRoom(joinedRoom)
+    navigate(`/room/${roomId}`)
+    // TODO: バックエンド接続後は socket.emit('room:join', { roomId }) に置き換える
   }
   return (
     <div className="min-h-screen bg-gray-100">
