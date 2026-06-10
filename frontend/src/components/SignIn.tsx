@@ -1,15 +1,21 @@
+import axios from 'axios'
 import { useState } from 'react'
+import { useAuthStore } from '../stores/authStore'
 
 interface SignInProps {
   onSignInSuccess: () => void
   onSwitchToSignup: () => void
 }
 
+const isBackendUnavailable = (error: unknown) =>
+  axios.isAxiosError(error) && !error.response
+
 export default function SignIn({
   onSignInSuccess,
   onSwitchToSignup,
 }: SignInProps) {
   const [error, setError] = useState('')
+  const { signIn, setCurrentUser, setAccessToken } = useAuthStore()
 
   const handleSignIn = async (formData: FormData) => {
     const identifier = formData.get('identifier') as string
@@ -18,17 +24,30 @@ export default function SignIn({
     console.log('SignIn attempt: ', { identifier, password })
     try {
       setError('')
-      // TODO: backend API（バックエンドと繋げたら実装）
-      // const response = await fetch('/api/auth/signin', {
-      //   method: 'POST',
-      //   headers: { 'Content-Type': 'application/json' },
-      //   body: JSON.stringify({ identifier, password })
-      // })
-
-      // 仮の成功
+      await signIn(identifier, password)
       console.log('SignIn successful: ', { identifier })
       onSignInSuccess()
-    } catch {
+    } catch (error) {
+      const shouldUseMockAuth =
+        import.meta.env.DEV && isBackendUnavailable(error)
+
+      if (shouldUseMockAuth) {
+        setCurrentUser({
+          id: 'current-user-id',
+          email: identifier,
+          username: 'current_user',
+          displayName: 'Current User',
+          avatarUrl: '/avatars/default-1.svg',
+          isGuest: false,
+          createdAt: new Date('2024-01-01'),
+          updatedAt: new Date(),
+        })
+        setAccessToken(null)
+        console.warn('SignIn backend unavailable. Using mock auth.', error)
+        onSignInSuccess()
+        return
+      }
+
       setError('ログインに失敗しました')
     }
   }

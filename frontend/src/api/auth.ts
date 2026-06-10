@@ -1,5 +1,5 @@
 import axios from 'axios'
-import type { User } from '../types/user'
+import type { LoginCredentials, User } from '../types/user'
 
 /**
  * Axios instance for API requests
@@ -9,6 +9,25 @@ const api = axios.create({
   baseURL: import.meta.env.VITE_API_URL || 'http://localhost:4000',
   withCredentials: true,
 })
+
+export interface SignInResponse {
+  accessToken: string
+}
+
+/**
+ * Sign in with backend auth API.
+ * VITE_API_URL should include the backend global prefix, for example:
+ * http://localhost:3000/api
+ */
+export const signIn = async (
+  credentials: LoginCredentials
+): Promise<SignInResponse> => {
+  const response = await api.post<SignInResponse>('/auth/signin', {
+    email: credentials.email,
+    password: credentials.password,
+  })
+  return response.data
+}
 
 /**
  * Get current logged-in user
