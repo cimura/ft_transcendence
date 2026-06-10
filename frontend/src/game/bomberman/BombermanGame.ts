@@ -14,6 +14,7 @@ import {
 import {
   calculateBlastCells,
   directionToVector,
+  getCollisionCells,
   gridToWorld,
   isBlockedCell,
   isColliding,
@@ -302,7 +303,9 @@ export class BombermanGame {
     const playerBomb = this.state.bombs.find(
       (bomb) =>
         bomb.ownerId === player.id &&
-        sameCell(bomb.position, worldToGrid(player.position))
+        getCollisionCells(player.position).some((cell) =>
+          sameCell(bomb.position, cell)
+        )
     )
 
     if (!isColliding(this.state.map, nextX, this.state.bombs, playerBomb?.id)) {

@@ -7,6 +7,10 @@ import type {
   WorldPosition,
 } from './bombermanTypes'
 
+const PLAYER_COLLISION_RADIUS = 0.32
+const MAP_MIN_WORLD_POSITION = -0.2
+const MAP_MAX_WORLD_POSITION = BOMBERMAN_GRID_SIZE - 0.8
+
 const directionVectors: Record<Direction, { x: number; z: number }> = {
   up: { x: 0, z: -1 },
   down: { x: 0, z: 1 },
@@ -49,6 +53,29 @@ export const isBlockedCell = (
   getTile(map, position) !== 'empty' ||
   bombs.some((bomb) => sameCell(bomb.position, position))
 
+export const getCollisionCells = (position: WorldPosition) => {
+  const candidates = [
+    {
+      x: position.x - PLAYER_COLLISION_RADIUS,
+      z: position.z - PLAYER_COLLISION_RADIUS,
+    },
+    {
+      x: position.x + PLAYER_COLLISION_RADIUS,
+      z: position.z - PLAYER_COLLISION_RADIUS,
+    },
+    {
+      x: position.x - PLAYER_COLLISION_RADIUS,
+      z: position.z + PLAYER_COLLISION_RADIUS,
+    },
+    {
+      x: position.x + PLAYER_COLLISION_RADIUS,
+      z: position.z + PLAYER_COLLISION_RADIUS,
+    },
+  ]
+
+  return candidates.map(worldToGrid)
+}
+
 export const isColliding = (
   map: BombermanMap,
   position: WorldPosition,
@@ -56,23 +83,15 @@ export const isColliding = (
   ignoredBombId?: string
 ) => {
   if (
-    position.x < -0.2 ||
-    position.x > BOMBERMAN_GRID_SIZE - 0.8 ||
-    position.z < -0.2 ||
-    position.z > BOMBERMAN_GRID_SIZE - 0.8
+    position.x < MAP_MIN_WORLD_POSITION ||
+    position.x > MAP_MAX_WORLD_POSITION ||
+    position.z < MAP_MIN_WORLD_POSITION ||
+    position.z > MAP_MAX_WORLD_POSITION
   ) {
     return true
   }
 
-  const candidates = [
-    { x: position.x - 0.32, z: position.z - 0.32 },
-    { x: position.x + 0.32, z: position.z - 0.32 },
-    { x: position.x - 0.32, z: position.z + 0.32 },
-    { x: position.x + 0.32, z: position.z + 0.32 },
-  ]
-
-  return candidates.some((candidate) => {
-    const cell = worldToGrid(candidate)
+  return getCollisionCells(position).some((cell) => {
     if (getTile(map, cell) !== 'empty') return true
 
     return bombs.some((bomb) => {
