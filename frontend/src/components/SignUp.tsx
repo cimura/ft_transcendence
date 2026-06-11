@@ -28,6 +28,15 @@ export default function Signup({
       return
     }
 
+    const usernameRegex = /^[a-zA-Z0-9_-]+$/
+    if (!usernameRegex.test(username)) {
+      setFieldErrors({
+        username:
+          'Username can only contain alphanumeric characters, underscores, and hyphens.',
+      })
+      return
+    }
+
     try {
       setError('')
       setFieldErrors({})
