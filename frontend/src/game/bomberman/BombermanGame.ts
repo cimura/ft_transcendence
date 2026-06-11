@@ -40,6 +40,18 @@ type NpcBrain = {
 }
 
 const directions: Direction[] = ['up', 'down', 'left', 'right']
+const NPC_INITIAL_BOMB_DELAY_MS = 1200
+const NPC_INITIAL_BOMB_STAGGER_MS = 500
+const NPC_DECISION_INTERVAL_MS = 220
+const NPC_DECISION_JITTER_MS = 180
+const NPC_BOMB_COOLDOWN_JITTER_MS = 500
+const NPC_COLLISION_PROBE_DISTANCE = 0.45
+const NPC_TARGET_REACHED_DISTANCE = 0.06
+const DEFAULT_SPEED_MULTIPLIER = 1
+const SAFE_PATH_MAX_STEPS = 5
+const CHASE_PATH_MAX_STEPS = 12
+const CHASE_STOP_DISTANCE = 1
+const CHASE_PATH_RETURN_STEPS = 3
 
 const cloneState = (state: BombermanGameState): BombermanGameState => ({
   ...state,
@@ -86,7 +98,8 @@ export class BombermanGame {
         this.npcBrains.set(player.id, {
           direction: directions[index % directions.length],
           nextDecisionAt: 0,
-          nextBombAt: 1200 + index * 500,
+          nextBombAt:
+            NPC_INITIAL_BOMB_DELAY_MS + index * NPC_INITIAL_BOMB_STAGGER_MS,
           path: [],
           escapingBombId: null,
         })
@@ -147,7 +160,10 @@ export class BombermanGame {
 
         if (elapsedMs >= brain.nextDecisionAt) {
           this.updateNpcDecision(npc, localPlayer, brain, elapsedMs)
-          brain.nextDecisionAt = elapsedMs + 220 + Math.random() * 180
+          brain.nextDecisionAt =
+            elapsedMs +
+            NPC_DECISION_INTERVAL_MS +
+            Math.random() * NPC_DECISION_JITTER_MS
         }
 
         this.moveNpcAlongPath(npc, brain, deltaTime)
@@ -210,7 +226,10 @@ export class BombermanGame {
 
       brain.escapingBombId = placedBomb.id
       brain.path = this.findSafePath(npcCell, placedBomb.id)
-      brain.nextBombAt = elapsedMs + NPC_BOMB_COOLDOWN_MS + Math.random() * 500
+      brain.nextBombAt =
+        elapsedMs +
+        NPC_BOMB_COOLDOWN_MS +
+        Math.random() * NPC_BOMB_COOLDOWN_JITTER_MS
       return
     }
 
@@ -241,8 +260,8 @@ export class BombermanGame {
       candidates.find((direction) => {
         const vector = directionToVector(direction)
         const next = {
-          x: npc.position.x + vector.x * 0.45,
-          z: npc.position.z + vector.z * 0.45,
+          x: npc.position.x + vector.x * NPC_COLLISION_PROBE_DISTANCE,
+          z: npc.position.z + vector.z * NPC_COLLISION_PROBE_DISTANCE,
         }
         return !isColliding(this.state.map, next, this.state.bombs)
       }) ?? preferred
@@ -264,7 +283,7 @@ export class BombermanGame {
     const dx = targetWorld.x - npc.position.x
     const dz = targetWorld.z - npc.position.z
 
-    if (Math.hypot(dx, dz) < 0.06) {
+    if (Math.hypot(dx, dz) < NPC_TARGET_REACHED_DISTANCE) {
       npc.position = targetWorld
       brain.path.shift()
       return
@@ -287,7 +306,7 @@ export class BombermanGame {
     player: BombermanPlayer,
     direction: Direction,
     deltaTime: number,
-    speedMultiplier = 1
+    speedMultiplier = DEFAULT_SPEED_MULTIPLIER
   ) {
     const vector = directionToVector(direction)
     const distance = PLAYER_SPEED * speedMultiplier * deltaTime
@@ -472,7 +491,7 @@ export class BombermanGame {
         return current.path
       }
 
-      if (current.path.length >= 5) continue
+      if (current.path.length >= SAFE_PATH_MAX_STEPS) continue
 
       directions.forEach((direction) => {
         const vector = directionToVector(direction)
@@ -511,7 +530,12 @@ export class BombermanGame {
         best = { path: current.path, score }
       }
 
-      if (score <= 1 || current.path.length >= 12) continue
+      if (
+        score <= CHASE_STOP_DISTANCE ||
+        current.path.length >= CHASE_PATH_MAX_STEPS
+      ) {
+        continue
+      }
 
       directions.forEach((direction) => {
         const vector = directionToVector(direction)
@@ -537,7 +561,7 @@ export class BombermanGame {
       })
     }
 
-    return best.path.slice(0, 3)
+    return best.path.slice(0, CHASE_PATH_RETURN_STEPS)
   }
 
   private canWalkCell(cell: GridPosition, ignoredBombId?: string) {

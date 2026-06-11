@@ -15,6 +15,8 @@ type GameCanvasProps = {
   onStateChange?: (state: BombermanGameState) => void
 }
 
+const BOMB_HIGHLIGHT_DURATION_MS = 180
+
 export function GameCanvas({ onInput, onStateChange }: GameCanvasProps) {
   const game = useMemo(() => new BombermanGame(), [])
   const inputManagerRef = useRef<InputManager | null>(null)
@@ -38,7 +40,7 @@ export function GameCanvas({ onInput, onStateChange }: GameCanvasProps) {
     bombHighlightTimeoutRef.current = window.setTimeout(() => {
       setActiveControl(null)
       bombHighlightTimeoutRef.current = null
-    }, 180)
+    }, BOMB_HIGHLIGHT_DURATION_MS)
   }, [clearBombHighlightTimeout])
 
   const handleInputState = useCallback(
