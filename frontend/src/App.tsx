@@ -12,6 +12,11 @@ import {
 import { Lobby } from './pages/Lobby'
 import { WaitingRoom } from './pages/WaitingRoom'
 import { GameRoomPage } from './pages/GameRoomPage'
+import { FriendsMenuPage } from './pages/friends/FriendsMenuPage'
+import { FriendsListPage } from './pages/friends/FriendsListPage'
+import { FriendRequestsPage } from './pages/friends/FriendRequestsPage'
+import { UserSearchPage } from './pages/friends/UserSearchPage'
+import { ProfilePage } from './pages/ProfilePage'
 import { Home } from './pages/Home'
 
 function App() {
