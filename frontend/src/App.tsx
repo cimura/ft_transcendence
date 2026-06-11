@@ -11,6 +11,7 @@ import {
 } from 'react-router-dom'
 import { Lobby } from './pages/Lobby'
 import { WaitingRoom } from './pages/WaitingRoom'
+import { GameRoomPage } from './pages/GameRoomPage'
 import { Home } from './pages/Home'
 
 function App() {
@@ -88,6 +89,17 @@ function AppRoutes() {
       <Route path="/home" element={<Home />} />
       <Route path="/lobby" element={<Lobby />} />
       <Route path="/room/:roomId" element={<WaitingRoom />} />
+      <Route path="/game/:roomId" element={<GameRoomPage />} />
+
+      {/* フレンド機能 */}
+      <Route path="/friends" element={<FriendsMenuPage />} />
+      <Route path="/friends/list" element={<FriendsListPage />} />
+      <Route path="/friends/requests" element={<FriendRequestsPage />} />
+      <Route path="/friends/search" element={<UserSearchPage />} />
+
+      {/* プロフィール */}
+      <Route path="/profile/:userId" element={<ProfilePage />} />
+
       {/* 以下は後で実装 */}
       <Route
         path="/friends"
