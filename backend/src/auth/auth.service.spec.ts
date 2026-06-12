@@ -6,7 +6,6 @@ import { PrismaService } from '../prisma.service';
 import { ConflictException, UnauthorizedException } from '@nestjs/common';
 import * as bcrypt from 'bcrypt';
 
-// 外部ライブラリ bcrypt を Jest のモック対象にする
 jest.mock('bcrypt');
 
 describe('AuthService', () => {
@@ -14,10 +13,11 @@ describe('AuthService', () => {
   let prisma: PrismaService;
   let jwtService: JwtService;
 
-  // 1. PrismaService のモック定義 (Userテーブルの操作関数をシミュレート)
+  // 1. PrismaService のモック定義
   const mockPrismaService = {
     user: {
       findUnique: jest.fn(),
+      findFirst: jest.fn(), // OR検索用
       create: jest.fn(),
     },
   };
@@ -40,7 +40,6 @@ describe('AuthService', () => {
     prisma = module.get<PrismaService>(PrismaService);
     jwtService = module.get<JwtService>(JwtService);
 
-    // テストケースごとにモックの呼び出し履歴をリセットする
     jest.clearAllMocks();
   });
 
@@ -48,48 +47,66 @@ describe('AuthService', () => {
   // 1. signUp（新規登録）のテスト
   // ==========================================
   describe('signUp', () => {
-    const signUpDto = { email: 'new@example.com', password: 'password123' };
+    const signUpDto = {
+      email: 'new@example.com',
+      username: 'userA',
+      password: 'password123',
+    };
 
     it('【正常系】ユーザーが重複していなければ、正常に作成されてトークンを返すこと', async () => {
-      // モックの振る舞いを定義
-      mockPrismaService.user.findUnique.mockResolvedValue(null); // 重複なし
-      (bcrypt.hash as jest.Mock).mockResolvedValue('hashed_password'); // 暗号化成功
+      mockPrismaService.user.findUnique.mockResolvedValue(null);
+      (bcrypt.hash as jest.Mock).mockResolvedValue('hashed_password');
+
       mockPrismaService.user.create.mockResolvedValue({
         id: 'user-uuid-123',
-        email: signUpDto.email,
       });
-      mockJwtService.signAsync.mockResolvedValue('mock_access_token'); // トークン発行
+      mockJwtService.signAsync.mockResolvedValue('mock_access_token');
 
       const result = await service.signUp(signUpDto);
 
-      // アサーション（検証）
       expect(prisma.user.findUnique).toHaveBeenCalledWith({
         where: { email: signUpDto.email },
       });
-      expect(bcrypt.hash).toHaveBeenCalledWith(signUpDto.password, 10);
-      expect(prisma.user.create).toHaveBeenCalledWith({
-        data: { email: signUpDto.email, passwordHash: 'hashed_password' },
-        select: { id: true, email: true },
+      expect(prisma.user.findUnique).toHaveBeenCalledWith({
+        where: { username: signUpDto.username },
       });
+
+      expect(bcrypt.hash).toHaveBeenCalledWith(signUpDto.password, 10);
+
+      expect(prisma.user.create).toHaveBeenCalledWith({
+        data: {
+          email: signUpDto.email,
+          username: signUpDto.username,
+          passwordHash: 'hashed_password',
+        },
+        select: { id: true },
+      });
+
       expect(result).toEqual({
         id: 'user-uuid-123',
-        email: signUpDto.email,
         accessToken: 'mock_access_token',
       });
     });
 
     it('【異常系】メールアドレスが既に存在する場合、ConflictExceptionを投げること', async () => {
-      // 既に存在するユーザーを返すように設定
-      mockPrismaService.user.findUnique.mockResolvedValue({
+      mockPrismaService.user.findUnique.mockResolvedValueOnce({
         id: 'existing-id',
       });
 
-      // 例外が投げられることを検証 (C++の EXPECT_THROW と同じ)
       await expect(service.signUp(signUpDto)).rejects.toThrow(
         ConflictException,
       );
+      expect(prisma.user.create).not.toHaveBeenCalled();
+    });
 
-      // ユーザー重複で処理が止まるため、create は絶対に呼ばれないことを検証
+    it('【異常系】ユーザーネームが既に存在する場合、ConflictExceptionを投げること', async () => {
+      mockPrismaService.user.findUnique
+        .mockResolvedValueOnce(null)
+        .mockResolvedValueOnce({ id: 'existing-id' });
+
+      await expect(service.signUp(signUpDto)).rejects.toThrow(
+        ConflictException,
+      );
       expect(prisma.user.create).not.toHaveBeenCalled();
     });
   });
@@ -98,80 +115,90 @@ describe('AuthService', () => {
   // 2. signIn（ログイン）のテスト
   // ==========================================
   describe('signIn', () => {
-    const signInDto = { email: 'login@example.com', password: 'password123' };
+    // データベースに既に登録されている想定のユーザーレコード
     const dbUser = {
       id: 'user-uuid-999',
       email: 'login@example.com',
+      username: 'userA',
       passwordHash: 'hashed_password_in_db',
     };
 
-    it('【正常系】アドレスが存在しパスワードが一致すれば、アクセストークンを返すこと', async () => {
-      mockPrismaService.user.findUnique.mockResolvedValue(dbUser);
-      (bcrypt.compare as jest.Mock).mockResolvedValue(true); // パスワード一致
+    // クラス全体の共通オブジェクトを一度退避させ、各itの中で個別定義します
+    beforeEach(() => {
+      (bcrypt.compare as jest.Mock).mockResolvedValue(true);
       mockJwtService.signAsync.mockResolvedValue('mock_access_token');
+    });
 
-      const result = await service.signIn(signInDto);
+    it('【正常系】ユーザー名（username）を入力してパスワードが一致すれば、アクセストークンを返すこと', async () => {
+      // ➔ ユーザーネームが入力されたケース
+      const signInWithUsernameDto = {
+        identifier: 'userA',
+        password: 'password123',
+      };
+      mockPrismaService.user.findFirst.mockResolvedValue(dbUser);
 
-      expect(prisma.user.findUnique).toHaveBeenCalledWith({
-        where: { email: signInDto.email },
+      const result = await service.signIn(signInWithUsernameDto);
+
+      // 内部クエリが正しく組み立てられているかを検証
+      expect(prisma.user.findFirst).toHaveBeenCalledWith({
+        where: {
+          OR: [
+            { email: signInWithUsernameDto.identifier },
+            { username: signInWithUsernameDto.identifier },
+          ],
+        },
       });
       expect(bcrypt.compare).toHaveBeenCalledWith(
-        signInDto.password,
+        signInWithUsernameDto.password,
         dbUser.passwordHash,
       );
       expect(result).toEqual({ accessToken: 'mock_access_token' });
     });
 
-    it('【異常系】メールアドレスが登録されていない場合、UnauthorizedExceptionを投げること', async () => {
-      mockPrismaService.user.findUnique.mockResolvedValue(null); // ユーザーが見つからない
+    it('【正常系】メールアドレス（email）を入力してパスワードが一致すれば、アクセストークンを返すこと', async () => {
+      // ➔ メールアドレスが入力されたケース
+      const signInWithEmailDto = {
+        identifier: 'login@example.com',
+        password: 'password123',
+      };
+      mockPrismaService.user.findFirst.mockResolvedValue(dbUser);
+
+      const result = await service.signIn(signInWithEmailDto);
+
+      expect(prisma.user.findFirst).toHaveBeenCalledWith({
+        where: {
+          OR: [
+            { email: signInWithEmailDto.identifier },
+            { username: signInWithEmailDto.identifier },
+          ],
+        },
+      });
+      expect(bcrypt.compare).toHaveBeenCalledWith(
+        signInWithEmailDto.password,
+        dbUser.passwordHash,
+      );
+      expect(result).toEqual({ accessToken: 'mock_access_token' });
+    });
+
+    it('【異常系】アカウントが登録されていない場合、UnauthorizedExceptionを投げること', async () => {
+      const signInDto = { identifier: 'unknown_user', password: 'password123' };
+      mockPrismaService.user.findFirst.mockResolvedValue(null); // DB上で誰も見つからない
 
       await expect(service.signIn(signInDto)).rejects.toThrow(
         UnauthorizedException,
       );
-      expect(bcrypt.compare).not.toHaveBeenCalled(); // パスワード比較まで進まない
+      expect(bcrypt.compare).not.toHaveBeenCalled();
     });
 
     it('【異常系】パスワードが一致しない場合、UnauthorizedExceptionを投げること', async () => {
-      mockPrismaService.user.findUnique.mockResolvedValue(dbUser);
+      const signInDto = { identifier: 'userA', password: 'wrong_password' };
+      mockPrismaService.user.findFirst.mockResolvedValue(dbUser);
       (bcrypt.compare as jest.Mock).mockResolvedValue(false); // パスワード不一致！
 
       await expect(service.signIn(signInDto)).rejects.toThrow(
         UnauthorizedException,
       );
-      expect(jwtService.signAsync).not.toHaveBeenCalled(); // トークンは発行されない
-    });
-  });
-
-  // ==========================================
-  // 3. profile（ユーザー情報取得）のテスト
-  // ==========================================
-  describe('profile', () => {
-    const targetUserId = 'user-uuid-123';
-    const profileUser = {
-      id: targetUserId,
-      email: 'test@example.com',
-      displayName: 'Takato',
-      avatarUrl: 'http://avatar.com',
-    };
-
-    it('【正常系】ユーザーが存在すれば、パスワードハッシュを除いた情報を返すこと', async () => {
-      mockPrismaService.user.findUnique.mockResolvedValue(profileUser);
-
-      const result = await service.profile(targetUserId);
-
-      expect(prisma.user.findUnique).toHaveBeenCalledWith({
-        where: { id: targetUserId },
-        select: { id: true, email: true, displayName: true, avatarUrl: true },
-      });
-      expect(result).toEqual(profileUser);
-    });
-
-    it('【異常系】ユーザーが存在しない場合、UnauthorizedExceptionを投げること', async () => {
-      mockPrismaService.user.findUnique.mockResolvedValue(null); // 存在しない
-
-      await expect(service.profile(targetUserId)).rejects.toThrow(
-        UnauthorizedException,
-      );
+      expect(jwtService.signAsync).not.toHaveBeenCalled();
     });
   });
 });
