@@ -151,7 +151,7 @@ export function ChatPanel({
           />
           <button
             type="submit"
-            disabled={!draft.trim() || connectionStatus !== 'connected'}
+            disabled={!draft.trim()}
             className="h-10 rounded-md bg-blue-600 px-4 text-sm font-semibold text-white transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:bg-gray-300"
           >
             送信
