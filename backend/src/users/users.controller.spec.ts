@@ -2,7 +2,6 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { UsersController } from './users.controller';
 import { UsersService } from './users.service';
-import { ProfileResponseDto } from './dto/profile.dto';
 import type { UserRequest } from './interfaces/user-request.interface';
 
 describe('UsersController', () => {

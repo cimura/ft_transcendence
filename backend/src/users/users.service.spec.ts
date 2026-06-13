@@ -2,7 +2,7 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { UsersService } from './users.service';
 import { PrismaService } from '../prisma.service';
-import { UnauthorizedException, BadRequestException } from '@nestjs/common';
+import { UnauthorizedException } from '@nestjs/common';
 
 describe('UsersService', () => {
   let service: UsersService;
