@@ -3,7 +3,6 @@ import { AuthService } from './auth.service';
 import {
   ApiTags,
   ApiOperation,
-  ApiResponse,
   ApiOkResponse,
   ApiCreatedResponse,
   ApiUnauthorizedResponse,
