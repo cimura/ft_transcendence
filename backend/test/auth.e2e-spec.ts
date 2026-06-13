@@ -36,7 +36,7 @@ describe('AuthController (E2E)', () => {
       .post('/auth/signup')
       .send({
         email: 'test@example.com',
-        username: 'takato',
+        username: 'userA',
         password: 'password123',
       })
       .expect(HttpStatus.CREATED) // 201が返ることを期待
@@ -51,7 +51,7 @@ describe('AuthController (E2E)', () => {
     await prisma.user.create({
       data: {
         email: 'existing@example.com',
-        username: 'takato', // この名前を奪う
+        username: 'userA', // この名前を奪う
         passwordHash: 'dummy_hash',
       },
     });
@@ -61,7 +61,7 @@ describe('AuthController (E2E)', () => {
       .post('/auth/signup')
       .send({
         email: 'new@example.com', // emailは被っていない
-        username: 'takato', // usernameが被っている
+        username: 'userA', // usernameが被っている
         password: 'password123',
       })
       .expect(HttpStatus.CONFLICT) // 409 Conflict が返ることを期待

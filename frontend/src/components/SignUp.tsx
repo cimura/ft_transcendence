@@ -1,8 +1,5 @@
-// src/components/Signup.tsx
 import { useState } from 'react'
-import { signUpApi } from '../api/auth'
-import type { ApiConflictError } from '../api/auth'
-import axios from 'axios'
+import { signUpApi, AuthApiError } from '../api/auth'
 
 interface SignupProps {
   onSignupSuccess: () => void
@@ -31,6 +28,15 @@ export default function Signup({
       return
     }
 
+    const usernameRegex = /^[a-zA-Z0-9_-]+$/
+    if (!usernameRegex.test(username)) {
+      setFieldErrors({
+        username:
+          'Username can only contain alphanumeric characters, underscores, and hyphens.',
+      })
+      return
+    }
+
     try {
       setError('')
       setFieldErrors({})
@@ -43,19 +49,22 @@ export default function Signup({
       console.log('Signup successful!')
       onSignupSuccess()
     } catch (err) {
-      if (axios.isAxiosError(err) && err.response?.status === 409) {
-        const conflictData = err.response.data as ApiConflictError
-        const newFieldErrors: { email?: string; username?: string } = {}
-
-        if (conflictData.fields.includes('email')) {
-          newFieldErrors.email = 'This email is already registered.'
+      if (err instanceof AuthApiError) {
+        if (err.type === 'CONFLICT') {
+          const newFieldErrors: { email?: string; username?: string } = {}
+          if (err.fields.includes('email')) {
+            newFieldErrors.email = 'This email is already registered.'
+          }
+          if (err.fields.includes('username')) {
+            newFieldErrors.username = 'This username is already taken.'
+          }
+          setFieldErrors(newFieldErrors)
+          return
         }
-        if (conflictData.fields.includes('username')) {
-          newFieldErrors.username = 'This username is already taken.'
-        }
-        setFieldErrors(newFieldErrors)
+        // CONFLICT 以外のネットワークエラーや400エラーは共通枠に表示
+        setError(err.message)
       } else {
-        setError('サインアップに失敗しました。サーバー環境を確認してください。')
+        setError('システムエラーが発生しました。')
       }
     } finally {
       setLoading(false)

@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { signInApi } from '../api/auth'
+import { signInApi, AuthApiError } from '../api/auth'
 
 interface SignInProps {
   onSignInSuccess: () => void
@@ -28,7 +28,11 @@ export default function SignIn({
       console.log('SignIn successful!')
       onSignInSuccess()
     } catch (err) {
-      setError('ユーザー名、またはパスワードが正しくありません。')
+      if (err instanceof AuthApiError) {
+        setError(err.message)
+      } else {
+        setError('予期せぬエラーが発生しました。')
+      }
     } finally {
       setLoading(false)
     }

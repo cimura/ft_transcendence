@@ -1,6 +1,6 @@
-import { useState, useEffect } from 'react' // ★ useEffect を追加
+import { useState, useEffect } from 'react'
 import SignIn from './components/SignIn'
-import Signup from './components/Signup'
+import Signup from './components/SignUp'
 import {
   BrowserRouter,
   Navigate,
@@ -11,9 +11,13 @@ import {
 } from 'react-router-dom'
 import { Lobby } from './pages/Lobby'
 import { WaitingRoom } from './pages/WaitingRoom'
+import { GameRoomPage } from './pages/GameRoomPage'
+import { FriendsMenuPage } from './pages/friends/FriendsMenuPage'
+import { FriendsListPage } from './pages/friends/FriendsListPage'
+import { FriendRequestsPage } from './pages/friends/FriendRequestsPage'
+import { UserSearchPage } from './pages/friends/UserSearchPage'
+import { ProfilePage } from './pages/ProfilePage'
 import { Home } from './pages/Home'
-
-type AuthView = 'SignIn' | 'signup'
 
 function App() {
   return (
@@ -90,6 +94,17 @@ function AppRoutes() {
       <Route path="/home" element={<Home />} />
       <Route path="/lobby" element={<Lobby />} />
       <Route path="/room/:roomId" element={<WaitingRoom />} />
+      <Route path="/game/:roomId" element={<GameRoomPage />} />
+
+      {/* フレンド機能 */}
+      <Route path="/friends" element={<FriendsMenuPage />} />
+      <Route path="/friends/list" element={<FriendsListPage />} />
+      <Route path="/friends/requests" element={<FriendRequestsPage />} />
+      <Route path="/friends/search" element={<UserSearchPage />} />
+
+      {/* プロフィール */}
+      <Route path="/profile/:userId" element={<ProfilePage />} />
+
       {/* 以下は後で実装 */}
       <Route
         path="/friends"

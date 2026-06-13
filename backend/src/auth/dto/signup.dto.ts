@@ -1,4 +1,10 @@
-import { IsEmail, IsNotEmpty, IsString, MinLength } from 'class-validator';
+import {
+  IsEmail,
+  IsNotEmpty,
+  IsString,
+  MinLength,
+  Matches,
+} from 'class-validator';
 import { ApiProperty } from '@nestjs/swagger';
 
 export class SignUpRequestDto {
@@ -18,6 +24,10 @@ export class SignUpRequestDto {
     description: 'ユーザーの名前（ユニーク）',
   })
   @IsNotEmpty({ message: 'Username is required.' })
+  @Matches(/^[a-zA-Z0-9_-]+$/, {
+    message:
+      'Username can only contain alphanumeric characters, underscores, and hyphens (no symbols like @).',
+  })
   username: string;
 
   @ApiProperty({
