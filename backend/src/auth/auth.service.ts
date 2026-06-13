@@ -6,9 +6,10 @@ import {
 import { JwtService } from '@nestjs/jwt';
 import { PrismaService } from '../prisma.service';
 import {
-  SignUpConflictResponseDto,
+  SignUpDuplicateField,
   SignUpRequestDto,
   SignUpResponseDto,
+  SignUpConflictResponseDto,
 } from './dto/signup.dto';
 import { SignInRequestDto, SignInResponseDto } from './dto/signin.dto';
 import * as bcrypt from 'bcrypt';
@@ -22,21 +23,21 @@ export class AuthService {
 
   // 1. サインアップ（新規登録）
   async signUp(dto: SignUpRequestDto): Promise<SignUpResponseDto> {
-    const duplicateFields: string[] = [];
+    const duplicateFields: SignUpDuplicateField[] = [];
 
     // 重複チェック: すでに同じメールアドレスが存在するか
     const existingEmail = await this.prisma.user.findUnique({
       where: { email: dto.email },
     });
     if (existingEmail) {
-      duplicateFields.push('email');
+      duplicateFields.push(SignUpDuplicateField.EMAIL);
     }
     // 重複チェック: すでに同じユーザーネームが存在するか
     const existingUsername = await this.prisma.user.findUnique({
       where: { username: dto.username },
     });
     if (existingUsername) {
-      duplicateFields.push('username');
+      duplicateFields.push(SignUpDuplicateField.USERNAME);
     }
     // どちらかの重複があれば 409 Conflict
     if (duplicateFields.length > 0) {

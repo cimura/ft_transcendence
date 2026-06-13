@@ -7,6 +7,11 @@ import {
 } from 'class-validator';
 import { ApiProperty } from '@nestjs/swagger';
 
+export enum SignUpDuplicateField {
+  EMAIL = 'email',
+  USERNAME = 'username',
+}
+
 export class SignUpRequestDto {
   @ApiProperty({
     example: 'example@example.com',
@@ -74,9 +79,10 @@ export class SignUpConflictResponseDto {
   message: string;
 
   @ApiProperty({
-    type: [String],
-    example: ['username'],
-    description: '重複しているフィールド名の配列。"email" or "username"',
+    enum: SignUpDuplicateField,
+    isArray: true,
+    example: [SignUpDuplicateField.USERNAME],
+    description: '重複しているフィールド名の配列。(email または username',
   })
-  fields: string[];
+  fields: SignUpDuplicateField[];
 }
