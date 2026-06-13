@@ -5,7 +5,11 @@ import {
 } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { PrismaService } from '../prisma.service';
-import { SignUpRequestDto, SignUpResponseDto } from './dto/signup.dto';
+import {
+  SignUpConflictResponseDto,
+  SignUpRequestDto,
+  SignUpResponseDto,
+} from './dto/signup.dto';
 import { SignInRequestDto, SignInResponseDto } from './dto/signin.dto';
 import * as bcrypt from 'bcrypt';
 
@@ -36,12 +40,13 @@ export class AuthService {
     }
     // どちらかの重複があれば 409 Conflict
     if (duplicateFields.length > 0) {
-      throw new ConflictException({
+      const errorBody: SignUpConflictResponseDto = {
         statusCode: 409,
         error: 'Conflict',
         message: 'Email or Username already exists.',
         fields: duplicateFields,
-      });
+      };
+      throw new ConflictException(errorBody);
     }
 
     // ソルト（ランダムな文字列）を生成し、パスワードと混ぜてハッシュ化

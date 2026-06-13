@@ -23,7 +23,8 @@ export class AuthController {
   @ApiResponse({ status: 201, description: '成功時', type: SignUpResponseDto })
   @ApiConflictResponse({
     type: SignUpConflictResponseDto,
-    description: 'メールアドレス、またはユーザー名が既に存在する時',
+    description:
+      'メールアドレス、またはユーザー名が既に存在する時。fieldsには"email"または"username"が入ります。',
   })
   signUp(@Body() dto: SignUpRequestDto) {
     return this.authService.signUp(dto);
