@@ -33,8 +33,7 @@ export default function SignIn({
       console.log('SignIn successful!')
       onSignInSuccess()
     } catch (err) {
-      const shouldUseMockAuth =
-        import.meta.env.DEV && isBackendUnavailable(err)
+      const shouldUseMockAuth = import.meta.env.DEV && isBackendUnavailable(err)
 
       if (shouldUseMockAuth) {
         setCurrentUser({
