@@ -2,6 +2,7 @@ import axios from 'axios'
 import { useState } from 'react'
 import { signInApi, AuthApiError } from '../api/auth'
 import { useAuthStore } from '../stores/authStore'
+import type { LoginCredentials } from '../types/user'
 
 interface SignInProps {
   onSignInSuccess: () => void
@@ -20,14 +21,16 @@ export default function SignIn({
   const { setCurrentUser, setAccessToken } = useAuthStore()
 
   const handleSignIn = async (formData: FormData) => {
-    const identifier = formData.get('identifier') as string
-    const password = formData.get('password') as string
+    const credentials = new LoginCredentials(
+      formData.get('identifier') as string,
+      formData.get('password') as string
+    )
 
     try {
       setError('')
       setLoading(true)
 
-      const data = await signInApi({ identifier, password })
+      const data = await signInApi(credentials)
 
       setAccessToken(data.accessToken)
       console.log('SignIn successful!')
