@@ -95,8 +95,6 @@ export const signInApi = async (data: {
   }
 }
 
-// ----- ここから下はバックエンドと未接続 -----
-
 export interface SignInResponse {
   accessToken: string
 }
@@ -115,6 +113,8 @@ export const signIn = async (
   })
   return response.data
 }
+
+// ----- ここから下はバックエンドと未接続 -----
 
 /**
  * Get current logged-in user
