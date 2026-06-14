@@ -24,7 +24,6 @@ model User {
 enum FriendRequestStatus {
   PENDING
   ACCEPTED
-  REJECTED
 }
 
 model UploadedImage {
