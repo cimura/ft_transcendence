@@ -19,9 +19,7 @@ export interface Friend {
 export interface FriendRequest {
   id: string
   requester: User
-  receiver: User
   status: RequestStatus
-  createdAt: Date
 }
 
 /**

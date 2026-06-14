@@ -8,6 +8,7 @@ import {
   Request,
   HttpCode,
   HttpStatus,
+  Query,
 } from '@nestjs/common';
 import {
   ApiTags,
@@ -38,6 +39,16 @@ export class UsersController {
       message: 'This is a protected route. You are authenticated.',
       user,
     };
+  }
+
+  @Get('search')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'ユーザー検索' })
+  @ApiResponse({ status: 200, description: '成功時' })
+  @ApiResponse({ status: 401, description: '認証失敗時' })
+  async search(@Request() req: UserRequest, @Query('q') query = '') {
+    return this.usersService.search(req.user.userId, query);
   }
 
   @Patch('me')
