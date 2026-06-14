@@ -89,9 +89,10 @@ describe('AuthService', () => {
     });
 
     it('【異常系】メールアドレスが既に存在する場合、ConflictExceptionを投げること', async () => {
-      mockPrismaService.user.findUnique.mockResolvedValueOnce({
-        id: 'existing-id',
-      });
+      // 1回目はユーザーあり（重複）、2回目はnull（未重複）と順番に解決させる
+      mockPrismaService.user.findUnique
+        .mockResolvedValueOnce({ id: 'existing-id' })
+        .mockResolvedValueOnce(null);
 
       await expect(service.signUp(signUpDto)).rejects.toThrow(
         ConflictException,
