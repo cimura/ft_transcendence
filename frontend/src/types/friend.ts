@@ -55,4 +55,4 @@ export type FriendStatus = 'online' | 'offline' | 'in_game'
 /**
  * Friend request status type
  */
-export type RequestStatus = 'pending' | 'accepted' | 'rejected'
+export type RequestStatus = 'pending' | 'accepted'

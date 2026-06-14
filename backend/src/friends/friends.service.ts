@@ -5,8 +5,17 @@ import {
   ForbiddenException,
   ConflictException,
 } from '@nestjs/common';
+import { Prisma } from '../generated/prisma/client';
 import { PrismaService } from '../prisma.service';
 import { FriendRequestStatus } from '../generated/prisma/enums';
+import {
+  FriendAcceptResponseDto,
+  FriendDeleteResponseDto,
+  FriendInfoDto,
+  FriendRejectResponseDto,
+  ReceivedFriendRequestDto,
+} from './dto/friends-response.dto';
+import { FriendRequestResponseDto } from './dto/friends-response.dto';
 
 type FriendUser = {
   id: string;
@@ -26,7 +35,7 @@ type FriendshipWithUsers = {
 export class FriendsService {
   constructor(private readonly prisma: PrismaService) {}
 
-  async getFriends(currentUserId: string) {
+  async getFriends(currentUserId: string): Promise<FriendInfoDto[]> {
     const friendships = await this.prisma.friendship.findMany({
       where: {
         status: FriendRequestStatus.ACCEPTED,
@@ -69,39 +78,41 @@ export class FriendsService {
     });
   }
 
-  async sendRequest(currentUserId: string, targetUserId: string) {
-    if (currentUserId === targetUserId)
+  async sendRequest(
+    currentUserId: string,
+    targetUserId: string,
+  ): Promise<FriendRequestResponseDto> {
+    if (currentUserId === targetUserId) {
       throw new BadRequestException(
         'You cannot send a friend request to yourself',
       );
+    }
 
     const receiver = await this.prisma.user.findUnique({
       where: { id: targetUserId },
     });
-    if (!receiver) throw new NotFoundException('Target user not found');
+    if (!receiver) {
+      throw new NotFoundException('Target user not found');
+    }
 
     let pairKey: string;
-    if (currentUserId < targetUserId)
+    if (currentUserId < targetUserId) {
       pairKey = `${currentUserId}:${targetUserId}`;
-    else pairKey = `{targetUserId} : ${currentUserId}`;
-
-    function isPrismaErrorCode(error: unknown, code: string): boolean {
-      if (typeof error !== 'object') return false;
-      if (error === null) return false;
-      if (!Object.prototype.hasOwnProperty.call(error, 'code')) return false;
-      return (error as { code: unknown }).code === code;
+    } else {
+      pairKey = `${targetUserId}:${currentUserId}`;
     }
 
     const existing = await this.prisma.friendship.findUnique({
       where: { pairKey },
     });
-    if (existing)
+    if (existing) {
       throw new BadRequestException(
         'Friend request or friendship already exists',
       );
+    }
 
     try {
-      return await this.prisma.friendship.create({
+      await this.prisma.friendship.create({
         data: {
           requesterId: currentUserId,
           receiverId: targetUserId,
@@ -109,14 +120,24 @@ export class FriendsService {
         },
       });
     } catch (error: unknown) {
-      if (isPrismaErrorCode(error, 'P2002')) {
+      if (
+        error instanceof Prisma.PrismaClientKnownRequestError &&
+        error.code === 'P2002'
+      ) {
         throw new ConflictException('This request is duplicated');
       }
       throw error;
     }
+
+    return {
+      message: 'Friend request has been successfully sent.',
+      status: FriendRequestStatus.PENDING,
+    };
   }
 
-  async getFriendsRequests(currentUserId: string) {
+  async getFriendsRequests(
+    currentUserId: string,
+  ): Promise<ReceivedFriendRequestDto[]> {
     const requesters = await this.prisma.friendship.findMany({
       where: {
         receiverId: currentUserId,
@@ -133,18 +154,34 @@ export class FriendsService {
         },
       },
     });
-    return requesters;
+
+    return requesters.map((req) => ({
+      id: req.id, // friendship レコード自体のID (requestId)
+      status: req.status, // "PENDING"
+      requester: {
+        id: req.requester.id,
+        email: req.requester.email,
+        displayName: req.requester.displayName,
+        avatarUrl: req.requester.avatarUrl,
+      },
+    }));
   }
 
-  async acceptRequest(currentUserId: string, requestId: string) {
+  async acceptRequest(
+    currentUserId: string,
+    requestId: string,
+  ): Promise<FriendAcceptResponseDto> {
     const friendship = await this.prisma.friendship.findUnique({
       where: { id: requestId },
       select: { receiverId: true },
     });
 
-    if (!friendship) throw new NotFoundException('Request not found');
-    if (friendship.receiverId !== currentUserId)
+    if (!friendship) {
+      throw new NotFoundException('Request not found');
+    }
+    if (friendship.receiverId !== currentUserId) {
       throw new ForbiddenException('Logged-in user is not the receiver');
+    }
 
     const result = await this.prisma.friendship.updateMany({
       where: {
@@ -154,17 +191,22 @@ export class FriendsService {
       },
       data: { status: FriendRequestStatus.ACCEPTED },
     });
-    if (result.count === 0)
+    if (result.count === 0) {
       throw new ConflictException(
         'Request has already been accepted or rejected',
       );
+    }
 
-    return this.prisma.friendship.findUnique({
-      where: { id: requestId },
-    });
+    return {
+      message: 'Friend request accepted.',
+      status: FriendRequestStatus.ACCEPTED,
+    };
   }
 
-  async rejectRequest(currentUserId: string, requestId: string) {
+  async rejectRequest(
+    currentUserId: string,
+    requestId: string,
+  ): Promise<FriendRejectResponseDto> {
     const friendship = await this.prisma.friendship.findUnique({
       where: { id: requestId },
       select: {
@@ -172,9 +214,12 @@ export class FriendsService {
       },
     });
 
-    if (!friendship) throw new NotFoundException('Request not found');
-    if (friendship.receiverId !== currentUserId)
+    if (!friendship) {
+      throw new NotFoundException('Request not found');
+    }
+    if (friendship.receiverId !== currentUserId) {
       throw new ForbiddenException('Logged-in user is not the receiver');
+    }
 
     const result = await this.prisma.friendship.deleteMany({
       where: {
@@ -183,17 +228,21 @@ export class FriendsService {
         status: FriendRequestStatus.PENDING,
       },
     });
-    if (result.count === 0)
+    if (result.count === 0) {
       throw new ConflictException(
         'Request has already been accepted or rejected',
       );
+    }
 
-    return this.prisma.friendship.findUnique({
-      where: { id: requestId },
-    });
+    return {
+      message: 'Friend request has been successfully rejected and removed.',
+    };
   }
 
-  async deleteFriend(currentUserId: string, targetUserId: string) {
+  async deleteFriend(
+    currentUserId: string,
+    targetUserId: string,
+  ): Promise<FriendDeleteResponseDto> {
     const result = await this.prisma.friendship.deleteMany({
       where: {
         status: FriendRequestStatus.ACCEPTED,
@@ -203,8 +252,12 @@ export class FriendsService {
         ],
       },
     });
-    if (result.count === 0)
+    if (result.count === 0) {
       throw new BadRequestException('You are not friends');
-    return result;
+    }
+
+    return {
+      message: 'Friend has been successfully deleted.',
+    };
   }
 }
