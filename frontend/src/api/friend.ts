@@ -30,11 +30,11 @@ export const getFriendRequests = async (): Promise<FriendRequest[]> => {
 
 /**
  * Send friend request to a user
- * @param userId Target user ID
+ * @param targetUserId Target user ID
  * @returns Promise<void>
  */
-export const sendFriendRequest = async (userId: string): Promise<void> => {
-  await api.post('/api/friends/request', { userId })
+export const sendFriendRequest = async (targetUserId: string): Promise<void> => {
+  await api.post('/api/friends/request', { targetUserId })
 }
 
 /**

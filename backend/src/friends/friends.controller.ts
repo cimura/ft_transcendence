@@ -20,6 +20,7 @@ import {
   ApiForbiddenResponse,
   ApiNotFoundResponse,
   ApiConflictResponse,
+  ApiCreatedResponse,
 } from '@nestjs/swagger';
 import { SendFriendRequestDto } from './dto/send-friend-request.dto';
 import type { UserRequest } from '../users/interfaces/user-request.interface';
@@ -50,7 +51,7 @@ export class FriendsController {
   // send request
   @Post('request')
   @ApiOperation({ summary: 'フレンド申請を送信' })
-  @ApiOkResponse({
+  @ApiCreatedResponse({
     description: '成功時',
     type: FriendRequestResponseDto,
   })
