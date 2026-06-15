@@ -7,7 +7,7 @@ type BackendFriendRequest = {
   requester: {
     id: string
     email: string
-    displayName: string | null
+    username: string
     avatarUrl: string | null
   }
 }
@@ -16,7 +16,7 @@ const toFriendRequest = (request: BackendFriendRequest): FriendRequest => ({
   id: request.id,
   requester: {
     id: request.requester.id,
-    username: request.requester.displayName ?? request.requester.email,
+    username: request.requester.username,
     email: request.requester.email,
     avatarUrl: request.requester.avatarUrl ?? undefined,
   },

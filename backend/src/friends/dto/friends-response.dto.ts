@@ -80,10 +80,9 @@ export class PendingRequesterInfoDto {
 
   @ApiProperty({
     example: 'Alice',
-    description: '申請者の表示名（displayName）',
-    nullable: true,
+    description: '申請者の表示名（username）',
   })
-  displayName: string | null;
+  username: string;
 
   @ApiProperty({
     example: 'http://localhost:8443/uploads/avatars/alice.png',

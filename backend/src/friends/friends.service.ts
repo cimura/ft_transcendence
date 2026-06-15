@@ -148,7 +148,7 @@ export class FriendsService {
           select: {
             id: true,
             email: true,
-            displayName: true,
+            username: true,
             avatarUrl: true,
           },
         },
@@ -161,7 +161,7 @@ export class FriendsService {
       requester: {
         id: req.requester.id,
         email: req.requester.email,
-        displayName: req.requester.displayName,
+        username: req.requester.username,
         avatarUrl: req.requester.avatarUrl,
       },
     }));
