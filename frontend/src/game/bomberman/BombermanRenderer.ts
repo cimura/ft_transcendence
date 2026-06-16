@@ -18,6 +18,28 @@ const colors = {
   text: '#f9fafb',
 }
 
+const CHECKER_PATTERN_MODULO = 2
+const FULL_CIRCLE_RADIANS = Math.PI * 2
+const TILE_CENTER_DIVISOR = 2
+const SOLID_BLOCK_INSET = 3
+const SOLID_HIGHLIGHT_INSET = 7
+const SOLID_HIGHLIGHT_TRIM = 14
+const SOLID_HIGHLIGHT_HEIGHT = 5
+const BREAKABLE_BLOCK_INSET = 5
+const BREAKABLE_BLOCK_TRIM = 10
+const BREAKABLE_HIGHLIGHT_INSET = 9
+const BREAKABLE_HIGHLIGHT_TRIM = 18
+const BREAKABLE_HIGHLIGHT_HEIGHT = 4
+const BREAKABLE_BOTTOM_HIGHLIGHT_OFFSET = 13
+const GRID_LINE_WIDTH = 1
+const GRID_PIXEL_OFFSET = 0.5
+const PLAYER_RADIUS_RATIO = 0.32
+const PLAYER_EYE_X_RATIO = 0.35
+const PLAYER_EYE_Y_RATIO = 0.25
+const PLAYER_EYE_RADIUS = 3
+const PLAYER_LABEL_FONT = '12px sans-serif'
+const PLAYER_LABEL_Y_RATIO = 0.7
+
 export function renderBombermanScene({
   ctx,
   map,
@@ -37,49 +59,96 @@ export function renderBombermanScene({
       const left = x * tileSize
       const top = y * tileSize
 
-      ctx.fillStyle = (x + y) % 2 === 0 ? colors.floor : colors.floorAlt
+      ctx.fillStyle =
+        (x + y) % CHECKER_PATTERN_MODULO === 0 ? colors.floor : colors.floorAlt
       ctx.fillRect(left, top, tileSize, tileSize)
 
       if (tile === 'solid') {
         ctx.fillStyle = colors.solid
-        ctx.fillRect(left + 3, top + 3, tileSize - 6, tileSize - 6)
+        ctx.fillRect(
+          left + SOLID_BLOCK_INSET,
+          top + SOLID_BLOCK_INSET,
+          tileSize - SOLID_BLOCK_INSET * TILE_CENTER_DIVISOR,
+          tileSize - SOLID_BLOCK_INSET * TILE_CENTER_DIVISOR
+        )
         ctx.fillStyle = colors.solidHighlight
-        ctx.fillRect(left + 7, top + 7, tileSize - 14, 5)
+        ctx.fillRect(
+          left + SOLID_HIGHLIGHT_INSET,
+          top + SOLID_HIGHLIGHT_INSET,
+          tileSize - SOLID_HIGHLIGHT_TRIM,
+          SOLID_HIGHLIGHT_HEIGHT
+        )
       }
 
       if (tile === 'breakable') {
         ctx.fillStyle = colors.breakable
-        ctx.fillRect(left + 5, top + 5, tileSize - 10, tileSize - 10)
+        ctx.fillRect(
+          left + BREAKABLE_BLOCK_INSET,
+          top + BREAKABLE_BLOCK_INSET,
+          tileSize - BREAKABLE_BLOCK_TRIM,
+          tileSize - BREAKABLE_BLOCK_TRIM
+        )
         ctx.fillStyle = colors.breakableHighlight
-        ctx.fillRect(left + 9, top + 9, tileSize - 18, 4)
-        ctx.fillRect(left + 9, top + tileSize - 13, tileSize - 18, 4)
+        ctx.fillRect(
+          left + BREAKABLE_HIGHLIGHT_INSET,
+          top + BREAKABLE_HIGHLIGHT_INSET,
+          tileSize - BREAKABLE_HIGHLIGHT_TRIM,
+          BREAKABLE_HIGHLIGHT_HEIGHT
+        )
+        ctx.fillRect(
+          left + BREAKABLE_HIGHLIGHT_INSET,
+          top + tileSize - BREAKABLE_BOTTOM_HIGHLIGHT_OFFSET,
+          tileSize - BREAKABLE_HIGHLIGHT_TRIM,
+          BREAKABLE_HIGHLIGHT_HEIGHT
+        )
       }
 
       ctx.strokeStyle = colors.grid
-      ctx.lineWidth = 1
-      ctx.strokeRect(left + 0.5, top + 0.5, tileSize, tileSize)
+      ctx.lineWidth = GRID_LINE_WIDTH
+      ctx.strokeRect(
+        left + GRID_PIXEL_OFFSET,
+        top + GRID_PIXEL_OFFSET,
+        tileSize,
+        tileSize
+      )
     }
   }
 
   players.forEach((player) => {
-    const centerX = player.gridX * tileSize + tileSize / 2
-    const centerY = player.gridY * tileSize + tileSize / 2
-    const radius = tileSize * 0.32
+    const centerX = player.gridX * tileSize + tileSize / TILE_CENTER_DIVISOR
+    const centerY = player.gridY * tileSize + tileSize / TILE_CENTER_DIVISOR
+    const radius = tileSize * PLAYER_RADIUS_RATIO
 
     ctx.fillStyle = player.color
     ctx.beginPath()
-    ctx.arc(centerX, centerY, radius, 0, Math.PI * 2)
+    ctx.arc(centerX, centerY, radius, 0, FULL_CIRCLE_RADIANS)
     ctx.fill()
 
     ctx.fillStyle = 'rgba(255, 255, 255, 0.9)'
     ctx.beginPath()
-    ctx.arc(centerX - radius * 0.35, centerY - radius * 0.25, 3, 0, Math.PI * 2)
-    ctx.arc(centerX + radius * 0.35, centerY - radius * 0.25, 3, 0, Math.PI * 2)
+    ctx.arc(
+      centerX - radius * PLAYER_EYE_X_RATIO,
+      centerY - radius * PLAYER_EYE_Y_RATIO,
+      PLAYER_EYE_RADIUS,
+      0,
+      FULL_CIRCLE_RADIANS
+    )
+    ctx.arc(
+      centerX + radius * PLAYER_EYE_X_RATIO,
+      centerY - radius * PLAYER_EYE_Y_RATIO,
+      PLAYER_EYE_RADIUS,
+      0,
+      FULL_CIRCLE_RADIANS
+    )
     ctx.fill()
 
     ctx.fillStyle = colors.text
-    ctx.font = '12px sans-serif'
+    ctx.font = PLAYER_LABEL_FONT
     ctx.textAlign = 'center'
-    ctx.fillText(player.username, centerX, centerY + tileSize * 0.7)
+    ctx.fillText(
+      player.username,
+      centerX,
+      centerY + tileSize * PLAYER_LABEL_Y_RATIO
+    )
   })
 }

@@ -1,29 +1,28 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import {
-  BOMBERMAN_TILE_SIZE,
-  createInitialBombermanMap,
-  initialPlayers,
-} from '../../game/bomberman/bombermanMap'
-import { renderBombermanScene } from '../../game/bomberman/BombermanRenderer'
 import type {
+  BombermanGameState,
   BombermanInput,
   Direction,
 } from '../../game/bomberman/bombermanTypes'
+import { BombermanGame } from '../../game/bomberman/BombermanGame'
 import { GameLoop } from '../../game/engine/GameLoop'
 import { InputManager } from '../../game/engine/InputManager'
+import { BombermanScene } from './BombermanScene'
 import { TouchControls, type ActiveControl } from './TouchControls'
 
 type GameCanvasProps = {
   onInput?: (input: BombermanInput) => void
+  onStateChange?: (state: BombermanGameState) => void
 }
 
-export function GameCanvas({ onInput }: GameCanvasProps) {
-  const canvasRef = useRef<HTMLCanvasElement | null>(null)
-  const containerRef = useRef<HTMLDivElement | null>(null)
-  const map = useMemo(() => createInitialBombermanMap(), [])
+const BOMB_HIGHLIGHT_DURATION_MS = 180
+
+export function GameCanvas({ onInput, onStateChange }: GameCanvasProps) {
+  const game = useMemo(() => new BombermanGame(), [])
   const inputManagerRef = useRef<InputManager | null>(null)
   const bombHighlightTimeoutRef = useRef<number | null>(null)
   const [activeControl, setActiveControl] = useState<ActiveControl>(null)
+  const [gameState, setGameState] = useState(() => game.getSnapshot())
 
   const isDirection = (value: ActiveControl): value is Direction =>
     value === 'up' || value === 'down' || value === 'left' || value === 'right'
@@ -41,7 +40,7 @@ export function GameCanvas({ onInput }: GameCanvasProps) {
     bombHighlightTimeoutRef.current = window.setTimeout(() => {
       setActiveControl(null)
       bombHighlightTimeoutRef.current = null
-    }, 180)
+    }, BOMB_HIGHLIGHT_DURATION_MS)
   }, [clearBombHighlightTimeout])
 
   const handleInputState = useCallback(
@@ -63,52 +62,26 @@ export function GameCanvas({ onInput }: GameCanvasProps) {
   )
 
   useEffect(() => {
-    const canvas = canvasRef.current
-    const container = containerRef.current
-    if (!canvas || !container) return
-
-    const ctx = canvas.getContext('2d')
-    if (!ctx) return
-
-    const mapWidth = (map[0]?.length ?? 0) * BOMBERMAN_TILE_SIZE
-    const mapHeight = map.length * BOMBERMAN_TILE_SIZE
-    const resizeCanvas = () => {
-      const containerWidth = container.clientWidth
-      const scale = Math.min(containerWidth / mapWidth, 1)
-
-      canvas.width = mapWidth
-      canvas.height = mapHeight
-      canvas.style.width = `${mapWidth * scale}px`
-      canvas.style.height = `${mapHeight * scale}px`
-    }
-
-    const observer = new ResizeObserver(resizeCanvas)
-    observer.observe(container)
-    resizeCanvas()
-
     const loop = new GameLoop({
-      update: () => undefined,
-      render: () => {
-        renderBombermanScene({
-          ctx,
-          map,
-          players: initialPlayers,
-          tileSize: BOMBERMAN_TILE_SIZE,
-        })
+      update: (deltaTime) => {
+        const nextState = game.update(deltaTime, performance.now())
+        setGameState(nextState)
+        onStateChange?.(nextState)
       },
+      render: () => undefined,
     })
 
     loop.start()
 
     return () => {
       loop.stop()
-      observer.disconnect()
     }
-  }, [map])
+  }, [game, onStateChange])
 
   useEffect(() => {
     const manager = new InputManager((input) => {
       handleInputState(input)
+      game.handleInput(input)
       onInput?.(input)
     })
     inputManagerRef.current = manager
@@ -119,7 +92,7 @@ export function GameCanvas({ onInput }: GameCanvasProps) {
       inputManagerRef.current = null
       clearBombHighlightTimeout()
     }
-  }, [clearBombHighlightTimeout, handleInputState, onInput])
+  }, [clearBombHighlightTimeout, game, handleInputState, onInput])
 
   const handleTouchInput = (input: BombermanInput) => {
     inputManagerRef.current?.emitTouchInput(input)
@@ -127,14 +100,8 @@ export function GameCanvas({ onInput }: GameCanvasProps) {
 
   return (
     <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_180px]">
-      <div
-        ref={containerRef}
-        className="flex min-h-[360px] items-center justify-center overflow-hidden rounded-lg bg-gray-950 p-4"
-      >
-        <canvas
-          ref={canvasRef}
-          className="max-w-full rounded-md border border-gray-700 bg-gray-900"
-        />
+      <div className="relative min-h-[560px] overflow-hidden rounded-lg border border-cyan-500/20 bg-gray-950">
+        <BombermanScene gameState={gameState} />
       </div>
       <TouchControls onInput={handleTouchInput} activeControl={activeControl} />
     </div>
