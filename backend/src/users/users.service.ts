@@ -8,17 +8,10 @@ import {
 import { PrismaService } from '../prisma.service';
 import { UpdateUserDto } from './dto/update-user.dto';
 import { ProfileUserDto } from './dto/profile.dto';
+import { UserSearchResponseDto } from './dto/users-response.dto';
 import { Prisma } from '../generated/prisma/client';
 import * as bcrypt from 'bcrypt';
 import { FriendRequestStatus } from '../generated/prisma/enums';
-
-type UserSearchResult = {
-  id: string;
-  username: string;
-  avatarUrl?: string;
-  isFriend: boolean;
-  isPending: boolean;
-};
 
 @Injectable()
 export class UsersService {
@@ -42,7 +35,7 @@ export class UsersService {
     return user;
   }
 
-  async search(userId: string, query: string): Promise<UserSearchResult[]> {
+  async search(userId: string, query: string): Promise<UserSearchResponseDto[]> {
     const normalizedQuery = query.trim();
 
     if (!normalizedQuery) {
@@ -52,16 +45,11 @@ export class UsersService {
     const users = await this.prisma.user.findMany({
       where: {
         id: { not: userId },
-        OR: [
-          { username: { contains: normalizedQuery, mode: 'insensitive' } },
-          { displayName: { contains: normalizedQuery, mode: 'insensitive' } },
-        ],
+        username: { contains: normalizedQuery, mode: 'insensitive' },
       },
       select: {
         id: true,
-        email: true,
         username: true,
-        displayName: true,
         avatarUrl: true,
       },
       take: 20,
@@ -90,8 +78,8 @@ export class UsersService {
 
       return {
         id: user.id,
-        username: user.displayName ?? user.username ?? user.email,
-        avatarUrl: user.avatarUrl ?? undefined,
+        username: user.username,
+        avatarUrl: user.avatarUrl,
         isFriend: friendship?.status === FriendRequestStatus.ACCEPTED,
         isPending: friendship?.status === FriendRequestStatus.PENDING,
       };
