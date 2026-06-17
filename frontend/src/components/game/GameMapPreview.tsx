@@ -6,6 +6,8 @@ import {
 } from '../../game/bomberman/bombermanMap'
 import { renderBombermanScene } from '../../game/bomberman/BombermanRenderer'
 
+const MAX_PREVIEW_SCALE = 1
+
 export function GameMapPreview() {
   const canvasRef = useRef<HTMLCanvasElement | null>(null)
   const containerRef = useRef<HTMLDivElement | null>(null)
@@ -24,7 +26,7 @@ export function GameMapPreview() {
 
     const drawPreview = () => {
       const containerWidth = container.clientWidth
-      const scale = Math.min(containerWidth / mapWidth, 1)
+      const scale = Math.min(containerWidth / mapWidth, MAX_PREVIEW_SCALE)
 
       canvas.width = mapWidth
       canvas.height = mapHeight

@@ -44,6 +44,8 @@ export function WaitingRoom() {
   // start game
   const handleStartGame = () => {
     console.log('ゲーム開始')
+    const playingRoom = { ...currentRoom, status: 'playing' as const }
+    setCurrentRoom(playingRoom)
     navigate(`/game/${currentRoom.id}`)
     // TODO: WebSocketでサーバーに送信
     // socket.emit('room:start', { roomId: currentRoom.id })
