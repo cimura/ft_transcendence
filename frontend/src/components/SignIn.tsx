@@ -21,10 +21,13 @@ export default function SignIn({
   const { setCurrentUser, setAccessToken } = useAuthStore()
 
   const handleSignIn = async (formData: FormData) => {
-    const credentials = new LoginCredentials(
-      formData.get('identifier') as string,
-      formData.get('password') as string
-    )
+    const identifier = formData.get('identifier') as string
+    const password = formData.get('password') as string
+
+    const credentials: LoginCredentials = {
+      identifier,
+      password
+    }
 
     try {
       setError('')

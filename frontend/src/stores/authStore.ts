@@ -14,8 +14,6 @@ interface AuthState {
   setLoading: (loading: boolean) => void
   setError: (error: string | null) => void
 
-  // API呼び出し
-  signIn: (email: string, password: string) => Promise<void>
   fetchCurrentUser: () => Promise<void>
   logout: () => Promise<void>
 }
@@ -57,23 +55,6 @@ export const useAuthStore = create<AuthState>((set) => ({
   },
   setLoading: (loading) => set({ loading }),
   setError: (error) => set({ error }),
-
-  // API呼び出しアクション
-  signIn: async (email, password) => {
-    try {
-      set({ loading: true, error: null })
-      const { accessToken } = await authApi.signIn({ email, password })
-      storeAccessToken(accessToken)
-      const user = await authApi.getCurrentUser()
-      set({ accessToken, currentUser: user, loading: false })
-    } catch (error) {
-      set({
-        error: error instanceof Error ? error.message : 'Failed to sign in',
-        loading: false,
-      })
-      throw error
-    }
-  },
 
   fetchCurrentUser: async () => {
     try {
