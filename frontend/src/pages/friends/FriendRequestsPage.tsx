@@ -1,45 +1,6 @@
-import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import type { FriendRequest } from '../../types/friend'
 import { FriendRequestCard } from '../../components/friends/FriendRequestCard'
-
-// モックデータ（バックエンド実装後にuseFriendRequestsフックに切り替える）
-const MOCK_REQUESTS: FriendRequest[] = [
-  {
-    id: 'req-1',
-    requester: {
-      id: 'user-10',
-      username: 'new_user1',
-      email: 'new_user1@example.com',
-      avatarUrl: undefined,
-    },
-    receiver: {
-      id: 'user-1',
-      username: 'me',
-      email: 'me@example.com',
-      avatarUrl: undefined,
-    },
-    status: 'pending',
-    createdAt: new Date('2024-01-20'),
-  },
-  {
-    id: 'req-2',
-    requester: {
-      id: 'user-11',
-      username: 'new_user2',
-      email: 'new_user2@example.com',
-      avatarUrl: undefined,
-    },
-    receiver: {
-      id: 'user-1',
-      username: 'me',
-      email: 'me@example.com',
-      avatarUrl: undefined,
-    },
-    status: 'pending',
-    createdAt: new Date('2024-01-21'),
-  },
-]
+import { useFriendRequests } from '../../hooks/friends/useFriendRequests'
 
 /**
  * FriendRequestsPage component
@@ -47,20 +8,17 @@ const MOCK_REQUESTS: FriendRequest[] = [
  */
 export function FriendRequestsPage() {
   const navigate = useNavigate()
-  const [requests, setRequests] = useState<FriendRequest[]>(MOCK_REQUESTS)
+  const { requests, loading, error, acceptRequest, rejectRequest } =
+    useFriendRequests()
 
   // 承認処理
-  const handleAccept = (requestId: string) => {
-    // TODO: バックエンド実装後にacceptRequest(requestId)を呼ぶ
-    console.log('承認:', requestId)
-    setRequests((prev) => prev.filter((req) => req.id !== requestId))
+  const handleAccept = async (requestId: string) => {
+    await acceptRequest(requestId)
   }
 
   // 拒否処理
-  const handleReject = (requestId: string) => {
-    // TODO: バックエンド実装後にrejectRequest(requestId)を呼ぶ
-    console.log('拒否:', requestId)
-    setRequests((prev) => prev.filter((req) => req.id !== requestId))
+  const handleReject = async (requestId: string) => {
+    await rejectRequest(requestId)
   }
 
   return (
@@ -83,7 +41,15 @@ export function FriendRequestsPage() {
         {/* コンテンツエリア */}
         <div className="bg-black/80 border-x-2 border-b-2 border-white/30 rounded-b-3xl px-8 py-6 min-h-[400px]">
           {/* リクエストリスト */}
-          {requests.length === 0 ? (
+          {loading ? (
+            <div className="flex items-center justify-center py-12">
+              <div className="text-white text-xl">読み込み中...</div>
+            </div>
+          ) : error ? (
+            <div className="flex items-center justify-center py-12">
+              <div className="text-red-500 text-xl">{error}</div>
+            </div>
+          ) : requests.length === 0 ? (
             <div className="flex items-center justify-center py-12">
               <div className="text-white/50 text-xl">
                 フレンドリクエストはありません
