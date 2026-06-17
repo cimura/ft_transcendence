@@ -35,7 +35,10 @@ export class UsersService {
     return user;
   }
 
-  async search(userId: string, query: string): Promise<UserSearchResponseDto[]> {
+  async search(
+    userId: string,
+    query: string,
+  ): Promise<UserSearchResponseDto[]> {
     const normalizedQuery = query.trim();
 
     if (!normalizedQuery) {

@@ -17,20 +17,6 @@ import {
 } from './dto/friends-response.dto';
 import { FriendRequestResponseDto } from './dto/friends-response.dto';
 
-type FriendUser = {
-  id: string;
-  email: string;
-  displayName: string | null;
-  avatarUrl: string | null;
-};
-
-type FriendshipWithUsers = {
-  requesterId: string;
-  receiverId: string;
-  requester: FriendUser;
-  receiver: FriendUser;
-};
-
 @Injectable()
 export class FriendsService {
   constructor(private readonly prisma: PrismaService) {}
@@ -46,7 +32,7 @@ export class FriendsService {
           select: {
             id: true,
             email: true,
-            displayName: true,
+            username: true,
             avatarUrl: true,
           },
         },
@@ -54,14 +40,14 @@ export class FriendsService {
           select: {
             id: true,
             email: true,
-            displayName: true,
+            username: true,
             avatarUrl: true,
           },
         },
       },
     });
 
-    return friendships.map((friendship: FriendshipWithUsers) => {
+    return friendships.map((friendship) => {
       const friend =
         friendship.requesterId === currentUserId
           ? friendship.receiver
@@ -69,7 +55,7 @@ export class FriendsService {
 
       return {
         id: friend.id,
-        username: friend.displayName ?? friend.email,
+        username: friend.username,
         email: friend.email,
         avatarUrl: friend.avatarUrl,
         isOnline: false,
