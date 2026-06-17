@@ -26,7 +26,7 @@ export default function SignIn({
 
     const credentials: LoginCredentials = {
       identifier,
-      password
+      password,
     }
 
     try {
