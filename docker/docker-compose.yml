@@ -32,7 +32,7 @@ services:
     networks:
       - transcendence
   nginx:
-    image: nginx
+    image: docker-nginx
     build:
       context: nginx
     container_name: nginx
