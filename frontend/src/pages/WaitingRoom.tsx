@@ -3,12 +3,15 @@ import { useLobbyStore } from '../stores/lobbyStore'
 import { useEffect, useState } from 'react'
 import { Button } from '../components/common/Button'
 import { PlayerCard } from '../components/waitingRoom/PlayerCard'
+import { ChatPanel } from '../components/waitingRoom/ChatPanel'
 import { GameMapPreview } from '../components/game/GameMapPreview'
+import { useAuthStore } from '../stores/authStore'
 
 export function WaitingRoom() {
   const { roomId } = useParams<{ roomId: string }>()
   const navigate = useNavigate()
   const { currentRoom, setCurrentRoom } = useLobbyStore()
+  const { currentUser, accessToken, fetchCurrentUser } = useAuthStore()
   const [isReady, setIsReady] = useState(false)
 
   // current userId(temporary)
@@ -21,7 +24,13 @@ export function WaitingRoom() {
     }
   }, [currentRoom, roomId, navigate])
 
-  if (!currentRoom) {
+  useEffect(() => {
+    if (!currentUser) {
+      fetchCurrentUser()
+    }
+  }, [currentUser, fetchCurrentUser])
+
+  if (!currentRoom || !roomId) {
     return null
   }
 
@@ -82,9 +91,9 @@ export function WaitingRoom() {
       </header>
 
       {/* メインコンテンツ */}
-      <main className="mx-auto max-w-6xl px-4 py-8 sm:px-6">
+      <main className="mx-auto max-w-7xl px-4 py-8 sm:px-6">
         {/* プレイヤー一覧 */}
-        <div className="grid gap-6 lg:grid-cols-[360px_minmax(0,1fr)]">
+        <div className="grid gap-6 lg:grid-cols-[360px_minmax(0,1fr)] xl:grid-cols-[320px_minmax(0,1fr)_360px]">
           <section>
             <div className="mb-6">
               <h2 className="mb-4 text-xl font-bold text-gray-900">
@@ -181,6 +190,12 @@ export function WaitingRoom() {
               バックエンド接続後は、全員の準備完了とゲーム開始イベントに合わせて遷移します。
             </div>
           </section>
+
+          <ChatPanel
+            roomId={roomId}
+            currentUser={currentUser}
+            accessToken={accessToken}
+          />
         </div>
       </main>
     </div>

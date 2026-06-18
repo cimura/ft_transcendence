@@ -1,6 +1,6 @@
 import api from './client'
 import axios from 'axios'
-import type { User } from '../types/user'
+import type { LoginCredentials, User } from '../types/user'
 
 export type AuthErrorType =
   | 'INVALID_CREDENTIALS' // ログイン失敗（401）
@@ -65,14 +65,11 @@ export const signUpApi = async (data: {
   }
 }
 
-export const signInApi = async (data: {
-  identifier: string
-  password: string
-}) => {
+export const signInApi = async (credentials: LoginCredentials) => {
   try {
     const response = await api.post<{ accessToken: string }>(
       '/auth/signin',
-      data
+      credentials
     )
     return response.data
   } catch (err) {
