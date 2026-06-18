@@ -110,40 +110,50 @@ export class RoomsService {
   }
 
   async join(roomId: string, userId: string) {
-    const room = await this.prisma.gameRoom.findUnique({
-      where: { id: roomId },
-      include: {
-        participants: {
-          select: { userId: true },
+    await this.prisma.$transaction(async (tx) => {
+      await tx.$queryRaw`
+        SELECT id FROM "GameRoom" WHERE id = ${roomId} FOR UPDATE
+      `;
+
+      const room = await tx.gameRoom.findUnique({
+        where: { id: roomId },
+        include: {
+          participants: {
+            select: { userId: true },
+          },
         },
-      },
-    });
+      });
 
-    if (!room) {
-      throw new NotFoundException('Room not found');
-    }
+      if (!room) {
+        throw new NotFoundException('Room not found');
+      }
 
-    if (room.status !== RoomStatus.WAITING) {
-      throw new ConflictException('Only waiting rooms can be joined');
-    }
+      if (room.status !== RoomStatus.WAITING) {
+        throw new ConflictException('Only waiting rooms can be joined');
+      }
 
-    if (
-      room.participants.some((participant) => participant.userId === userId)
-    ) {
-      throw new ConflictException('You have already joined this room');
-    }
+      if (room.mode === RoomMode.LOCAL_CPU && room.hostId !== userId) {
+        throw new ConflictException('Local CPU rooms cannot be joined');
+      }
 
-    if (room.participants.length >= room.maxPlayers) {
-      throw new ConflictException('Room is full');
-    }
+      if (
+        room.participants.some((participant) => participant.userId === userId)
+      ) {
+        throw new ConflictException('You have already joined this room');
+      }
 
-    await this.prisma.roomParticipant.create({
-      data: {
-        roomId,
-        userId,
-        isHost: false,
-        isReady: false,
-      },
+      if (room.participants.length >= room.maxPlayers) {
+        throw new ConflictException('Room is full');
+      }
+
+      await tx.roomParticipant.create({
+        data: {
+          roomId,
+          userId,
+          isHost: false,
+          isReady: false,
+        },
+      });
     });
 
     return this.findOne(roomId);
