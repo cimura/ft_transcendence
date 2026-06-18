@@ -21,6 +21,7 @@ import {
   ApiNotFoundResponse,
   ApiConflictResponse,
   ApiCreatedResponse,
+  ApiBearerAuth,
 } from '@nestjs/swagger';
 import { SendFriendRequestDto } from './dto/send-friend-request.dto';
 import type { UserRequest } from '../users/interfaces/user-request.interface';
@@ -36,6 +37,7 @@ import {
 @Controller('friends')
 @ApiTags('friends')
 @ApiUnauthorizedResponse({ description: '認証失敗時（未ログイン）' })
+@ApiBearerAuth()
 @UseGuards(JwtAuthGuard)
 export class FriendsController {
   constructor(private friendsService: FriendsService) {}

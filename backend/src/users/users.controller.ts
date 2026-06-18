@@ -27,20 +27,20 @@ import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { ProfileResponseDto } from './dto/profile.dto';
 import type { UserRequest } from './interfaces/user-request.interface';
 
-@ApiTags('users')
 @Controller('users')
+@ApiTags('users')
+@ApiUnauthorizedResponse({ description: '認証失敗時' })
+@ApiBearerAuth()
+@UseGuards(JwtAuthGuard)
 export class UsersController {
   constructor(private readonly usersService: UsersService) {}
 
   @Get('profile')
-  @UseGuards(JwtAuthGuard)
-  @ApiBearerAuth()
   @ApiOperation({ summary: 'ユーザーのプロフィールの取得' })
   @ApiOkResponse({
     description: '成功時',
     type: ProfileResponseDto,
   })
-  @ApiUnauthorizedResponse({ description: '認証失敗時' })
   async profile(@Request() req: UserRequest): Promise<ProfileResponseDto> {
     const user = await this.usersService.profile(req.user.userId);
     return {
@@ -50,16 +50,11 @@ export class UsersController {
   }
 
   @Get('search')
-  @UseGuards(JwtAuthGuard)
-  @ApiBearerAuth()
   @ApiOperation({ summary: 'ユーザー検索' })
   @ApiOkResponse({
     description: '成功時',
     type: UserSearchResponseDto,
     isArray: true,
-  })
-  @ApiUnauthorizedResponse({
-    description: '認証失敗時',
   })
   async search(
     @Request() req: UserRequest,
@@ -69,8 +64,6 @@ export class UsersController {
   }
 
   @Patch('me')
-  @UseGuards(JwtAuthGuard)
-  @ApiBearerAuth()
   @HttpCode(HttpStatus.OK)
   @ApiOperation({
     summary: 'ログイン中のユーザーのメールアドレスまたはパスワードを更新',
@@ -94,14 +87,11 @@ export class UsersController {
   }
 
   @Delete('me')
-  @UseGuards(JwtAuthGuard)
-  @ApiBearerAuth()
   @HttpCode(HttpStatus.OK) // 通常 DELETE では 204 だが、削除完了通知を返すため 200
   @ApiOperation({ summary: 'ログイン中の自分のアカウントを削除（退会処理）' })
   @ApiOkResponse({
     description: 'アカウントの削除が正常に完了しました',
   })
-  @ApiUnauthorizedResponse({ description: '認証情報が無効です' })
   @ApiNotFoundResponse({
     description: '削除対象のユーザーが見つかりません',
   })
