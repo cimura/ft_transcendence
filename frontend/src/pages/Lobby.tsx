@@ -72,7 +72,7 @@ export function Lobby() {
     }
 
     const alreadyJoined = room.players.some(
-      (player) => player.userId === user.id,
+      (player) => player.userId === user.id
     )
 
     if (alreadyJoined) {
@@ -95,7 +95,7 @@ export function Lobby() {
 
         if (
           latestRoom.players.some(
-            (player: { userId: string }) => player.userId === user.id,
+            (player: { userId: string }) => player.userId === user.id
           )
         ) {
           upsertRoom(latestRoom)

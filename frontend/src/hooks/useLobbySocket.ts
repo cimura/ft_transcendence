@@ -42,7 +42,7 @@ export function useLobbySocket() {
       console.log('[Socket] 部屋一覧受信:', rooms)
       setRooms(rooms)
     })
-  
+
     // 部屋作成
     socket.on('room:created', (room: GameRoom) => {
       console.log('[Socket] 部屋作成:', room)

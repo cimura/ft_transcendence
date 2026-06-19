@@ -12,7 +12,8 @@ import { useLobbySocket } from '../hooks/useLobbySocket'
 export function WaitingRoom() {
   const { roomId } = useParams<{ roomId: string }>()
   const navigate = useNavigate()
-  const { currentRoom, setCurrentRoom, removeRoom, upsertRoom } = useLobbyStore()
+  const { currentRoom, setCurrentRoom, removeRoom, upsertRoom } =
+    useLobbyStore()
   const { currentUser, accessToken, fetchCurrentUser } = useAuthStore()
   const [isReady, setIsReady] = useState(false)
 
