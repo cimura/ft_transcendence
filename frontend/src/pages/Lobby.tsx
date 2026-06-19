@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useLobbyStore } from '../stores/lobbyStore'
 import { useLobbySocket } from '../hooks/useLobbySocket'
 import type { CreateRoomDto } from '../types'
@@ -7,7 +7,10 @@ import { RoomFilter } from '../components/lobby/RoomFilter'
 import { RoomList } from '../components/lobby/RoomList'
 import { CreateRoomModal } from '../components/lobby/CreateRoomModal'
 import { useNavigate } from 'react-router-dom'
+import axios from 'axios'
 import api from '../api/client'
+import { getRoom, joinRoom } from '../api/rooms'
+import { useAuthStore } from '../stores/authStore'
 
 type FilterType = 'all' | 'waiting' | 'playing' | 'finished'
 
@@ -16,9 +19,16 @@ export function Lobby() {
   const { rooms, setCurrentRoom, upsertRoom } = useLobbyStore()
   const [filter, setFilter] = useState<FilterType>('waiting')
   const [isModalOpen, setIsModalOpen] = useState(false)
+  const { currentUser, fetchCurrentUser } = useAuthStore()
 
   // WebSocketに接続
   useLobbySocket()
+
+  useEffect(() => {
+    if (!currentUser) {
+      fetchCurrentUser()
+    }
+  }, [currentUser, fetchCurrentUser])
 
   const filteredRooms = rooms.filter((room) => {
     if (filter === 'all') return true
@@ -42,30 +52,63 @@ export function Lobby() {
     }
   }
   // join rooms
-  const handleJoinRoom = (roomId: string) => {
-    console.log('join rooms...', roomId)
+  const handleJoinRoom = async (roomId: string) => {
     const room = rooms.find((r) => r.id === roomId)
-    if (!room) return
 
-    const joinedRoom = {
-      ...room,
-      players: room.players.some((player) => player.userId === '0')
-        ? room.players
-        : [
-            ...room.players,
-            {
-              userId: '0',
-              username: 'current_user',
-              isReady: false,
-              isHost: false,
-            },
-          ],
+    if (!room) {
+      console.error('Room not found:', roomId)
+      return
     }
 
-    upsertRoom(joinedRoom)
-    setCurrentRoom(joinedRoom)
-    navigate(`/room/${roomId}`)
-    // TODO: バックエンド接続後は socket.emit('room:join', { roomId }) に置き換える
+    let user = currentUser
+    if (!user) {
+      await fetchCurrentUser()
+      user = useAuthStore.getState().currentUser
+    }
+
+    if (!user) {
+      console.error('Current user is not loaded')
+      return
+    }
+
+    const alreadyJoined = room.players.some(
+      (player) => player.userId === user.id,
+    )
+
+    if (alreadyJoined) {
+      setCurrentRoom(room)
+      navigate(`/room/${roomId}`)
+      return
+    }
+
+    console.log('join rooms...', roomId)
+
+    try {
+      const joinedRoom = await joinRoom(roomId)
+
+      upsertRoom(joinedRoom)
+      setCurrentRoom(joinedRoom)
+      navigate(`/room/${roomId}`)
+    } catch (error) {
+      if (axios.isAxiosError(error) && error.response?.status === 409) {
+        const latestRoom = await getRoom(roomId)
+
+        if (
+          latestRoom.players.some(
+            (player: { userId: string }) => player.userId === user.id,
+          )
+        ) {
+          upsertRoom(latestRoom)
+          setCurrentRoom(latestRoom)
+          navigate(`/room/${roomId}`)
+          return
+        }
+
+        upsertRoom(latestRoom)
+      }
+
+      console.error('Failed to join room:', error)
+    }
   }
   return (
     <div className="min-h-screen bg-gray-100">
