@@ -7,9 +7,10 @@ const BACKEND_URL = import.meta.env.VITE_BACKEND_URL || 'http://localhost:4000'
 
 export function useLobbySocket() {
   const socketRef = useRef<Socket | null>(null)
-  const { upsertRoom, removeRoom, setRooms } = useLobbyStore()
 
   useEffect(() => {
+    const { upsertRoom, removeRoom, setRooms } = useLobbyStore.getState()
+
     // connect socket
     const socket = io(BACKEND_URL, {
       autoConnect: false,
@@ -41,7 +42,7 @@ export function useLobbySocket() {
       console.log('[Socket] 部屋一覧受信:', rooms)
       setRooms(rooms)
     })
-
+  
     // 部屋作成
     socket.on('room:created', (room: GameRoom) => {
       console.log('[Socket] 部屋作成:', room)
@@ -71,9 +72,9 @@ export function useLobbySocket() {
 
     // クリーンアップ
     return () => {
-      console.log('[Socket] クリーンアップ')
+      console.log('[Socket] クリーンアップ:', socket.id)
       socket.emit('lobby:leave')
       socket.disconnect()
     }
-  }, [upsertRoom, removeRoom, setRooms])
+  }, [])
 }

@@ -10,9 +10,12 @@ import {
   ConnectedSocket,
 } from '@nestjs/websockets';
 import { Socket } from 'socket.io';
+import { RoomsService } from './rooms.service';
 
 @WebSocketGateway()
 export class RoomsGateway implements OnGatewayConnection, OnGatewayDisconnect {
+  constructor(private readonly roomsService: RoomsService) {}
+
   handleConnection(client: Socket) {
     console.log(`[RoomsGateway] connected: ${client.id}`);
   }
@@ -22,7 +25,10 @@ export class RoomsGateway implements OnGatewayConnection, OnGatewayDisconnect {
   @SubscribeMessage('lobby:join')
   async handleJoinLobby(@ConnectedSocket() client: Socket) {
     await client.join('lobby');
+    const rooms = await this.roomsService.findAll('waiting');
+    client.emit('lobby:rooms', rooms);
     console.log(`[RoomsGateway] lobby:join ${client.id}`);
+    console.log(`[RoomsGateway] sent lobby:rooms count=${rooms.length}`);
   }
   @SubscribeMessage('lobby:leave')
   async handleLeaveLobby(@ConnectedSocket() client: Socket) {
