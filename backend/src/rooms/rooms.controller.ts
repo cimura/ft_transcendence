@@ -58,15 +58,25 @@ export class RoomsController {
   @Post(':roomId/join')
   @ApiOperation({ summary: 'ルームに参加' })
   @ApiResponse({ status: 201, description: '成功時' })
-  join(@Request() req: UserRequest, @Param('roomId') roomId: string) {
-    return this.roomsService.join(roomId, req.user.userId);
+  async join(@Request() req: UserRequest, @Param('roomId') roomId: string) {
+    const room = await this.roomsService.join(roomId, req.user.userId);
+    this.roomsGateway.emitRoomUpdated(room);
+    return room;
   }
 
   @Post(':roomId/leave')
   @ApiOperation({ summary: 'ルームから退出' })
   @ApiResponse({ status: 201, description: '成功時' })
-  leave(@Request() req: UserRequest, @Param('roomId') roomId: string) {
-    return this.roomsService.leave(roomId, req.user.userId);
+  async leave(@Request() req: UserRequest, @Param('roomId') roomId: string) {
+    const result = await this.roomsService.leave(roomId, req.user.userId);
+
+    if ('id' in result) {
+      this.roomsGateway.emitRoomUpdated(result);
+    } else {
+      this.roomsGateway.emitRoomDeleted(result.roomId);
+    }
+
+    return result;
   }
 
   @Post(':roomId/ready')

@@ -44,4 +44,14 @@ export class RoomsGateway implements OnGatewayConnection, OnGatewayDisconnect {
     console.log(`[RoomsGateway] room:created ${room.id}`);
     this.server.to('lobby').emit('room:created', room);
   }
+
+  emitRoomUpdated(room: Awaited<ReturnType<RoomsService['join']>>) {
+    console.log(`[RoomsGateway] room:updated ${room.id}`);
+    this.server.to('lobby').emit('room:updated', room);
+  }
+
+  emitRoomDeleted(roomId: string) {
+    console.log(`[RoomsGateway] room:deleted ${roomId}`);
+    this.server.to('lobby').emit('room:deleted', { roomId });
+  }
 }

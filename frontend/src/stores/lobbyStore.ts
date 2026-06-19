@@ -16,7 +16,16 @@ export const useLobbyStore = create<LobbyStore>()(
   immer((set) => ({
     rooms: mockRooms,
     currentRoom: null,
-    setRooms: (rooms) => set({ rooms }),
+    setRooms: (rooms) =>
+      set((state) => {
+        state.rooms = rooms
+        if (
+          state.currentRoom &&
+          !rooms.some((room) => room.id === state.currentRoom?.id)
+        ) {
+          state.currentRoom = null
+        }
+      }),
     upsertRoom: (room) =>
       set((state) => {
         const index = state.rooms.findIndex((r: GameRoom) => r.id === room.id)
@@ -25,10 +34,16 @@ export const useLobbyStore = create<LobbyStore>()(
         } else {
           state.rooms.push(room) // insert
         }
+        if (state.currentRoom?.id === room.id) {
+          state.currentRoom = room
+        }
       }),
     removeRoom: (id) =>
       set((state) => {
         state.rooms = state.rooms.filter((r: GameRoom) => r.id !== id)
+        if (state.currentRoom?.id === id) {
+          state.currentRoom = null
+        }
       }),
     setCurrentRoom: (room) => set({ currentRoom: room }),
   }))

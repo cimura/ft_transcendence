@@ -6,16 +6,19 @@ import { PlayerCard } from '../components/waitingRoom/PlayerCard'
 import { ChatPanel } from '../components/waitingRoom/ChatPanel'
 import { GameMapPreview } from '../components/game/GameMapPreview'
 import { useAuthStore } from '../stores/authStore'
+import { leaveRoom } from '../api/rooms'
+import { useLobbySocket } from '../hooks/useLobbySocket'
 
 export function WaitingRoom() {
   const { roomId } = useParams<{ roomId: string }>()
   const navigate = useNavigate()
-  const { currentRoom, setCurrentRoom } = useLobbyStore()
+  const { currentRoom, setCurrentRoom, removeRoom, upsertRoom } = useLobbyStore()
   const { currentUser, accessToken, fetchCurrentUser } = useAuthStore()
   const [isReady, setIsReady] = useState(false)
 
-  // current userId(temporary)
-  const currentUserId = '0'
+  const currentUserId = currentUser?.id
+
+  useLobbySocket()
 
   useEffect(() => {
     // ルーム情報がない場合はロビーへ戻る
@@ -61,12 +64,40 @@ export function WaitingRoom() {
   }
 
   // leave room
-  const handleLeaveRoom = () => {
+  const handleLeaveRoom = async () => {
     console.log('部屋を退出')
-    setCurrentRoom(null)
-    navigate('/lobby')
-    // TODO: WebSocketでサーバーに送信
-    // socket.emit('room:leave', { roomId: currentRoom.id })
+
+    try {
+      const result = await leaveRoom(currentRoom.id)
+
+      if (result.deleted) {
+        removeRoom(result.roomId)
+      } else {
+        upsertRoom(result)
+      }
+
+      setCurrentRoom(null)
+      navigate('/lobby')
+    } catch (error) {
+      const status =
+        typeof error === 'object' &&
+        error !== null &&
+        'response' in error &&
+        typeof error.response === 'object' &&
+        error.response !== null &&
+        'status' in error.response
+          ? error.response.status
+          : undefined
+
+      if (status === 403 || status === 404) {
+        removeRoom(currentRoom.id)
+        setCurrentRoom(null)
+        navigate('/lobby')
+        return
+      }
+
+      console.error('Failed to leave room:', error)
+    }
   }
 
   return (
