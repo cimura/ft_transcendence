@@ -8,12 +8,16 @@ import {
   OnGatewayDisconnect,
   SubscribeMessage,
   ConnectedSocket,
+  WebSocketServer,
 } from '@nestjs/websockets';
-import { Socket } from 'socket.io';
+import { Socket, Server } from 'socket.io';
 import { RoomsService } from './rooms.service';
 
 @WebSocketGateway()
 export class RoomsGateway implements OnGatewayConnection, OnGatewayDisconnect {
+  @WebSocketServer()
+  server: Server;
+
   constructor(private readonly roomsService: RoomsService) {}
 
   handleConnection(client: Socket) {
@@ -34,5 +38,10 @@ export class RoomsGateway implements OnGatewayConnection, OnGatewayDisconnect {
   async handleLeaveLobby(@ConnectedSocket() client: Socket) {
     await client.leave('lobby');
     console.log(`[RoomsGateway] lobby:leave ${client.id}`);
+  }
+
+  emitRoomCreated(room: Awaited<ReturnType<RoomsService['create']>>) {
+    console.log(`[RoomsGateway] room:created ${room.id}`);
+    this.server.to('lobby').emit('room:created', room);
   }
 }

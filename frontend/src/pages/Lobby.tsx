@@ -7,6 +7,7 @@ import { RoomFilter } from '../components/lobby/RoomFilter'
 import { RoomList } from '../components/lobby/RoomList'
 import { CreateRoomModal } from '../components/lobby/CreateRoomModal'
 import { useNavigate } from 'react-router-dom'
+import api from '../api/client'
 
 type FilterType = 'all' | 'waiting' | 'playing' | 'finished'
 
@@ -27,31 +28,18 @@ export function Lobby() {
     return false
   })
   // create rooms
-  const handleCreateRoom = (dto: CreateRoomDto) => {
-    console.log('create rooms...', dto)
-    const room = {
-      id: `local-${Date.now()}`,
-      name: dto.name,
-      hostId: '0',
-      hostName: 'current_user',
-      players: [
-        {
-          userId: '0',
-          username: 'current_user',
-          isReady: true,
-          isHost: true,
-        },
-      ],
-      maxPlayers: dto.maxPlayers,
-      status: 'waiting' as const,
-      mapId: dto.mapId,
-      createdAt: new Date(),
-    }
+  const handleCreateRoom = async (dto: CreateRoomDto) => {
+    try {
+      const response = await api.post('/rooms', dto)
+      const room = response.data
 
-    upsertRoom(room)
-    setCurrentRoom(room)
-    setIsModalOpen(false)
-    navigate(`/room/${room.id}`)
+      upsertRoom(room)
+      setCurrentRoom(room)
+      setIsModalOpen(false)
+      navigate(`/room/${room.id}`)
+    } catch (error) {
+      console.error('room create failed', error)
+    }
   }
   // join rooms
   const handleJoinRoom = (roomId: string) => {
