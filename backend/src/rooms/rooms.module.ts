@@ -7,7 +7,7 @@ import { RoomsGateway } from './rooms.gateway';
 
 @Module({
   imports: [GamesModule],
-  controllers: [RoomsController, RoomsGateway],
-  providers: [RoomsService, PrismaService],
+  controllers: [RoomsController],
+  providers: [RoomsService, PrismaService, RoomsGateway],
 })
 export class RoomsModule {}

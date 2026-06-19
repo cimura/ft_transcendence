@@ -2,16 +2,19 @@
 // 2. log when a socket connects
 // 3. log when a socket disconnects
 
-import { WebSocketGateway, OnGatewayConnection, OnGatewayDisconnect } from '@nestjs/websockets'
-import { Socket } from 'socket.io'
+import {
+  WebSocketGateway,
+  OnGatewayConnection,
+  OnGatewayDisconnect,
+} from '@nestjs/websockets';
+import { Socket } from 'socket.io';
 
 @WebSocketGateway()
-export class RoomsGateway implements OnGatewayConnection, OnGatewayDisconnect{
-    handleConnection(client: Socket) {
-        console.log(`[RoomsGateway] connected: ${client.id}`);
-    }
-    handleDisconnection(client: Socket) {
-        console.log(`[RoomsGateway] connected: ${client.id}`);
-    }
+export class RoomsGateway implements OnGatewayConnection, OnGatewayDisconnect {
+  handleConnection(client: Socket) {
+    console.log(`[RoomsGateway] connected: ${client.id}`);
+  }
+  handleDisconnect(client: Socket) {
+    console.log(`[RoomsGateway] disconnected: ${client.id}`);
+  }
 }
-
