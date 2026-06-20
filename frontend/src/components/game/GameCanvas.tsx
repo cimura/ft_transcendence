@@ -4,7 +4,7 @@ import type {
   BombermanInput,
   Direction,
 } from '../../game/bomberman/bombermanTypes'
-import { BombermanGame } from '../../game/bomberman/BombermanGame'
+import { MockBombermanApi } from '../../game/bomberman/MockBombermanApi'
 import { GameLoop } from '../../game/engine/GameLoop'
 import { InputManager } from '../../game/engine/InputManager'
 import { BombermanScene } from './BombermanScene'
@@ -18,11 +18,11 @@ type GameCanvasProps = {
 const BOMB_HIGHLIGHT_DURATION_MS = 180
 
 export function GameCanvas({ onInput, onStateChange }: GameCanvasProps) {
-  const game = useMemo(() => new BombermanGame(), [])
+  const gameApi = useMemo(() => new MockBombermanApi(), [])
   const inputManagerRef = useRef<InputManager | null>(null)
   const bombHighlightTimeoutRef = useRef<number | null>(null)
   const [activeControl, setActiveControl] = useState<ActiveControl>(null)
-  const [gameState, setGameState] = useState(() => game.getSnapshot())
+  const [gameState, setGameState] = useState(() => gameApi.getSnapshot())
 
   const isDirection = (value: ActiveControl): value is Direction =>
     value === 'up' || value === 'down' || value === 'left' || value === 'right'
@@ -64,7 +64,7 @@ export function GameCanvas({ onInput, onStateChange }: GameCanvasProps) {
   useEffect(() => {
     const loop = new GameLoop({
       update: (deltaTime) => {
-        const nextState = game.update(deltaTime, performance.now())
+        const nextState = gameApi.tick(deltaTime, performance.now())
         setGameState(nextState)
         onStateChange?.(nextState)
       },
@@ -76,23 +76,36 @@ export function GameCanvas({ onInput, onStateChange }: GameCanvasProps) {
     return () => {
       loop.stop()
     }
-  }, [game, onStateChange])
+  }, [gameApi, onStateChange])
 
   useEffect(() => {
+    let isActive = true
     const manager = new InputManager((input) => {
       handleInputState(input)
-      game.handleInput(input)
-      onInput?.(input)
+      void gameApi.sendInput(input).then((response) => {
+        if (!isActive || !response.ok) return
+
+        setGameState(response.state)
+        onStateChange?.(response.state)
+        onInput?.(response.input)
+      })
     })
     inputManagerRef.current = manager
     manager.attach()
 
     return () => {
+      isActive = false
       manager.detach()
       inputManagerRef.current = null
       clearBombHighlightTimeout()
     }
-  }, [clearBombHighlightTimeout, game, handleInputState, onInput])
+  }, [
+    clearBombHighlightTimeout,
+    gameApi,
+    handleInputState,
+    onInput,
+    onStateChange,
+  ])
 
   const handleTouchInput = (input: BombermanInput) => {
     inputManagerRef.current?.emitTouchInput(input)
