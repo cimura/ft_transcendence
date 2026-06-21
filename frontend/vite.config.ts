@@ -10,8 +10,8 @@ export default defineConfig({
 		watch: {
 			usePolling: true
 		},
-		hmr: {
-			clientPort: 443,
-		},
+			protocol: 'wss',
+      host: 'localhost',
+      clientPort: 8443,
 	},
 })
