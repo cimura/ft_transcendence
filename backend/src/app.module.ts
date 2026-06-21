@@ -8,6 +8,8 @@ import { PrismaService } from './prisma.service';
 import { UploadsModule } from './uploads/uploads.module';
 import { UsersModule } from './users/users.module';
 import { FriendsModule } from './friends/friends.module';
+import { GameGateway } from './game/game.gateway';
+import { GameModule } from './game/game.module';
 
 @Module({
   imports: [
@@ -19,8 +21,9 @@ import { FriendsModule } from './friends/friends.module';
     UploadsModule,
     UsersModule,
     FriendsModule,
+    GameModule,
   ],
   controllers: [AppController],
-  providers: [AppService, PrismaService],
+  providers: [AppService, PrismaService, GameGateway],
 })
 export class AppModule {}
