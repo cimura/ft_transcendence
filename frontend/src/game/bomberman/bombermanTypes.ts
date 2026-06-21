@@ -56,11 +56,10 @@ export type BombermanSmoke = {
 
 export type BombermanGameState = {
   map: BombermanMap
-  players: BombermanPlayer[]
-  bombs: BombermanBomb[]
+  players: Record<string, BombermanPlayer>
+  bombs: Record<string, BombermanBomb>
   explosions: BombermanExplosion[]
   smokes: BombermanSmoke[]
-  status: GameStatus
   winnerId?: string
 }
 

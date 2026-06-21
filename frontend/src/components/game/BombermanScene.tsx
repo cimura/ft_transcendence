@@ -234,7 +234,7 @@ export function BombermanScene({ gameState }: BombermanSceneProps) {
         })
       )}
 
-      {gameState.bombs.map((bomb) => (
+      {Object.values(gameState.bombs).map((bomb) => (
         <group key={bomb.id} position={[bomb.position.x, 0, bomb.position.y]}>
           <mesh
             geometry={assets.bombCoreGeometry}
@@ -256,7 +256,7 @@ export function BombermanScene({ gameState }: BombermanSceneProps) {
         smokes={gameState.smokes}
       />
 
-      {gameState.players.map((player) => (
+      {Object.values(gameState.players).map((player) => (
         <BombermanCharacter key={player.id} player={player} />
       ))}
     </Canvas>
