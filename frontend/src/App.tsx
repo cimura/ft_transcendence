@@ -18,6 +18,11 @@ import { FriendRequestsPage } from './pages/friends/FriendRequestsPage'
 import { UserSearchPage } from './pages/friends/UserSearchPage'
 import { ProfilePage } from './pages/ProfilePage'
 import { Home } from './pages/Home'
+import { Settings } from './pages/settings/Settings'
+import { SettingsMenu } from './pages/settings/SettingsMenu'
+import { AccountManagement } from './pages/settings/AccountManagement'
+import { NotificationSettings } from './pages/settings/NotificationPage'
+import { PrivacySettings } from './pages/settings/PrivacySettings'
 
 function App() {
   return (
@@ -110,14 +115,12 @@ function AppRoutes() {
         path="/friends"
         element={<div className="p-8">フレンド画面（準備中）</div>}
       />
-      <Route
-        path="/history"
-        element={<div className="p-8">対戦履歴画面（準備中）</div>}
-      />
-      <Route
-        path="/settings"
-        element={<div className="p-8">設定画面（準備中）</div>}
-      />
+      <Route path="/settings" element={<Settings />}>
+        <Route index element={<SettingsMenu />} /> {/* 設定のトップメニュー */}
+        <Route path="account" element={<AccountManagement />} />
+        <Route path="notifications" element={<NotificationSettings />} />
+        <Route path="privacy" element={<PrivacySettings />} />
+      </Route>
 
       {/* ログイン状態で存在しないURLに入ったら /home にリダイレクト */}
       <Route path="*" element={<Navigate to="/home" replace />} />

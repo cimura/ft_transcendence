@@ -44,18 +44,12 @@ export function Home() {
           </button>
 
           {/* 下段: 設定・対戦履歴 */}
-          <div className="grid grid-cols-2 gap-8">
+          <div className="flex justify-center">
             <button
               onClick={() => navigate('/settings')}
               className="rounded-full bg-black bg-opacity-70 px-12 py-6 text-2xl font-bold text-white transition-all hover:bg-opacity-90"
             >
               設定
-            </button>
-            <button
-              onClick={() => navigate('/history')}
-              className="rounded-full bg-black bg-opacity-70 px-12 py-6 text-2xl font-bold text-white transition-all hover:bg-opacity-90"
-            >
-              対戦履歴
             </button>
           </div>
         </div>
