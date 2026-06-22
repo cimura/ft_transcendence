@@ -8,15 +8,29 @@ import {
 import { PrismaService } from '../prisma.service';
 import { GamesService } from '../games/games.service';
 import { BOMBERMAN_GAME_ID } from '../games/games.constants';
+import type { Prisma } from '../generated/prisma/client';
 import { RoomMode, RoomStatus } from '../generated/prisma/enums';
 import { CreateRoomDto } from './dto/create-room.dto';
 import { CreateRoomMessageDto } from './dto/create-room-message.dto';
+import type { QueryRoomStatus } from './dto/query-rooms.dto';
 
 const MAX_MESSAGES_PER_ROOM = 50;
 const MESSAGE_COOLDOWN_MS = 1000;
 
 type RoomStatusResponse = 'waiting' | 'playing' | 'finished';
 type RoomModeResponse = 'online' | 'local_cpu';
+type CreateRoomMode = NonNullable<CreateRoomDto['mode']>;
+
+const ROOM_STATUS_MAP: Record<QueryRoomStatus, RoomStatus> = {
+  waiting: RoomStatus.WAITING,
+  playing: RoomStatus.PLAYING,
+  finished: RoomStatus.FINISHED,
+};
+
+const ROOM_MODE_MAP: Record<CreateRoomMode, RoomMode> = {
+  online: RoomMode.ONLINE,
+  local_cpu: RoomMode.LOCAL_CPU,
+};
 
 type RoomWithParticipants = {
   id: string;
@@ -26,7 +40,7 @@ type RoomWithParticipants = {
   maxPlayers: number;
   status: RoomStatus;
   mode: RoomMode;
-  settingsSnapshot: unknown;
+  settingsSnapshot: Prisma.JsonValue;
   createdAt: Date;
   updatedAt: Date;
   startedAt: Date | null;
@@ -58,7 +72,7 @@ export class RoomsService {
     private readonly gamesService: GamesService,
   ) {}
 
-  async findAll(status?: string) {
+  async findAll(status?: QueryRoomStatus) {
     const roomStatus = status ? this.toRoomStatus(status) : undefined;
     const rooms = await this.prisma.gameRoom.findMany({
       where: roomStatus ? { status: roomStatus } : undefined,
@@ -434,17 +448,12 @@ export class RoomsService {
     };
   }
 
-  private toRoomStatus(status: string) {
-    if (status === 'waiting') return RoomStatus.WAITING;
-    if (status === 'playing') return RoomStatus.PLAYING;
-    if (status === 'finished') return RoomStatus.FINISHED;
-    throw new BadRequestException('Invalid room status');
+  private toRoomStatus(status: QueryRoomStatus) {
+    return ROOM_STATUS_MAP[status];
   }
 
-  private toRoomMode(mode: string) {
-    if (mode === 'online') return RoomMode.ONLINE;
-    if (mode === 'local_cpu') return RoomMode.LOCAL_CPU;
-    throw new BadRequestException('Invalid room mode');
+  private toRoomMode(mode: CreateRoomMode) {
+    return ROOM_MODE_MAP[mode];
   }
 
   private toStatusResponse(status: RoomStatus): RoomStatusResponse {

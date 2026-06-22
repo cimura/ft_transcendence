@@ -18,6 +18,7 @@ import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import type { UserRequest } from '../users/interfaces/user-request.interface';
 import { CreateRoomDto } from './dto/create-room.dto';
 import { CreateRoomMessageDto } from './dto/create-room-message.dto';
+import { QueryRoomsDto } from './dto/query-rooms.dto';
 import { ReadyRoomDto } from './dto/ready-room.dto';
 import { RoomsService } from './rooms.service';
 
@@ -31,8 +32,8 @@ export class RoomsController {
   @Get()
   @ApiOperation({ summary: 'ルーム一覧を取得' })
   @ApiResponse({ status: 200, description: '成功時' })
-  findAll(@Query('status') status?: string) {
-    return this.roomsService.findAll(status);
+  findAll(@Query() query: QueryRoomsDto) {
+    return this.roomsService.findAll(query.status);
   }
 
   @Post()
