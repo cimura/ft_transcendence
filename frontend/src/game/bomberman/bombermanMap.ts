@@ -40,6 +40,7 @@ export const NPC_SPEED_MULTIPLIER = 1.18
 export const NPC_ATTACK_RANGE = 4
 export const NPC_BOMB_COOLDOWN_MS = 900
 export const BLAST_RANGE = 2
+
 export const BREAKABLE_COLORS = [
   '#00ffff',
   '#ff00ff',
@@ -47,6 +48,25 @@ export const BREAKABLE_COLORS = [
   '#00ff88',
   '#ff5500',
 ]
+
+export const getBreakableColor = (x: number, y: number) => {
+  // フォールバック: 座標が想定外（または範囲外）の場合はデフォルトの色を返す
+  if (
+    x < 0 ||
+    x >= BOMBERMAN_GRID_SIZE ||
+    y < 0 ||
+    y >= BOMBERMAN_GRID_SIZE ||
+    isNaN(x) ||
+    isNaN(y)
+  ) {
+    return BREAKABLE_COLORS[0]
+  }
+
+  return BREAKABLE_COLORS[
+    (x * BREAKABLE_COLOR_X_WEIGHT + y * BREAKABLE_COLOR_Y_WEIGHT) %
+      BREAKABLE_COLORS.length
+  ]
+}
 
 export const startPositions: WorldPosition[] = [
   { x: 0, z: 0 },
@@ -79,13 +99,6 @@ export const createInitialBombermanMap = (): BombermanMap =>
         : 'empty'
     })
   )
-
-// Coprime weights keep color choices stable while avoiding obvious grid stripes.
-export const getBreakableColor = (x: number, y: number) =>
-  BREAKABLE_COLORS[
-    (x * BREAKABLE_COLOR_X_WEIGHT + y * BREAKABLE_COLOR_Y_WEIGHT) %
-      BREAKABLE_COLORS.length
-  ]
 
 export const createInitialBombermanPlayers = (): BombermanPlayer[] => [
   {

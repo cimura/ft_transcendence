@@ -1,67 +1,96 @@
 import type { BombermanInput, Direction } from '../bomberman/bombermanTypes'
 
-type InputListener = (input: BombermanInput) => void
-
-const directionKeys: Record<string, Direction> = {
-  ArrowUp: 'up',
-  w: 'up',
-  W: 'up',
-  ArrowDown: 'down',
-  s: 'down',
-  S: 'down',
-  ArrowLeft: 'left',
-  a: 'left',
-  A: 'left',
-  ArrowRight: 'right',
-  d: 'right',
-  D: 'right',
-}
-
 export class InputManager {
-  private readonly listener: InputListener
-  private activeDirection: Direction | null = null
+  private onInput: (input: BombermanInput) => void
+  private activeDirections: Direction[] = []
+  private attached = false
 
-  constructor(listener: InputListener) {
-    this.listener = listener
+  constructor(onInput: (input: BombermanInput) => void) {
+    this.onInput = onInput
+    this.handleKeyDown = this.handleKeyDown.bind(this)
+    this.handleKeyUp = this.handleKeyUp.bind(this)
   }
 
   attach() {
+    if (this.attached) return
     window.addEventListener('keydown', this.handleKeyDown)
     window.addEventListener('keyup', this.handleKeyUp)
+    this.attached = true
   }
 
   detach() {
+    if (!this.attached) return
     window.removeEventListener('keydown', this.handleKeyDown)
     window.removeEventListener('keyup', this.handleKeyUp)
+    this.attached = false
+    this.activeDirections = []
   }
 
+  // タッチコントローラー（画面上のボタン）からの直接入力用
   emitTouchInput(input: BombermanInput) {
-    this.listener(input)
+    // タッチ入力とキーボード入力が競合しないよう、キーボードのスタックはクリアする
+    if (input.type === 'move' || input.type === 'stop') {
+      this.activeDirections = []
+    }
+    this.onInput(input)
   }
 
-  private handleKeyDown = (event: KeyboardEvent) => {
-    if (event.repeat) return
+  private handleKeyDown(e: KeyboardEvent) {
+    // キー押しっぱなしによるOSの連続入力（リピート）は無視する
+    if (e.repeat) return
 
-    const direction = directionKeys[event.key]
-    if (direction) {
-      event.preventDefault()
-      this.activeDirection = direction
-      this.listener({ type: 'move', direction })
+    const dir = this.getDirectionFromKey(e.code)
+    if (dir) {
+      if (!this.activeDirections.includes(dir)) {
+        this.activeDirections.push(dir) // スタックの末尾に追加
+        this.emitCurrentDirection()
+      }
       return
     }
 
-    if (event.key === ' ') {
-      event.preventDefault()
-      this.listener({ type: 'place_bomb' })
+    if (e.code === 'Space' || e.code === 'Enter') {
+      this.onInput({ type: 'place_bomb' })
     }
   }
 
-  private handleKeyUp = (event: KeyboardEvent) => {
-    const direction = directionKeys[event.key]
-    if (!direction || direction !== this.activeDirection) return
+  private handleKeyUp(e: KeyboardEvent) {
+    const dir = this.getDirectionFromKey(e.code)
+    if (dir) {
+      const index = this.activeDirections.indexOf(dir)
+      if (index > -1) {
+        this.activeDirections.splice(index, 1) // 離したキーをスタックから削除
+        this.emitCurrentDirection()
+      }
+    }
+  }
 
-    event.preventDefault()
-    this.activeDirection = null
-    this.listener({ type: 'stop' })
+  private emitCurrentDirection() {
+    if (this.activeDirections.length > 0) {
+      // 常にスタックの末尾（最後に押されたキー）を現在の進行方向とする
+      const currentDir = this.activeDirections[this.activeDirections.length - 1]
+      this.onInput({ type: 'move', direction: currentDir })
+    } else {
+      // スタックが空になれば停止
+      this.onInput({ type: 'stop' })
+    }
+  }
+
+  private getDirectionFromKey(code: string): Direction | null {
+    switch (code) {
+      case 'KeyW':
+      case 'ArrowUp':
+        return 'up'
+      case 'KeyS':
+      case 'ArrowDown':
+        return 'down'
+      case 'KeyA':
+      case 'ArrowLeft':
+        return 'left'
+      case 'KeyD':
+      case 'ArrowRight':
+        return 'right'
+      default:
+        return null
+    }
   }
 }

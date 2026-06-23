@@ -70,3 +70,16 @@ export type BombermanPlayerPreview = {
   gridY: number
   color: string
 }
+
+export type PlayerStats = {
+  blocksDestroyed: number
+  bombsPlaced: number
+  kills: number
+  survivalTime: number
+}
+
+export type GameEndPayload = {
+  winnerId?: string
+  isDraw: boolean
+  rankings: { playerId: string; stats: PlayerStats }[]
+}

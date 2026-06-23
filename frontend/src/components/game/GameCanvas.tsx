@@ -8,18 +8,24 @@ import type {
   BombermanGameState,
   BombermanInput,
   Direction,
+  BombermanBomb,
+  BombermanExplosion,
+  GridPosition,
+  GameEndPayload,
 } from '../../game/bomberman/bombermanTypes'
 
-const ROOM_ID = 'test-room'
-
 type GameCanvasProps = {
+  roomId: string // ★ Propsに roomId を追加
   onInput?: (input: BombermanInput) => void
-  onGameEnd?: (result: 'WIN' | 'LOSE' | 'DRAW') => void
+  onGameEnd?: (
+    result: 'WIN' | 'LOSE' | 'DRAW',
+    rankings?: GameEndPayload['rankings']
+  ) => void
 }
 
 const BOMB_HIGHLIGHT_DURATION_MS = 180
 
-export function GameCanvas({ onInput, onGameEnd }: GameCanvasProps) {
+export function GameCanvas({ roomId, onInput, onGameEnd }: GameCanvasProps) {
   const socketRef = useRef<Socket | null>(null)
   const inputManagerRef = useRef<InputManager | null>(null)
   const bombHighlightTimeoutRef = useRef<number | null>(null)
@@ -29,6 +35,7 @@ export function GameCanvas({ onInput, onGameEnd }: GameCanvasProps) {
 
   const gameState = useGameStore((state) => state.gameState)
   const setGameState = useGameStore((state) => state.setGameState)
+  const setResultStats = useGameStore((state) => state.setResultStats)
 
   const isDirection = (value: ActiveControl): value is Direction =>
     value === 'up' || value === 'down' || value === 'left' || value === 'right'
@@ -68,16 +75,16 @@ export function GameCanvas({ onInput, onGameEnd }: GameCanvasProps) {
     if (!socketRef.current) {
       socketRef.current = io({
         transports: ['websocket'],
-        secure: true
-      });
+        secure: true,
+      })
     }
 
-    const socket = socketRef.current;
+    const socket = socketRef.current
 
-    socket.emit('game:join', { roomId: ROOM_ID, username: 'Player-Local' })
+    // ★ Props で受け取った roomId を使って参加
+    socket.emit('game:join', { roomId, username: 'Player-Local' })
 
     socket.on('game:init', (data) => {
-      console.log('Game initialized from server:', data)
       setGameState({
         map: data.map,
         players: data.players,
@@ -88,32 +95,108 @@ export function GameCanvas({ onInput, onGameEnd }: GameCanvasProps) {
     })
 
     socket.on('game:state', (data: BombermanGameState) => {
-      // Zustandストアからその時点の最新の gameState を取得
-      const currentGameState = useGameStore.getState().gameState;
-      
+      const currentGameState = useGameStore.getState().gameState
       setGameState({
-        ...currentGameState,     // 既存の map, explosions, smokes を維持
-        players: data.players,   // サーバーからの最新プレイヤー位置
-        bombs: data.bombs,       // サーバーからの最新爆弾状態
+        ...currentGameState,
+        players: data.players,
+        bombs: data.bombs,
       })
     })
 
-    socket.on('game:end', (data: { winnerId?: string; isDraw: boolean }) => {
+    socket.on('bomb:spawn', (data: { bomb: BombermanBomb }) => {
+      const state = useGameStore.getState().gameState
+      setGameState({
+        ...state,
+        bombs: { ...state.bombs, [data.bomb.id]: data.bomb },
+      })
+    })
+
+    socket.on(
+      'bomb:explode',
+      (data: {
+        bombId: string
+        affectedTiles: GridPosition[]
+        destroyedBlocks: GridPosition[]
+        damagedPlayerIds: string[]
+        mapRevision: number
+      }) => {
+        const state = useGameStore.getState().gameState
+        const newBombs = { ...state.bombs }
+        delete newBombs[data.bombId]
+
+        const newMap = [...state.map]
+        data.destroyedBlocks.forEach((pos) => {
+          newMap[pos.y] = [...newMap[pos.y]]
+          newMap[pos.y][pos.x] = 'empty'
+        })
+
+        const newPlayers = { ...state.players }
+        data.damagedPlayerIds.forEach((pid) => {
+          if (newPlayers[pid]) {
+            newPlayers[pid] = { ...newPlayers[pid], alive: false }
+          }
+        })
+
+        const explosion: BombermanExplosion = {
+          id: `exp_${Date.now()}_${Math.random()}`,
+          cells: data.affectedTiles,
+          expiresAt: Date.now() + 500,
+        }
+
+        setGameState({
+          ...state,
+          map: newMap,
+          bombs: newBombs,
+          players: newPlayers,
+          explosions: [...state.explosions, explosion],
+        })
+      }
+    )
+
+    socket.on('game:end', (data: GameEndPayload) => {
+      setResultStats(data)
       if (data.isDraw) {
-        onGameEnd?.('DRAW')
+        onGameEnd?.('DRAW', data.rankings)
       } else if (data.winnerId === socket.id) {
-        onGameEnd?.('WIN')
+        onGameEnd?.('WIN', data.rankings)
       } else {
-        onGameEnd?.('LOSE')
+        onGameEnd?.('LOSE', data.rankings)
       }
     })
 
     return () => {
       socket.off('game:init')
       socket.off('game:state')
+      socket.off('bomb:spawn')
+      socket.off('bomb:explode')
       socket.off('game:end')
     }
-  }, [setGameState, onGameEnd])
+  }, [roomId, setGameState, onGameEnd])
+
+  useEffect(() => {
+    return () => {
+      setGameState({
+        map: [],
+        players: {},
+        bombs: {},
+        explosions: [],
+        smokes: [],
+      })
+      setResultStats(null)
+    }
+  }, [setGameState, setResultStats])
+
+  useEffect(() => {
+    return () => {
+      setGameState({
+        map: [],
+        players: {},
+        bombs: {},
+        explosions: [],
+        smokes: [],
+      })
+    }
+  }, [setGameState])
 
   useEffect(() => {
     const manager = new InputManager((input) => {

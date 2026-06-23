@@ -8,6 +8,7 @@ import type {
   BombermanGameState,
   BombermanInput,
   BombermanPlayer,
+  GameEndPayload,
 } from '../game/bomberman/bombermanTypes'
 
 type DisplayInput = Exclude<BombermanInput, { type: 'stop' }>
@@ -20,7 +21,30 @@ export function GameRoomPage() {
   const [lastInput, setLastInput] = useState<DisplayInput | null>(null)
 
   const [gameResult, setGameResult] = useState<GameResult>(null)
+  const [rankings, setRankings] = useState<GameEndPayload['rankings']>([])
+  const [isDisconnected, setIsDisconnected] = useState(false) // 切断判定用のフラグ
   const gameState = useGameStore((state) => state.gameState)
+
+  const playersCount = Object.keys(gameState?.players ?? {}).length
+
+  useEffect(() => {
+    const handleBeforeUnload = () => {
+      if (!gameResult && roomId && playersCount >= 2) {
+        sessionStorage.setItem('surrenderedRoomId', roomId)
+      }
+    }
+
+    window.addEventListener('beforeunload', handleBeforeUnload)
+    return () => window.removeEventListener('beforeunload', handleBeforeUnload)
+  }, [gameResult, roomId, playersCount])
+
+  useEffect(() => {
+    if (roomId && sessionStorage.getItem('surrenderedRoomId') === roomId) {
+      setGameResult('LOSE')
+      setIsDisconnected(true) // ペナルティでの敗北であることを記録
+      sessionStorage.removeItem('surrenderedRoomId')
+    }
+  }, [roomId])
 
   useEffect(() => {
     if (!roomId) {
@@ -58,10 +82,20 @@ export function GameRoomPage() {
     })
   }, [navigate, roomId, rooms, setCurrentRoom])
 
-  const handleGameInput= useCallback((input: BombermanInput) => {
+  const handleGameInput = useCallback((input: BombermanInput) => {
     if (input.type === 'stop') return
     setLastInput(input)
   }, [])
+
+  const handleGameEnd = useCallback(
+    (result: GameResult, resultRankings?: GameEndPayload['rankings']) => {
+      setGameResult(result)
+      if (resultRankings) {
+        setRankings(resultRankings)
+      }
+    },
+    []
+  )
 
   if (!currentRoom) {
     return null
@@ -81,8 +115,9 @@ export function GameRoomPage() {
     return directionLabels[lastInput.direction]
   }
 
-  const livingPlayers = Object.values(gameState?.players ?? {})
-    .filter((player: BombermanPlayer) => player.alive).length;
+  const livingPlayers = Object.values(gameState?.players ?? {}).filter(
+    (player: BombermanPlayer) => player.alive
+  ).length
 
   return (
     <div className="min-h-screen bg-gray-950 text-white">
@@ -105,28 +140,91 @@ export function GameRoomPage() {
             <Button
               variant="secondary"
               size="sm"
-              onClick={() => navigate(`/room/${currentRoom.id}`)}
+              onClick={() => navigate('/lobby')}
             >
-              待機室へ戻る
+              ロビーへ戻る
             </Button>
           </div>
         </div>
       </header>
 
       <main className="relative mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8">
-        <GameCanvas onInput={handleGameInput} onGameEnd={setGameResult} />
-        
+        <GameCanvas
+          roomId={currentRoom.id}
+          onInput={handleGameInput}
+          onGameEnd={handleGameEnd}
+        />
+
         {gameResult && (
           <div className="pointer-events-none absolute inset-x-4 top-1/2 z-10 flex -translate-y-1/2 justify-center sm:inset-x-6 lg:inset-x-8">
-            <div className="rounded-lg border border-cyan-300/40 bg-gray-950/85 px-8 py-6 text-center shadow-2xl shadow-cyan-500/20">
+            <div className="pointer-events-auto rounded-lg border border-cyan-300/40 bg-gray-950/85 px-8 py-6 text-center shadow-2xl shadow-cyan-500/20">
               <p className="text-5xl font-black italic tracking-normal text-cyan-200 drop-shadow-[0_0_18px_rgba(34,211,238,0.9)]">
                 {gameResult === 'WIN' && 'YOU WIN'}
                 {gameResult === 'LOSE' && 'GAME OVER'}
                 {gameResult === 'DRAW' && 'DRAW'}
               </p>
-              <p className="mt-3 text-sm font-semibold text-gray-300">
-                待機室へ戻って再開できます
+              <p className="mt-4 text-sm font-semibold text-gray-300">
+                {isDisconnected
+                  ? 'ネットワークを切断したためGAME OVERになりました。'
+                  : 'ロビーへ戻って再開できます'}
               </p>
+
+              {rankings.length > 0 && (
+                <div className="mt-6 w-full overflow-x-auto text-left">
+                  <table className="w-full text-sm text-gray-300">
+                    <thead className="bg-gray-800/50 text-gray-400">
+                      <tr>
+                        <th className="px-4 py-2 font-medium">プレイヤー</th>
+                        <th className="px-4 py-2 text-center font-medium">
+                          キル
+                        </th>
+                        <th className="px-4 py-2 text-center font-medium">
+                          破壊
+                        </th>
+                        <th className="px-4 py-2 text-center font-medium">
+                          設置
+                        </th>
+                        <th className="px-4 py-2 text-right font-medium">
+                          生存時間
+                        </th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-gray-800">
+                      {rankings
+                        .sort(
+                          (a, b) => b.stats.survivalTime - a.stats.survivalTime
+                        )
+                        .map((r, i) => (
+                          <tr
+                            key={r.playerId}
+                            className={i % 2 === 0 ? 'bg-gray-900/30' : ''}
+                          >
+                            <td className="px-4 py-2">
+                              {r.playerId.slice(0, 8)}
+                            </td>
+                            <td className="px-4 py-2 text-center">
+                              {r.stats.kills}
+                            </td>
+                            <td className="px-4 py-2 text-center">
+                              {r.stats.blocksDestroyed}
+                            </td>
+                            <td className="px-4 py-2 text-center">
+                              {r.stats.bombsPlaced}
+                            </td>
+                            <td className="px-4 py-2 text-right">
+                              {(r.stats.survivalTime / 1000).toFixed(1)}s
+                            </td>
+                          </tr>
+                        ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+              <div className="mt-6 flex justify-center">
+                <Button variant="primary" onClick={() => navigate('/lobby')}>
+                  ロビーへ戻る
+                </Button>
+              </div>
             </div>
           </div>
         )}
