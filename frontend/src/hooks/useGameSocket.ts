@@ -89,7 +89,7 @@ export function useGameSocket(
         const explosion: BombermanExplosion = {
           id: `exp_${Date.now()}_${Math.random()}`,
           cells: data.affectedTiles,
-          expiresAt: Date.now() + 500,
+          expiresAt: Date.now() + 500, // 0.5秒後に消える
         }
 
         setGameState({
@@ -122,7 +122,24 @@ export function useGameSocket(
     }
   }, [roomId, setGameState, onGameEnd, setResultStats])
 
-  // コンポーネントアンマウント時の状態クリア（重複していた記述を1つに統合）
+  // 爆風エフェクトの有効期限を監視して削除するタイマー処理
+  useEffect(() => {
+    const timer = setInterval(() => {
+      const state = useGameStore.getState().gameState
+      const now = Date.now()
+
+      const activeExplosions = state.explosions.filter((e) => e.expiresAt > now)
+
+      // 数が変わっていたら（期限切れがあれば）Stateを更新
+      if (activeExplosions.length !== state.explosions.length) {
+        setGameState({ ...state, explosions: activeExplosions })
+      }
+    }, 100)
+
+    return () => clearInterval(timer)
+  }, [setGameState])
+
+  // コンポーネントアンマウント時の状態クリア
   useEffect(() => {
     return () => {
       setGameState({
