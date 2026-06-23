@@ -1,0 +1,56 @@
+import { GameSession, PlayerStats } from '../game.types';
+
+export interface GameEndResult {
+  winnerId: string | null;
+  isDraw: boolean;
+  rankings: { playerId: string; stats: PlayerStats }[];
+}
+
+/**
+ * 勝敗判定およびリザルト集計のビジネスロジック
+ * ゲームが終了条件を満たしていない場合は null を返す。
+ * 終了条件を満たした場合は、生存時間の確定処理を行い、リザルトデータを返す。
+ */
+export function evaluateGameEnd(
+  room: GameSession,
+  now: number,
+): GameEndResult | null {
+  if (room.phase !== 'playing') return null;
+
+  const totalPlayers = Object.keys(room.players).length;
+  if (totalPlayers === 0) return null;
+
+  const livingPlayers = Object.values(room.players).filter((p) => p.alive);
+
+  // 終了条件: 2人以上で開始した場合は生存者が1人以下になったら終了。
+  // 1人のみのテストプレイ等の場合は、その1人が死んだら終了。
+  const isGameOver =
+    totalPlayers >= 2 ? livingPlayers.length <= 1 : livingPlayers.length === 0;
+
+  if (!isGameOver) return null;
+
+  let winnerId: string | null = null;
+  let isDraw = false;
+
+  if (livingPlayers.length === 1) {
+    winnerId = livingPlayers[0].id;
+  } else if (livingPlayers.length === 0) {
+    isDraw = true; // 全滅した場合は引き分け
+  }
+
+  // ゲーム終了時点で生き残っていたプレイヤーの生存時間を確定する
+  livingPlayers.forEach((p) => {
+    room.stats[p.id].survivalTime = now - (room.startedAt || now);
+  });
+
+  const rankings = Object.keys(room.players).map((id) => ({
+    playerId: id,
+    stats: room.stats[id],
+  }));
+
+  return {
+    winnerId,
+    isDraw,
+    rankings,
+  };
+}
