@@ -1,4 +1,5 @@
 import { GameSession } from '../game.types';
+import { getPlayersOverlappingTile } from './movement.logic';
 import {
   GridPosition,
   BombSnapshot,
@@ -151,7 +152,12 @@ export function tryPlaceBomb(
   room.bombs[bombId] = bomb;
   room.stats[playerId].bombsPlaced++;
   if (!room.bombPassingPlayers) room.bombPassingPlayers = {};
-  room.bombPassingPlayers[bombId] = [playerId];
+
+  room.bombPassingPlayers[bombId] = getPlayersOverlappingTile(
+    room,
+    gridX,
+    gridY,
+  );
 
   return bomb;
 }

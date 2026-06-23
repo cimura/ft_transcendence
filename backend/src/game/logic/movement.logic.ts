@@ -25,6 +25,39 @@ export function isPassable(
   return true;
 }
 
+export function getPlayersOverlappingTile(
+  room: GameSession,
+  gridX: number,
+  gridY: number,
+): string[] {
+  const passingPlayers: string[] = [];
+
+  for (const pid in room.players) {
+    const p = room.players[pid];
+    if (!p.alive) continue;
+
+    const currentLeft = Math.floor(p.position.x - COLLISION_SIZE + 0.5);
+    const currentRight = Math.floor(p.position.x + COLLISION_SIZE + 0.5);
+    const currentTop = Math.floor(p.position.z - COLLISION_SIZE + 0.5);
+    const currentBottom = Math.floor(p.position.z + COLLISION_SIZE + 0.5);
+
+    let isOverlapping = false;
+    for (let y = currentTop; y <= currentBottom; y++) {
+      for (let x = currentLeft; x <= currentRight; x++) {
+        if (gridX === x && gridY === y) {
+          isOverlapping = true;
+        }
+      }
+    }
+
+    if (isOverlapping) {
+      passingPlayers.push(pid);
+    }
+  }
+
+  return passingPlayers;
+}
+
 export function updatePlayerMovements(room: GameSession): void {
   for (const playerId in room.players) {
     const player = room.players[playerId];
