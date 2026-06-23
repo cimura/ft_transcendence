@@ -21,53 +21,16 @@ import {
 import type { BombermanGameState } from '../../game/bomberman/bombermanTypes'
 import { BombermanCharacter } from './BombermanCharacter'
 import { BombermanEffects } from './BombermanEffects'
+import { SCENE_CONFIG } from '../../game/constants/scene.constants'
 
 type BombermanSceneProps = {
   gameState: BombermanGameState
 }
 
-const GRID_CENTER_DIVISOR = 2
-const CAMERA_HEIGHT = 8
-const CAMERA_DISTANCE_FROM_CENTER = 7
-const CAMERA_FOV = 58
-const AMBIENT_LIGHT_INTENSITY = 0.42
-const DIRECTIONAL_LIGHT_POSITION: [number, number, number] = [10, 10, 5]
-const DIRECTIONAL_LIGHT_INTENSITY = 0.7
-const POINT_LIGHT_HEIGHT = 3
-const POINT_LIGHT_INTENSITY = 4
-const POINT_LIGHT_DISTANCE = 15
-const ORBIT_MIN_DISTANCE = 6
-const ORBIT_MAX_DISTANCE = 14
-const ORBIT_MAX_POLAR_ANGLE_RATIO = 0.46
-const GROUND_Y = -0.5
-const GRID_Y = -0.48
-const GROUND_SIZE_PADDING = 1
-const REFLECTOR_BLUR: [number, number] = [300, 80]
-const REFLECTOR_RESOLUTION = 512
-const REFLECTOR_MIX_BLUR = 1
-const REFLECTOR_MIX_STRENGTH = 40
-const REFLECTOR_ROUGHNESS = 0.22
-const REFLECTOR_DEPTH_SCALE = 1
-const REFLECTOR_MIN_DEPTH_THRESHOLD = 0.4
-const REFLECTOR_MAX_DEPTH_THRESHOLD = 1.2
-const METALLIC_BLOCK_METALNESS = 0.9
-const BREAKABLE_EMISSIVE_INTENSITY = 2
-const BOMB_EMISSIVE_INTENSITY = 4
-const BREAKABLE_SHELL_OPACITY = 0.6
-const BOMB_AURA_OPACITY = 0.4
-const SOLID_EDGE_OPACITY = 0.22
-const SOLID_BLOCK_SIZE: [number, number, number] = [1, 1, 1]
-const SOLID_PILLAR_SIZE: [number, number, number] = [0.5, 1.1, 0.5]
-const BREAKABLE_CORE_RADIUS = 0.35
-const BREAKABLE_CORE_SEGMENTS = 16
-const BREAKABLE_SHELL_SIZE: [number, number, number] = [0.9, 0.9, 0.9]
-const BOMB_CORE_RADIUS = 0.3
-const BOMB_CORE_SEGMENTS = 32
-const BOMB_AURA_RADIUS = 0.4
-const BOMB_AURA_SEGMENTS = 16
-
 export function BombermanScene({ gameState }: BombermanSceneProps) {
-  const center = (BOMBERMAN_GRID_SIZE - 1) / GRID_CENTER_DIVISOR
+  const center = (BOMBERMAN_GRID_SIZE - 1) / SCENE_CONFIG.grid.centerDivisor
+  const { blocks, bombs, colors } = SCENE_CONFIG
+
   const assets = useMemo(() => {
     const breakableMaterials = new Map(
       BREAKABLE_COLORS.map((color) => [
@@ -75,118 +38,124 @@ export function BombermanScene({ gameState }: BombermanSceneProps) {
         new MeshStandardMaterial({
           color,
           emissive: color,
-          emissiveIntensity: BREAKABLE_EMISSIVE_INTENSITY,
+          emissiveIntensity: blocks.breakableEmissiveIntensity,
           toneMapped: false,
         }),
       ])
     )
 
     return {
-      solidBlockGeometry: new BoxGeometry(...SOLID_BLOCK_SIZE),
-      solidPillarGeometry: new BoxGeometry(...SOLID_PILLAR_SIZE),
+      solidBlockGeometry: new BoxGeometry(...blocks.solidSize),
+      solidPillarGeometry: new BoxGeometry(...blocks.solidPillarSize),
       breakableCoreGeometry: new SphereGeometry(
-        BREAKABLE_CORE_RADIUS,
-        BREAKABLE_CORE_SEGMENTS,
-        BREAKABLE_CORE_SEGMENTS
+        blocks.breakableCoreRadius,
+        blocks.breakableCoreSegments,
+        blocks.breakableCoreSegments
       ),
-      breakableShellGeometry: new BoxGeometry(...BREAKABLE_SHELL_SIZE),
+      breakableShellGeometry: new BoxGeometry(...blocks.breakableShellSize),
       bombCoreGeometry: new SphereGeometry(
-        BOMB_CORE_RADIUS,
-        BOMB_CORE_SEGMENTS,
-        BOMB_CORE_SEGMENTS
+        bombs.coreRadius,
+        bombs.coreSegments,
+        bombs.coreSegments
       ),
       bombAuraGeometry: new SphereGeometry(
-        BOMB_AURA_RADIUS,
-        BOMB_AURA_SEGMENTS,
-        BOMB_AURA_SEGMENTS
+        bombs.auraRadius,
+        bombs.auraSegments,
+        bombs.auraSegments
       ),
       solidBlockMaterial: new MeshStandardMaterial({
-        color: '#080808',
-        metalness: METALLIC_BLOCK_METALNESS,
+        color: colors.solidBlock,
+        metalness: blocks.metallicMetalness,
       }),
-      solidPillarMaterial: new MeshStandardMaterial({ color: '#111111' }),
+      solidPillarMaterial: new MeshStandardMaterial({
+        color: colors.solidPillar,
+      }),
       breakableShellMaterial: new MeshStandardMaterial({
-        color: '#111111',
+        color: colors.breakableShell,
         transparent: true,
-        opacity: BREAKABLE_SHELL_OPACITY,
+        opacity: blocks.breakableShellOpacity,
       }),
       localBombMaterial: new MeshStandardMaterial({
-        color: '#ffffff',
-        emissive: '#00ffff',
-        emissiveIntensity: BOMB_EMISSIVE_INTENSITY,
+        color: colors.localBomb,
+        emissive: colors.localBombEmissive,
+        emissiveIntensity: bombs.emissiveIntensity,
         toneMapped: false,
       }),
       enemyBombMaterial: new MeshStandardMaterial({
-        color: '#ff0000',
-        emissive: '#ff0000',
-        emissiveIntensity: BOMB_EMISSIVE_INTENSITY,
+        color: colors.enemyBomb,
+        emissive: colors.enemyBombEmissive,
+        emissiveIntensity: bombs.emissiveIntensity,
         toneMapped: false,
       }),
       bombAuraMaterial: new MeshBasicMaterial({
-        color: '#ffffff',
+        color: colors.bombAura,
         wireframe: true,
         transparent: true,
-        opacity: BOMB_AURA_OPACITY,
+        opacity: bombs.auraOpacity,
       }),
       breakableMaterials,
     }
-  }, [])
+  }, [blocks, bombs, colors])
 
   return (
     <Canvas
       camera={{
-        position: [center, CAMERA_HEIGHT, center + CAMERA_DISTANCE_FROM_CENTER],
-        fov: CAMERA_FOV,
+        position: [
+          center,
+          SCENE_CONFIG.camera.height,
+          center + SCENE_CONFIG.camera.distanceFromCenter,
+        ],
+        fov: SCENE_CONFIG.camera.fov,
       }}
     >
-      <color attach="background" args={['#010103']} />
-      <ambientLight intensity={AMBIENT_LIGHT_INTENSITY} />
+      <color attach="background" args={[colors.background]} />
+      <ambientLight intensity={SCENE_CONFIG.light.ambientIntensity} />
       <directionalLight
-        position={DIRECTIONAL_LIGHT_POSITION}
-        intensity={DIRECTIONAL_LIGHT_INTENSITY}
+        position={SCENE_CONFIG.light.directionalPosition}
+        intensity={SCENE_CONFIG.light.directionalIntensity}
       />
       <pointLight
-        position={[center, POINT_LIGHT_HEIGHT, center]}
-        color="#ff00ff"
-        intensity={POINT_LIGHT_INTENSITY}
-        distance={POINT_LIGHT_DISTANCE}
+        position={[center, SCENE_CONFIG.light.pointHeight, center]}
+        color={colors.pointLight}
+        intensity={SCENE_CONFIG.light.pointIntensity}
+        distance={SCENE_CONFIG.light.pointDistance}
       />
       <OrbitControls
         target={[center, 0, center]}
         enablePan={false}
-        minDistance={ORBIT_MIN_DISTANCE}
-        maxDistance={ORBIT_MAX_DISTANCE}
-        maxPolarAngle={Math.PI * ORBIT_MAX_POLAR_ANGLE_RATIO}
+        minDistance={SCENE_CONFIG.orbit.minDistance}
+        maxDistance={SCENE_CONFIG.orbit.maxDistance}
+        maxPolarAngle={Math.PI * SCENE_CONFIG.orbit.maxPolarAngleRatio}
       />
 
       <mesh
-        rotation={[-Math.PI / GRID_CENTER_DIVISOR, 0, 0]}
-        position={[center, GROUND_Y, center]}
+        rotation={[-Math.PI / SCENE_CONFIG.grid.centerDivisor, 0, 0]}
+        position={[center, SCENE_CONFIG.ground.y, center]}
       >
         <planeGeometry
           args={[
-            BOMBERMAN_GRID_SIZE + GROUND_SIZE_PADDING,
-            BOMBERMAN_GRID_SIZE + GROUND_SIZE_PADDING,
+            BOMBERMAN_GRID_SIZE + SCENE_CONFIG.ground.sizePadding,
+            BOMBERMAN_GRID_SIZE + SCENE_CONFIG.ground.sizePadding,
           ]}
         />
         <MeshReflectorMaterial
-          blur={REFLECTOR_BLUR}
-          resolution={REFLECTOR_RESOLUTION}
-          mixBlur={REFLECTOR_MIX_BLUR}
-          mixStrength={REFLECTOR_MIX_STRENGTH}
-          roughness={REFLECTOR_ROUGHNESS}
-          depthScale={REFLECTOR_DEPTH_SCALE}
-          minDepthThreshold={REFLECTOR_MIN_DEPTH_THRESHOLD}
-          maxDepthThreshold={REFLECTOR_MAX_DEPTH_THRESHOLD}
-          color="#050510"
-          metalness={METALLIC_BLOCK_METALNESS}
+          blur={SCENE_CONFIG.ground.reflectorBlur}
+          resolution={SCENE_CONFIG.ground.reflectorResolution}
+          mixBlur={SCENE_CONFIG.ground.reflectorMixBlur}
+          mixStrength={SCENE_CONFIG.ground.reflectorMixStrength}
+          roughness={SCENE_CONFIG.ground.reflectorRoughness}
+          depthScale={SCENE_CONFIG.ground.reflectorDepthScale}
+          minDepthThreshold={SCENE_CONFIG.ground.minDepthThreshold}
+          maxDepthThreshold={SCENE_CONFIG.ground.maxDepthThreshold}
+          color={colors.ground}
+          metalness={blocks.metallicMetalness}
         />
       </mesh>
       <Grid
         args={[BOMBERMAN_GRID_SIZE, BOMBERMAN_GRID_SIZE]}
-        cellColor="#222222"
-        sectionColor="#00ffff"
-        position={[center, GRID_Y, center]}
+        cellColor={colors.gridCell}
+        sectionColor={colors.gridSection}
+        position={[center, SCENE_CONFIG.grid.y, center]}
       />
 
       {gameState.map.map((row, y) =>
@@ -201,8 +170,8 @@ export function BombermanScene({ gameState }: BombermanSceneProps) {
                   material={assets.solidBlockMaterial}
                 >
                   <Edges
-                    color="#00ffff"
-                    opacity={SOLID_EDGE_OPACITY}
+                    color={colors.solidEdge}
+                    opacity={blocks.solidEdgeOpacity}
                     transparent
                   />
                 </Box>
@@ -227,7 +196,7 @@ export function BombermanScene({ gameState }: BombermanSceneProps) {
                 geometry={assets.breakableShellGeometry}
                 material={assets.breakableShellMaterial}
               >
-                <Edges color="#333333" />
+                <Edges color={colors.breakableEdge} />
               </Box>
             </group>
           )
