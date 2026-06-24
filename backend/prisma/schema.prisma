@@ -9,16 +9,19 @@ datasource db {
 }
 
 model User {
-  id                     String       @id @default(uuid())
-  email                  String       @unique
-  username               String       @unique
+  id                     String            @id @default(uuid())
+  email                  String            @unique
+  username               String            @unique
   passwordHash           String
   displayName            String?
   avatarUrl              String?
-  createdAt              DateTime     @default(now())
-  updatedAt              DateTime     @updatedAt
-  sentFriendRequests     Friendship[] @relation("FriendRequester")
-  receivedFriendRequests Friendship[] @relation("FriendReceiver")
+  createdAt              DateTime          @default(now())
+  updatedAt              DateTime          @updatedAt
+  sentFriendRequests     Friendship[]      @relation("FriendRequester")
+  receivedFriendRequests Friendship[]      @relation("FriendReceiver")
+  hostedRooms            GameRoom[]        @relation("RoomHost")
+  roomParticipants       RoomParticipant[]
+  roomMessages           RoomMessage[]
 }
 
 enum FriendRequestStatus {
@@ -50,4 +53,67 @@ model Friendship {
   receiver  User @relation("FriendReceiver", fields: [receiverId], references: [id])
 
   @@unique([requesterId, receiverId])
+}
+
+enum RoomStatus {
+  WAITING
+  PLAYING
+  FINISHED
+}
+
+enum RoomMode {
+  ONLINE
+  LOCAL_CPU
+}
+
+model GameRoom {
+  id               String     @id @default(uuid())
+  gameId           String
+  name             String
+  hostId           String
+  maxPlayers       Int
+  status           RoomStatus @default(WAITING)
+  mode             RoomMode   @default(ONLINE)
+  settingsSnapshot Json
+  createdAt        DateTime   @default(now())
+  updatedAt        DateTime   @updatedAt
+  startedAt        DateTime?
+  finishedAt       DateTime?
+
+  host         User              @relation("RoomHost", fields: [hostId], references: [id], onDelete: Cascade)
+  participants RoomParticipant[]
+  messages     RoomMessage[]
+
+  @@index([gameId])
+  @@index([hostId])
+  @@index([status])
+  @@index([mode])
+}
+
+model RoomParticipant {
+  roomId   String
+  userId   String
+  isHost   Boolean  @default(false)
+  isReady  Boolean  @default(false)
+  joinedAt DateTime @default(now())
+
+  room GameRoom @relation(fields: [roomId], references: [id], onDelete: Cascade)
+  user User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@id([roomId, userId])
+  @@index([userId])
+}
+
+model RoomMessage {
+  id        String   @id @default(uuid())
+  roomId    String
+  senderId  String
+  content   String
+  createdAt DateTime @default(now())
+
+  room   GameRoom @relation(fields: [roomId], references: [id], onDelete: Cascade)
+  sender User     @relation(fields: [senderId], references: [id], onDelete: Cascade)
+
+  @@index([roomId, createdAt])
+  @@index([senderId])
 }
