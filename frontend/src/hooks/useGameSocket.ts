@@ -17,23 +17,27 @@ export function useGameSocket(
   ) => void
 ) {
   const socketRef = useRef<Socket | null>(null)
+  const myIdRef = useRef<string | null>(null)
   const setGameState = useGameStore((state) => state.setGameState)
   const setResultStats = useGameStore((state) => state.setResultStats)
 
-  // Socket通信とイベントリスナーのセットアップ
   useEffect(() => {
     if (!socketRef.current) {
+      const token = localStorage.getItem('accessToken')
+
       socketRef.current = io({
         transports: ['websocket'],
         secure: true,
+        auth: { token: `Bearer ${token}` },
       })
     }
 
     const socket = socketRef.current
 
-    socket.emit('game:join', { roomId, username: 'Player-Local' })
+    socket.emit('game:join', { roomId })
 
     socket.on('game:init', (data) => {
+      myIdRef.current = data.yourId
       setGameState({
         map: data.map,
         players: data.players,
@@ -89,7 +93,7 @@ export function useGameSocket(
         const explosion: BombermanExplosion = {
           id: `exp_${Date.now()}_${Math.random()}`,
           cells: data.affectedTiles,
-          expiresAt: Date.now() + 500, // 0.5秒後に消える
+          expiresAt: Date.now() + 500,
         }
 
         setGameState({
@@ -102,16 +106,19 @@ export function useGameSocket(
       }
     )
 
-    socket.on('game:end', (data: GameEndPayload) => {
-      setResultStats(data)
-      if (data.isDraw) {
-        onGameEnd?.('DRAW', data.rankings)
-      } else if (data.winnerId === socket.id) {
-        onGameEnd?.('WIN', data.rankings)
-      } else {
-        onGameEnd?.('LOSE', data.rankings)
+    socket.on(
+      'game:end',
+      (data: { winnerId: string | null; rankings: any[] }) => {
+        setResultStats(data)
+        if (data.winnerId === null) {
+          onGameEnd?.('DRAW', data.rankings)
+        } else if (data.winnerId === myIdRef.current) {
+          onGameEnd?.('WIN', data.rankings)
+        } else {
+          onGameEnd?.('LOSE', data.rankings)
+        }
       }
-    })
+    )
 
     return () => {
       socket.off('game:init')
@@ -122,7 +129,6 @@ export function useGameSocket(
     }
   }, [roomId, setGameState, onGameEnd, setResultStats])
 
-  // 爆風エフェクトの有効期限を監視して削除するタイマー処理
   useEffect(() => {
     const timer = setInterval(() => {
       const state = useGameStore.getState().gameState
@@ -130,7 +136,6 @@ export function useGameSocket(
 
       const activeExplosions = state.explosions.filter((e) => e.expiresAt > now)
 
-      // 数が変わっていたら（期限切れがあれば）Stateを更新
       if (activeExplosions.length !== state.explosions.length) {
         setGameState({ ...state, explosions: activeExplosions })
       }
@@ -139,7 +144,6 @@ export function useGameSocket(
     return () => clearInterval(timer)
   }, [setGameState])
 
-  // コンポーネントアンマウント時の状態クリア
   useEffect(() => {
     return () => {
       setGameState({

@@ -20,10 +20,8 @@ type GameCanvasProps = {
 export function GameCanvas({ roomId, onInput, onGameEnd }: GameCanvasProps) {
   const gameState = useGameStore((state) => state.gameState)
 
-  // 1. 通信・状態同期のロジックを切り出したカスタムフック
   const socketRef = useGameSocket(roomId, onGameEnd)
 
-  // 2. 入力管理・送信のロジックを切り出したカスタムフック
   const { activeControl, handleTouchInput } = useGameInput(socketRef, onInput)
 
   return (
