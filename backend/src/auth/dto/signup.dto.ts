@@ -1,5 +1,16 @@
-import { IsEmail, IsNotEmpty, IsString, MinLength } from 'class-validator';
+import {
+  IsEmail,
+  IsNotEmpty,
+  IsString,
+  MinLength,
+  Matches,
+} from 'class-validator';
 import { ApiProperty } from '@nestjs/swagger';
+
+export enum SignUpDuplicateField {
+  EMAIL = 'email',
+  USERNAME = 'username',
+}
 
 export class SignUpRequestDto {
   @ApiProperty({
@@ -12,6 +23,17 @@ export class SignUpRequestDto {
   )
   @IsNotEmpty({ message: 'Email is required.' })
   email: string;
+
+  @ApiProperty({
+    example: 'example42',
+    description: 'ユーザーの名前（ユニーク）',
+  })
+  @IsNotEmpty({ message: 'Username is required.' })
+  @Matches(/^[a-zA-Z0-9_-]+$/, {
+    message:
+      'Username can only contain alphanumeric characters, underscores, and hyphens (no symbols like @).',
+  })
+  username: string;
 
   @ApiProperty({
     example: 'password123',
@@ -31,14 +53,36 @@ export class SignUpResponseDto {
   id: string;
 
   @ApiProperty({
-    example: 'user@example.com',
-    description: 'メールアドレス',
-  })
-  email: string;
-
-  @ApiProperty({
     example: 'eyJhbGciOiJIUz...',
     description: '今後APIにアクセスするために使う鍵',
   })
   accessToken: string;
+}
+
+export class SignUpConflictResponseDto {
+  @ApiProperty({
+    example: 409,
+    description: 'HTTPステータスコード',
+  })
+  statusCode: number;
+
+  @ApiProperty({
+    example: 'Conflict',
+    description: 'エラーの種類',
+  })
+  error: string;
+
+  @ApiProperty({
+    example: 'Email or Username already exists.',
+    description: 'エラーメッセージの概要',
+  })
+  message: string;
+
+  @ApiProperty({
+    enum: SignUpDuplicateField,
+    isArray: true,
+    example: [SignUpDuplicateField.USERNAME],
+    description: '重複しているフィールド名の配列。(email または username',
+  })
+  fields: SignUpDuplicateField[];
 }

@@ -1,13 +1,26 @@
-import axios from 'axios'
+import api from './client'
 import type { Friend, FriendRequest, SearchResult } from '../types/friend'
 
-/**
- * Axios instance for API requests
- * Configured with base URL and credentials
- */
-const api = axios.create({
-  baseURL: import.meta.env.VITE_API_URL || 'http://localhost:4000',
-  withCredentials: true, // Cookieを送信
+type BackendFriendRequest = {
+  id: string
+  status: 'PENDING' | 'ACCEPTED'
+  requester: {
+    id: string
+    email: string
+    username: string
+    avatarUrl: string | null
+  }
+}
+
+const toFriendRequest = (request: BackendFriendRequest): FriendRequest => ({
+  id: request.id,
+  requester: {
+    id: request.requester.id,
+    username: request.requester.username,
+    email: request.requester.email,
+    avatarUrl: request.requester.avatarUrl ?? undefined,
+  },
+  status: request.status.toLowerCase() as FriendRequest['status'],
 })
 
 /**
@@ -15,7 +28,7 @@ const api = axios.create({
  * @returns Promise<Friend[]> List of friends
  */
 export const getFriends = async (): Promise<Friend[]> => {
-  const response = await api.get<Friend[]>('/api/friends')
+  const response = await api.get<Friend[]>('/friends')
   return response.data
 }
 
@@ -24,17 +37,19 @@ export const getFriends = async (): Promise<Friend[]> => {
  * @returns Promise<FriendRequest[]> List of received friend requests
  */
 export const getFriendRequests = async (): Promise<FriendRequest[]> => {
-  const response = await api.get<FriendRequest[]>('/api/friends/requests')
-  return response.data
+  const response = await api.get<BackendFriendRequest[]>('/friends/requests')
+  return response.data.map(toFriendRequest)
 }
 
 /**
  * Send friend request to a user
- * @param userId Target user ID
+ * @param targetUserId Target user ID
  * @returns Promise<void>
  */
-export const sendFriendRequest = async (userId: string): Promise<void> => {
-  await api.post('/api/friends/request', { userId })
+export const sendFriendRequest = async (
+  targetUserId: string
+): Promise<void> => {
+  await api.post('/friends/request', { targetUserId })
 }
 
 /**
@@ -43,7 +58,7 @@ export const sendFriendRequest = async (userId: string): Promise<void> => {
  * @returns Promise<void>
  */
 export const acceptFriendRequest = async (requestId: string): Promise<void> => {
-  await api.put(`/api/friends/${requestId}/accept`)
+  await api.put(`/friends/${requestId}/accept`)
 }
 
 /**
@@ -52,7 +67,7 @@ export const acceptFriendRequest = async (requestId: string): Promise<void> => {
  * @returns Promise<void>
  */
 export const rejectFriendRequest = async (requestId: string): Promise<void> => {
-  await api.put(`/api/friends/${requestId}/reject`)
+  await api.put(`/friends/${requestId}/reject`)
 }
 
 /**
@@ -61,7 +76,7 @@ export const rejectFriendRequest = async (requestId: string): Promise<void> => {
  * @returns Promise<void>
  */
 export const deleteFriend = async (friendId: string): Promise<void> => {
-  await api.delete(`/api/friends/${friendId}`)
+  await api.delete(`/friends/${friendId}`)
 }
 
 /**
@@ -70,7 +85,7 @@ export const deleteFriend = async (friendId: string): Promise<void> => {
  * @returns Promise<SearchResult[]> List of search results
  */
 export const searchUsers = async (query: string): Promise<SearchResult[]> => {
-  const response = await api.get<SearchResult[]>('/api/users/search', {
+  const response = await api.get<SearchResult[]>('/users/search', {
     params: { q: query },
   })
   return response.data

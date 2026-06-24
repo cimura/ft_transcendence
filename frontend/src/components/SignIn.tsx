@@ -1,35 +1,70 @@
+import axios from 'axios'
 import { useState } from 'react'
+import { signInApi, AuthApiError } from '../api/auth'
+import { useAuthStore } from '../stores/authStore'
+import type { LoginCredentials } from '../types/user'
 
 interface SignInProps {
   onSignInSuccess: () => void
   onSwitchToSignup: () => void
 }
 
+const isBackendUnavailable = (error: unknown) =>
+  axios.isAxiosError(error) && !error.response
+
 export default function SignIn({
   onSignInSuccess,
   onSwitchToSignup,
 }: SignInProps) {
   const [error, setError] = useState('')
+  const [loading, setLoading] = useState(false)
+  const { setCurrentUser, setAccessToken } = useAuthStore()
 
   const handleSignIn = async (formData: FormData) => {
     const identifier = formData.get('identifier') as string
     const password = formData.get('password') as string
 
-    console.log('SignIn attempt: ', { identifier, password })
+    const credentials: LoginCredentials = {
+      identifier,
+      password,
+    }
+
     try {
       setError('')
-      // TODO: backend API（バックエンドと繋げたら実装）
-      // const response = await fetch('/api/auth/signin', {
-      //   method: 'POST',
-      //   headers: { 'Content-Type': 'application/json' },
-      //   body: JSON.stringify({ identifier, password })
-      // })
+      setLoading(true)
 
-      // 仮の成功
-      console.log('SignIn successful: ', { identifier })
+      const data = await signInApi(credentials)
+
+      setAccessToken(data.accessToken)
+      console.log('SignIn successful!')
       onSignInSuccess()
-    } catch {
-      setError('ログインに失敗しました')
+    } catch (err) {
+      const shouldUseMockAuth = import.meta.env.DEV && isBackendUnavailable(err)
+
+      if (shouldUseMockAuth) {
+        setCurrentUser({
+          id: 'current-user-id',
+          email: identifier,
+          username: 'current_user',
+          displayName: 'Current User',
+          avatarUrl: '/avatars/default-1.svg',
+          isGuest: false,
+          createdAt: new Date('2024-01-01'),
+          updatedAt: new Date(),
+        })
+        setAccessToken(null)
+        console.warn('SignIn backend unavailable. Using mock auth.', err)
+        onSignInSuccess()
+        return
+      }
+
+      if (err instanceof AuthApiError) {
+        setError(err.message)
+      } else {
+        setError('予期せぬエラーが発生しました。')
+      }
+    } finally {
+      setLoading(false)
     }
   }
 
@@ -38,13 +73,12 @@ export default function SignIn({
       <div className="bg-white p-8 rounded-lg shadow-md w-96">
         <h1 className="text-2xl font-bold mb-6 text-center">SignIn</h1>
         <form action={handleSignIn} className="space-y-4">
-          {/** error message */}
           {error && (
             <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded">
               {error}
             </div>
           )}
-          {/** Email */}
+          {/** Identifier (Email or Username) */}
           <div>
             <label
               htmlFor="identifier"
@@ -79,12 +113,12 @@ export default function SignIn({
           {/** SignIn Button */}
           <button
             type="submit"
-            className="w-full bg-blue-600 text-white py-2 px-4 rounded-md hover:bg-blue-700 transition-colors"
+            disabled={loading}
+            className="w-full bg-blue-600 text-white py-2 px-4 rounded-md hover:bg-blue-700 transition-colors disabled:bg-gray-400"
           >
-            SignIn
+            {loading ? 'Signing in...' : 'SignIn'}
           </button>
         </form>
-        {/** Switch to Signup */}
         <div className="mt-4 text-center text-sm text-gray-600">
           Don't have an account?{' '}
           <button

@@ -3,65 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import type { Friend } from '../../types/friend'
 import { FriendCard } from '../../components/friends/FriendCard'
 import { ConfirmDialog } from '../../components/friends/ConfirmDialog'
-
-// モックデータ（バックエンド実装後にuseFriendsフックに切り替える）
-const MOCK_FRIENDS: Friend[] = [
-  {
-    id: 'user-1',
-    username: 'ttakino',
-    email: 'ttakino@example.com',
-    avatarUrl: undefined,
-    isOnline: true,
-    status: 'online',
-    lastSeen: undefined,
-  },
-  {
-    id: 'user-2',
-    username: 'sshimura',
-    email: 'sshimura@example.com',
-    avatarUrl: undefined,
-    isOnline: true,
-    status: 'online',
-    lastSeen: undefined,
-  },
-  {
-    id: 'user-3',
-    username: 'rseki',
-    email: 'rseki@example.com',
-    avatarUrl: undefined,
-    isOnline: false,
-    status: 'offline',
-    lastSeen: new Date('2024-01-15'),
-  },
-  {
-    id: 'user-4',
-    username: 'yutakagi',
-    email: 'yutakagi@example.com',
-    avatarUrl: undefined,
-    isOnline: true,
-    status: 'in_game',
-    lastSeen: undefined,
-  },
-  {
-    id: 'user-5',
-    username: 'ryomori',
-    email: 'ryomori@example.com',
-    avatarUrl: undefined,
-    isOnline: true,
-    status: 'online',
-    lastSeen: undefined,
-  },
-  // 追加のモックデータ（ページネーションテスト用）
-  ...Array.from({ length: 15 }, (_, i) => ({
-    id: `user-${i + 6}`,
-    username: `user${i + 6}`,
-    email: `user${i + 6}@example.com`,
-    avatarUrl: undefined,
-    isOnline: i % 2 === 0,
-    status: (i % 2 === 0 ? 'online' : 'offline') as Friend['status'],
-    lastSeen: i % 2 === 0 ? undefined : new Date('2024-01-15'),
-  })),
-]
+import { useFriends } from '../../hooks/friends/useFriends'
 
 const ITEMS_PER_PAGE = 4
 
@@ -71,12 +13,12 @@ const ITEMS_PER_PAGE = 4
  */
 export function FriendsListPage() {
   const navigate = useNavigate()
-  const [friends] = useState<Friend[]>(MOCK_FRIENDS)
+  const { friends, loading, error, deleteFriend } = useFriends()
   const [currentPage, setCurrentPage] = useState(1)
   const [deletingFriend, setDeletingFriend] = useState<Friend | null>(null)
 
   // ページネーションの計算
-  const totalPages = Math.ceil(friends.length / ITEMS_PER_PAGE)
+  const totalPages = Math.max(1, Math.ceil(friends.length / ITEMS_PER_PAGE))
   const startIndex = (currentPage - 1) * ITEMS_PER_PAGE
   const endIndex = startIndex + ITEMS_PER_PAGE
   const displayedFriends = friends.slice(startIndex, endIndex)
@@ -88,10 +30,9 @@ export function FriendsListPage() {
   }
 
   // 削除確認
-  const handleConfirmDelete = () => {
+  const handleConfirmDelete = async () => {
     if (deletingFriend) {
-      // TODO: バックエンド実装後にdeleteFriend(deletingFriend.id)を呼ぶ
-      console.log('削除:', deletingFriend.username)
+      await deleteFriend(deletingFriend.id)
       setDeletingFriend(null)
     }
   }
@@ -132,14 +73,28 @@ export function FriendsListPage() {
         </div>
 
         {/* フレンドリスト */}
-        <div className="bg-black/80 border-x-2 border-white/30 px-8 py-6 space-y-4">
-          {displayedFriends.map((friend) => (
-            <FriendCard
-              key={friend.id}
-              friend={friend}
-              onDelete={handleDeleteClick}
-            />
-          ))}
+        <div className="bg-black/80 border-x-2 border-white/30 px-8 py-6 space-y-4 min-h-[320px]">
+          {loading ? (
+            <div className="flex items-center justify-center py-12">
+              <div className="text-white text-xl">読み込み中...</div>
+            </div>
+          ) : error ? (
+            <div className="flex items-center justify-center py-12">
+              <div className="text-red-500 text-xl">{error}</div>
+            </div>
+          ) : friends.length === 0 ? (
+            <div className="flex items-center justify-center py-12">
+              <div className="text-white/50 text-xl">フレンドはいません</div>
+            </div>
+          ) : (
+            displayedFriends.map((friend) => (
+              <FriendCard
+                key={friend.id}
+                friend={friend}
+                onDelete={handleDeleteClick}
+              />
+            ))
+          )}
         </div>
 
         {/* ページネーション */}

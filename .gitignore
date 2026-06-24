@@ -4,6 +4,9 @@
 node_modules/
 npm-debug.log*
 
+# TypeScript
+tsconfig.build.tsbuildinfo
+
 # Prisma
 backend/src/generated/prisma
 

@@ -10,11 +10,10 @@ describe('AuthController', () => {
   let authService: AuthService;
 
   beforeEach(async () => {
-    // AuthServiceの偽物（ダミー）を定義
+    // 最新の仕様(emailを含まない構造)に合わせたServiceのモック
     const mockAuthService = {
       signUp: jest.fn().mockResolvedValue({
-        id: 'Mocked UserID', // タイポを修正
-        email: 'mock@mock.com',
+        id: 'Mocked UserID',
         accessToken: 'mock_token',
       }),
       signIn: jest.fn().mockResolvedValue({ accessToken: 'mock_token' }),
@@ -38,17 +37,16 @@ describe('AuthController', () => {
   it('should pass data to authService.signUp', async () => {
     const dto: SignUpRequestDto = {
       email: 'test@example.com',
+      username: 'userA', // username を追加
       password: 'password123',
     };
     const result = await controller.signUp(dto);
 
-    // 1. Service の signUp 関数が、DTOを引数に正しく呼ばれたか検証
     expect(authService.signUp).toHaveBeenCalledWith(dto);
 
-    // 2. 戻り値全体が、モックのデータと完全一致するかを1回で検証
+    // 戻り値の検証から余分な email フィールドを排除
     expect(result).toEqual({
       id: 'Mocked UserID',
-      email: 'mock@mock.com',
       accessToken: 'mock_token',
     });
   });
@@ -56,7 +54,7 @@ describe('AuthController', () => {
   // テストケース2: SignIn
   it('should pass data to authService.signIn', async () => {
     const dto: SignInRequestDto = {
-      email: 'test@example.com',
+      identifier: 'test@example.com', // identifier に変更
       password: 'password123',
     };
     const result = await controller.signIn(dto);

@@ -15,7 +15,7 @@ services:
     networks:
       - transcendence
   backend:
-    build: 
+    build:
       context: ../backend
       dockerfile: ../docker/backend/Dockerfile
     container_name: backend

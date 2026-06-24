@@ -8,8 +8,10 @@ import {
 import { PrismaService } from '../prisma.service';
 import { UpdateUserDto } from './dto/update-user.dto';
 import { ProfileUserDto } from './dto/profile.dto';
+import { UserSearchResponseDto } from './dto/users-response.dto';
 import { Prisma } from '../generated/prisma/client';
 import * as bcrypt from 'bcrypt';
+import { FriendRequestStatus } from '../generated/prisma/enums';
 
 @Injectable()
 export class UsersService {
@@ -31,6 +33,60 @@ export class UsersService {
     }
 
     return user;
+  }
+
+  async search(
+    userId: string,
+    query: string,
+  ): Promise<UserSearchResponseDto[]> {
+    const normalizedQuery = query.trim();
+
+    if (!normalizedQuery) {
+      return [];
+    }
+
+    const users = await this.prisma.user.findMany({
+      where: {
+        id: { not: userId },
+        username: { contains: normalizedQuery, mode: 'insensitive' },
+      },
+      select: {
+        id: true,
+        username: true,
+        avatarUrl: true,
+      },
+      take: 20,
+      orderBy: { username: 'asc' },
+    });
+
+    const targetUserIds = users.map((user) => user.id);
+    const friendships = await this.prisma.friendship.findMany({
+      where: {
+        OR: [
+          { requesterId: userId, receiverId: { in: targetUserIds } },
+          { receiverId: userId, requesterId: { in: targetUserIds } },
+        ],
+      },
+      select: {
+        requesterId: true,
+        receiverId: true,
+        status: true,
+      },
+    });
+
+    return users.map((user) => {
+      const friendship = friendships.find(
+        (item) => item.requesterId === user.id || item.receiverId === user.id,
+      );
+
+      return {
+        id: user.id,
+        username: user.username,
+        avatarUrl: user.avatarUrl,
+        isFriend: friendship?.status === FriendRequestStatus.ACCEPTED,
+        isPending: friendship?.status === FriendRequestStatus.PENDING,
+      };
+    });
   }
 
   async updateMe(userId: string, dto: UpdateUserDto) {
