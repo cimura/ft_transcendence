@@ -1,13 +1,29 @@
+import { useState } from 'react'
+
+const privacyOptions = ['全体に公開', 'フレンドのみ', '非公開']
+
 export const PrivacySettings = () => {
+  const [selectedOption, setSelectedOption] = useState('フレンドのみ')
+
   return (
     <div className="space-y-4">
-      <p className="text-white/60 text-sm mb-4">プロフィール公開範囲</p>
-      {['全体に公開', 'フレンドのみ', '非公開'].map((option) => (
+      <p className="mb-4 text-sm text-white/60">プロフィール公開範囲</p>
+      {privacyOptions.map((option) => (
         <button
           key={option}
-          className="w-full text-left p-4 bg-white/5 rounded-xl border border-white/10 text-white hover:bg-white/10"
+          type="button"
+          aria-pressed={selectedOption === option}
+          onClick={() => setSelectedOption(option)}
+          className={`flex w-full items-center justify-between rounded-md border p-4 text-left text-white transition-colors ${
+            selectedOption === option
+              ? 'border-blue-500/70 bg-blue-600/20'
+              : 'border-white/10 bg-white/5 hover:bg-white/10'
+          }`}
         >
-          {option}
+          <span>{option}</span>
+          {selectedOption === option && (
+            <span className="text-sm text-blue-200">選択中</span>
+          )}
         </button>
       ))}
     </div>

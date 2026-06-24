@@ -1,11 +1,29 @@
-import { useNavigate } from 'react-router-dom'
+import { useState } from 'react'
+import { useNavigate, useOutletContext } from 'react-router-dom'
+import { useAuthStore } from '../../stores/authStore'
+import type { SettingsOutletContext } from './Settings'
 
 export const SettingsMenu = () => {
   const navigate = useNavigate()
+  const { onLogout } = useOutletContext<SettingsOutletContext>()
+  const logout = useAuthStore((state) => state.logout)
+  const [isLoggingOut, setIsLoggingOut] = useState(false)
 
-  // 共通のボタンデザインを定義
   const baseButtonClass =
-    'w-full flex justify-between items-center px-6 py-4 rounded-xl border border-white/10 bg-white/5 hover:bg-white/10 transition-all text-white font-medium'
+    'flex w-full items-center justify-between rounded-md border border-white/10 bg-white/5 px-6 py-4 text-left font-medium text-white transition-colors hover:bg-white/10'
+
+  const handleLogout = async () => {
+    setIsLoggingOut(true)
+
+    try {
+      await logout()
+    } catch {
+      // The auth store still clears local session state when the API is unavailable.
+    } finally {
+      setIsLoggingOut(false)
+      onLogout()
+    }
+  }
 
   return (
     <div className="grid gap-4">
@@ -28,12 +46,11 @@ export const SettingsMenu = () => {
       </button>
 
       <button
-        onClick={() => {
-          /* ログアウト処理 */
-        }}
-        className="w-full px-6 py-4 rounded-xl border border-red-900/50 bg-red-900/10 text-red-400 hover:bg-red-900/20 transition-all font-medium"
+        onClick={handleLogout}
+        disabled={isLoggingOut}
+        className="w-full rounded-md border border-red-900/50 bg-red-900/10 px-6 py-4 font-medium text-red-400 transition-colors hover:bg-red-900/20 disabled:cursor-not-allowed disabled:opacity-60"
       >
-        ログアウト
+        {isLoggingOut ? 'ログアウト中...' : 'ログアウト'}
       </button>
     </div>
   )

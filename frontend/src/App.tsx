@@ -64,6 +64,11 @@ function AppRoutes() {
     navigate('/home')
   }
 
+  const handleLogoutSuccess = () => {
+    setIsLoggedIn(false)
+    navigate('/signin', { replace: true })
+  }
+
   if (!isLoggedIn) {
     return (
       <Routes>
@@ -115,7 +120,10 @@ function AppRoutes() {
         path="/friends"
         element={<div className="p-8">フレンド画面（準備中）</div>}
       />
-      <Route path="/settings" element={<Settings />}>
+      <Route
+        path="/settings"
+        element={<Settings onLogout={handleLogoutSuccess} />}
+      >
         <Route index element={<SettingsMenu />} /> {/* 設定のトップメニュー */}
         <Route path="account" element={<AccountManagement />} />
         <Route path="notifications" element={<NotificationSettings />} />

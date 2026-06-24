@@ -1,38 +1,46 @@
 import { Outlet, useLocation, useNavigate } from 'react-router-dom'
 
-export const Settings = () => {
+interface SettingsProps {
+  onLogout: () => void
+}
+
+export interface SettingsOutletContext {
+  onLogout: () => void
+}
+
+export const Settings = ({ onLogout }: SettingsProps) => {
   const navigate = useNavigate()
   const location = useLocation()
   const isTopLevel = location.pathname === '/settings'
 
   return (
-    <div className="min-h-screen bg-black flex items-center justify-center p-4">
-      <div className="w-full max-w-2xl bg-black/80 border-2 border-white/30 rounded-3xl p-8">
-        <div className="flex items-center mb-8">
+    <div className="flex min-h-screen items-center justify-center bg-black p-4">
+      <div className="w-full max-w-2xl rounded-lg border-2 border-white/30 bg-black/80 p-6 sm:p-8">
+        <div className="mb-8 grid grid-cols-[1fr_auto_1fr] items-center gap-3">
           {isTopLevel ? (
-            // [トップレベル]: 「閉じる(ホーム)」を表示
             <button
               onClick={() => navigate('/home')}
-              className="text-white/50 hover:text-white mr-4 text-xl transition-colors"
+              className="justify-self-start rounded-md px-3 py-2 text-left text-sm text-white/70 transition-colors hover:bg-white/10 hover:text-white sm:text-base"
             >
               ✕ 閉じる
             </button>
           ) : (
-            // [詳細画面]: 「戻る(設定一覧)」を表示
             <button
               onClick={() => navigate('/settings')}
-              className="text-white/70 hover:text-white mr-4 transition-colors"
+              className="justify-self-start rounded-md px-3 py-2 text-left text-sm text-white/70 transition-colors hover:bg-white/10 hover:text-white sm:text-base"
             >
               ← 設定一覧に戻る
             </button>
           )}
 
-          <h1 className="text-3xl font-bold text-white m-auto">
+          <h1 className="text-center text-2xl font-bold text-white sm:text-3xl">
             {isTopLevel ? '設定' : '詳細設定'}
           </h1>
+
+          <div />
         </div>
 
-        <Outlet />
+        <Outlet context={{ onLogout } satisfies SettingsOutletContext} />
       </div>
     </div>
   )

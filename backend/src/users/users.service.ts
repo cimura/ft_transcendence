@@ -23,13 +23,19 @@ export class UsersService {
       select: {
         id: true,
         email: true,
+        username: true,
         displayName: true,
         avatarUrl: true,
+        createdAt: true,
+        updatedAt: true,
       },
     });
 
     if (!user) {
-      throw new UnauthorizedException('User not found');
+      throw new UnauthorizedException({
+        code: 'USER_NOT_FOUND',
+        message: 'User not found',
+      });
     }
 
     return user;
@@ -90,8 +96,11 @@ export class UsersService {
   }
 
   async updateMe(userId: string, dto: UpdateUserDto) {
-    if (!dto.email && !dto.password) {
-      throw new BadRequestException('No data provided for update');
+    if (!dto.email && !dto.username && !dto.password) {
+      throw new BadRequestException({
+        code: 'NO_UPDATE_FIELDS',
+        message: 'No data provided for update',
+      });
     }
 
     const updateData: Prisma.UserUpdateInput = {};
@@ -106,13 +115,65 @@ export class UsersService {
       });
 
       if (existingUser) {
-        throw new ConflictException('Email is already in use by another user');
+        throw new ConflictException({
+          code: 'EMAIL_ALREADY_IN_USE',
+          message: 'Email is already in use by another user',
+        });
       }
 
       updateData.email = dto.email;
     }
 
+    if (dto.username) {
+      const existingUser = await this.prisma.user.findFirst({
+        where: {
+          username: dto.username,
+          NOT: { id: userId },
+        },
+      });
+
+      if (existingUser) {
+        throw new ConflictException({
+          code: 'USERNAME_ALREADY_IN_USE',
+          message: 'Username is already in use by another user',
+        });
+      }
+
+      updateData.username = dto.username;
+    }
+
     if (dto.password) {
+      if (!dto.currentPassword) {
+        throw new BadRequestException({
+          code: 'CURRENT_PASSWORD_REQUIRED',
+          message: 'Current password is required',
+        });
+      }
+
+      const currentUser = await this.prisma.user.findUnique({
+        where: { id: userId },
+        select: { passwordHash: true },
+      });
+
+      if (!currentUser) {
+        throw new NotFoundException({
+          code: 'USER_NOT_FOUND',
+          message: 'User not found',
+        });
+      }
+
+      const isCurrentPasswordValid = await bcrypt.compare(
+        dto.currentPassword,
+        currentUser.passwordHash,
+      );
+
+      if (!isCurrentPasswordValid) {
+        throw new UnauthorizedException({
+          code: 'CURRENT_PASSWORD_INVALID',
+          message: 'Current password is invalid',
+        });
+      }
+
       // 安全のため、salt (ランダムな文字列) をパスワードに付与してからハッシュ化する
       const saltRounds = 10;
       const hashedPassword = await bcrypt.hash(dto.password, saltRounds);
@@ -126,8 +187,11 @@ export class UsersService {
         select: {
           id: true,
           email: true,
+          username: true,
           displayName: true,
           avatarUrl: true,
+          createdAt: true,
+          updatedAt: true,
         },
       });
       return {
@@ -135,7 +199,10 @@ export class UsersService {
         user: updatedUser,
       };
     } catch {
-      throw new NotFoundException('User not found');
+      throw new NotFoundException({
+        code: 'USER_NOT_FOUND',
+        message: 'User not found',
+      });
     }
   }
 
@@ -150,7 +217,10 @@ export class UsersService {
         message: 'Your account has been permanently deleted.',
       };
     } catch {
-      throw new NotFoundException('User not found or already deleted');
+      throw new NotFoundException({
+        code: 'USER_NOT_FOUND',
+        message: 'User not found or already deleted',
+      });
     }
   }
 }

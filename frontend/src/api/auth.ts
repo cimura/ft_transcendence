@@ -92,32 +92,36 @@ export const signInApi = async (credentials: LoginCredentials) => {
   }
 }
 
-// ----- ここから下はバックエンドと未接続 -----
+interface CurrentUserResponse {
+  user: {
+    id: string
+    email: string
+    username: string
+    displayName: string | null
+    avatarUrl: string | null
+    createdAt: string
+    updatedAt: string
+  }
+}
 
 /**
  * Get current logged-in user
  * @returns Promise<User> Current user data
  */
 export const getCurrentUser = async (): Promise<User> => {
-  // モックデータを返す（実際のAPIエンドポイントは未実装）
-  return new Promise((resolve) => {
-    setTimeout(() => {
-      resolve({
-        id: 'current-user-id',
-        email: 'me@example.com',
-        username: 'current_user',
-        displayName: 'Current User',
-        avatarUrl: '/avatars/default-1.svg',
-        isGuest: false,
-        createdAt: new Date('2024-01-01'),
-        updatedAt: new Date(),
-      })
-    }, 300)
-  })
+  const response = await api.get<CurrentUserResponse>('/users/profile')
+  const user = response.data.user
 
-  // 実際のAPI実装時はこちらを使用
-  // const response = await api.get<User>('/api/auth/me')
-  // return response.data
+  return {
+    id: user.id,
+    email: user.email,
+    username: user.username,
+    displayName: user.displayName ?? undefined,
+    avatarUrl: user.avatarUrl ?? undefined,
+    isGuest: false,
+    createdAt: new Date(user.createdAt),
+    updatedAt: new Date(user.updatedAt),
+  }
 }
 
 /**

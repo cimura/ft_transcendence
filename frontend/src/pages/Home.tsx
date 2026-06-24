@@ -43,7 +43,7 @@ export function Home() {
             待機場
           </button>
 
-          {/* 下段: 設定・対戦履歴 */}
+          {/* 下段: 設定 */}
           <div className="flex justify-center">
             <button
               onClick={() => navigate('/settings')}
