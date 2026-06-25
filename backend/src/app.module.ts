@@ -9,6 +9,8 @@ import { UploadsModule } from './uploads/uploads.module';
 import { UsersModule } from './users/users.module';
 import { FriendsModule } from './friends/friends.module';
 import { ScoresModule } from './scores/scores.module';
+import { GamesModule } from './games/games.module';
+import { RoomsModule } from './rooms/rooms.module';
 
 @Module({
   imports: [
@@ -21,6 +23,8 @@ import { ScoresModule } from './scores/scores.module';
     UsersModule,
     FriendsModule,
     ScoresModule,
+    GamesModule,
+    RoomsModule,
   ],
   controllers: [AppController],
   providers: [AppService, PrismaService],
