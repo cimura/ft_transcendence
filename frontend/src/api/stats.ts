@@ -1,19 +1,6 @@
-import type {
-  UserStats,
-  MatchHistory,
-  MatchHistoryResponse,
-} from '../types/profile'
+import api from './client'
 
-/**
- * TODO: 実際のAPI実装時は以下のaxiosインスタンスを使用
- *
- * import axios from 'axios'
- *
- * const api = axios.create({
- *   baseURL: import.meta.env.VITE_API_URL || 'http://localhost:4000',
- *   withCredentials: true,
- * })
- */
+import type { UserStats, MatchHistoryResponse } from '../types/profile'
 
 /**
  * モック統計データ
@@ -55,36 +42,6 @@ const mockStats: Record<string, UserStats> = {
     winRate: 70.0,
     maxWinStreak: 12,
   },
-}
-
-/**
- * モック試合履歴データ生成
- */
-const generateMockHistory = (
-  userId: string,
-  count: number,
-  offset: number
-): MatchHistory[] => {
-  const results: Array<'win' | 'loss' | 'draw'> = ['win', 'loss', 'draw']
-  const gameTypes = [
-    'Battle Royale',
-    'Team Deathmatch',
-    'Free For All',
-    'Capture the Flag',
-  ]
-  const opponents = ['alice', 'bob', 'charlie', 'david', 'eve', 'frank']
-
-  return Array.from({ length: count }, (_, i) => {
-    const index = offset + i
-    return {
-      id: `${userId}-match-${index}`,
-      result: results[index % 3],
-      opponents: opponents.slice(0, Math.floor(Math.random() * 3) + 1),
-      kills: Math.floor(Math.random() * 10) + 1,
-      playedAt: new Date(Date.now() - index * 3600000 * 2),
-      gameType: gameTypes[index % gameTypes.length],
-    }
-  })
 }
 
 /**
@@ -131,24 +88,6 @@ export const getMatchHistory = async (
   page: number = 1,
   limit: number = 20
 ): Promise<MatchHistoryResponse> => {
-  // モックデータを返す
-  return new Promise((resolve) => {
-    setTimeout(() => {
-      const totalMatches = mockStats[userId]?.totalGames || 50
-      const offset = (page - 1) * limit
-      const data = generateMockHistory(userId, limit, offset)
-      const hasMore = offset + limit < totalMatches
-
-      resolve({
-        data,
-        hasMore,
-        total: totalMatches,
-        page,
-      })
-    }, 500)
-  })
-
-  // 実際のAPI実装時はこちらを使用
   const response = await api.get<MatchHistoryResponse>(
     `/scores/user/${userId}`,
     {

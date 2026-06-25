@@ -19,7 +19,7 @@ export const MatchHistoryCard = ({ match }: MatchHistoryCardProps) => {
         ? '敗北'
         : '引き分け'
 
-  const formatDate = (date: Date) => {
+  const formatDate = (date: string) => {
     const now = new Date()
     const diff = now.getTime() - new Date(date).getTime()
     const hours = Math.floor(diff / (1000 * 60 * 60))
