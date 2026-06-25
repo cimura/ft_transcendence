@@ -41,7 +41,7 @@ export class ScoresController {
     @Param('userId') userId: string,
     @Query('page') page = '1',
     @Query('limit') limit = '20',
-  ): MatchHistoryResponseDto {
+  ): Promise<MatchHistoryResponseDto> {
     return this.scoresService.getMatchHistory(
       userId,
       Number(page),
