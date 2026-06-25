@@ -23,6 +23,6 @@
 
 ## AI handoff
 
-- What should the AI quest board update after this PR?
+- What should the GitHub Project quest card update after this PR?
 - Does this PR unblock another quest?
 - Does this PR intentionally cut or defer any scope?

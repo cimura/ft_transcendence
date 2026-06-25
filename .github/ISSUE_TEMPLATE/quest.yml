@@ -6,13 +6,14 @@ body:
   - type: markdown
     attributes:
       value: |
-        Use this template for development quests that should be tracked by the AI-driven workflow.
+        Use this template for confirmed development quests that need a real GitHub Issue.
+        Proposed quests can stay as GitHub Project draft cards until the team accepts them.
 
   - type: input
     id: quest_id
     attributes:
       label: Quest ID
-      description: Use the ID from docs/quest-board.md if one exists.
+      description: Use the ID from the GitHub Project card if one exists.
       placeholder: Q-001
 
   - type: dropdown
@@ -140,4 +141,3 @@ body:
       placeholder: |
         - Watch for scope drift into ...
         - Mark Q-... unblocked when this merges.
-

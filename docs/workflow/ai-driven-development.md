@@ -1,12 +1,12 @@
 # AI-driven development workflow
 
-Last updated: 2026-06-25
+Last updated: 2026-06-26
 
-This document defines how the team uses AI to keep development moving without spending too much time manually splitting and assigning tasks.
+This document defines how the team uses GitHub Projects and AI to keep development moving without spending too much time manually splitting, sorting, and re-sorting tasks.
 
 ## Goal
 
-Use AI as a project assistant that continuously turns the current requirements, schedule, issues, pull requests, and branch state into actionable quests.
+Use GitHub Projects as the main execution board, and use AI as a project assistant that keeps quests easy to pick up.
 
 AI should help with:
 
@@ -15,6 +15,7 @@ AI should help with:
 - detecting stale or blocked work
 - summarizing what changed after pushes and PR merges
 - proposing scope cuts when the schedule is at risk
+- keeping `Priority`, `Next Action`, `Risk`, and dependencies easy to scan
 
 AI should not own:
 
@@ -23,6 +24,7 @@ AI should not own:
 - human assignment and accountability
 - conflict resolution policy
 - feature additions after scope freeze
+- final Done decisions
 
 ## Sources of truth
 
@@ -32,13 +34,41 @@ Use these sources in this order:
 |---|---|---|
 | 1 | GitHub Wiki: `改訂版スケジュール（6.17）` | Current schedule and phase goals |
 | 2 | GitHub Wiki: `要件` | Required modules and 14-point target |
-| 3 | `docs/requirements.md` | Repo-local requirements snapshot |
-| 4 | GitHub Issues | Quest-level work items |
+| 3 | GitHub Project: `トラセンプロジェクト` | Current quest status, priority, and next action |
+| 4 | GitHub Issues | Confirmed quest details, discussion, and PR links |
 | 5 | GitHub Pull Requests | Real implementation state |
 | 6 | Branch diff against `origin/develop` | Evidence for what is actually implemented |
 | 7 | CI status | Evidence for merge readiness |
+| 8 | `docs/requirements.md` | Repo-local requirements snapshot |
 
-If two sources disagree, prefer the higher-priority source and add a note to the quest board.
+If two sources disagree, prefer the higher-priority source and add a note to the relevant Project card or issue.
+
+## Main board
+
+The main working surface is the GitHub Project `トラセンプロジェクト`.
+
+Members should normally start from the Project views, not from a Markdown checklist.
+
+Recommended views:
+
+| View | Purpose |
+|---|---|
+| Priority Queue | Group by `優先度`; this is the daily entry point |
+| Next Actions | Group by `次のアクション` so people can pick review, implementation, integration, or test work |
+| Blockers | Show `リスク = High` or `Blocker` |
+| This Week | Show quests due this week |
+| Schedule | Sort by due date |
+
+Recommended Project fields:
+
+| Field | Meaning |
+|---|---|
+| `優先度` | `P0 今すぐ`, `P1 次にやる`, `P2 近いうち`, `P3 後で` |
+| `次のアクション` | Review, merge, decision, implementation, integration, test, docs, stabilization, or wait |
+| `リスク` | Schedule or integration risk |
+| `AIステータス` | Whether the quest is still AI-proposed or team-confirmed |
+| `依存関係` | Quest IDs, issues, PRs, or decisions that must happen first |
+| `完了条件` | One-line observable Done condition |
 
 ## Quest size
 
@@ -69,6 +99,8 @@ Every quest should include:
 | Due | Target date |
 | Owner | Human owner, or `Unassigned` |
 | Status | `Proposed`, `Confirmed`, `In Progress`, `Review`, `Done`, `Blocked`, or `Cut` |
+| Priority | `P0`, `P1`, `P2`, or `P3` |
+| Next Action | The kind of work needed next |
 | Depends on | Quest IDs, PRs, or issues that must land first |
 | Do | Scope that belongs in the quest |
 | Do not | Explicit exclusions |
@@ -94,18 +126,18 @@ Only merged work on `develop` counts as Done.
 
 ### Daily start
 
-Ask AI to refresh the quest board from:
+Open the GitHub Project and start with:
 
-- GitHub Wiki schedule
-- open issues
-- open pull requests
-- branch diffs against `origin/develop`
-- CI status
+- `優先度 = P0 今すぐ`
+- `優先度 = P1 次にやる`
+- `次のアクション`
+- `リスク = High` or `Blocker`
 
-Expected output:
+AI should periodically refresh:
 
-- quests due today
-- blocked quests
+- priorities
+- next actions
+- stale or blocked cards
 - PRs that should be reviewed or merged first
 - scope risks against the next milestone
 
@@ -127,6 +159,7 @@ AI checks:
 - whether the quest acceptance criteria changed
 - whether another quest is now unblocked
 - whether new conflicts appeared
+- whether Project `Priority`, `Next Action`, or `Risk` should change
 
 ### After merge to `develop`
 
@@ -136,51 +169,31 @@ AI updates:
 - dependencies
 - next recommended quest
 - milestone risk
+- a lightweight snapshot if the team wants an audit trail
 
-## GitHub Project fields
+## Repo templates
 
-The current Project already has:
+The repo keeps only lightweight templates and operating rules:
 
-- `Status`
-- `Iteration`
-- `Start date`
-- `Due date`
+- `.github/ISSUE_TEMPLATE/quest.yml`
+- `.github/pull_request_template.md`
+- `docs/workflow/ai-driven-development.md`
 
-Recommended additional fields:
+The Project is the source of current quest state. Avoid maintaining a separate Markdown quest board as the main workflow because it becomes stale and duplicates the Project.
 
-| Field | Type | Options |
-|---|---|---|
-| Module | Single select | Framework, WebSocket, User Interaction, Bomberman, Remote Players, User Management, Notifications, Stats, QA, Docs |
-| Quest Type | Single select | Feature, Integration, Fix, QA, Docs, Decision |
-| Risk | Single select | Low, Medium, High, Blocker |
-| AI Status | Single select | Proposed, Confirmed, Needs Human Decision |
-| Depends on | Text | Quest IDs, issues, or PRs |
-| Acceptance | Text | One-line Done condition |
+## Automation path
 
-Do not add these fields until the team agrees, because Project fields affect everyone.
+Start with Project-first automation:
 
-## Initial automation path
+1. Keep proposed quests as Project draft cards until the team confirms them.
+2. Convert confirmed quests into GitHub Issues only when discussion, assignment, or PR linking is needed.
+3. Require PRs to mention `Quest: Q-xxx` or `Closes #issue`.
+4. Add a manually triggered GitHub Action that refreshes Project fields from issues, PRs, and CI.
+5. Add a daily scheduled refresh if the manual flow is useful.
+6. Let AI update low-risk fields such as `Risk`, `Priority`, `Next Action`, and dependency notes.
+7. Keep deletion, major due-date changes, scope cuts, and final Done decisions human-controlled.
 
-Start with local docs and templates:
-
-1. Maintain `docs/quest-board.md`.
-2. Use `.github/ISSUE_TEMPLATE/quest.yml` for new quest issues.
-3. Use `.github/pull_request_template.md` for every PR.
-4. Manually ask AI to refresh the quest board.
-
-Then add GitHub integration:
-
-1. Create GitHub labels and Project fields.
-2. Convert confirmed quests into GitHub Issues.
-3. Add issues to the Project.
-4. Link PRs to quests.
-
-Finally add automation:
-
-1. Run a scheduled or manually triggered GitHub Action.
-2. The action gathers Wiki, issues, PRs, and branch state.
-3. AI proposes updates to `docs/quest-board.md`.
-4. The action opens a PR with the proposed quest-board update.
+The optional Markdown snapshot can be generated later if the team wants a daily audit log, but it is not the main operating board.
 
 ## Scope policy
 
@@ -195,4 +208,3 @@ If the schedule slips:
 3. reduce chat to room-only
 4. reduce stats to match history and simple ranking
 5. postpone badges and nonessential UI polish
-
