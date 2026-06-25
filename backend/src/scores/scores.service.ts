@@ -2,7 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { MatchHistoryResponseDto } from './dto/match-history.dto';
 
 @Injectable()
-export class ScoreService {
+export class ScoresService {
   getMatchHistory(
     userId: string,
     page = 1,

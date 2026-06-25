@@ -8,7 +8,7 @@ import { PrismaService } from './prisma.service';
 import { UploadsModule } from './uploads/uploads.module';
 import { UsersModule } from './users/users.module';
 import { FriendsModule } from './friends/friends.module';
-import { ScoreModule } from './scores/scores.module';
+import { ScoresModule } from './scores/scores.module';
 
 @Module({
   imports: [
@@ -20,7 +20,7 @@ import { ScoreModule } from './scores/scores.module';
     UploadsModule,
     UsersModule,
     FriendsModule,
-    ScoreModule,
+    ScoresModule,
   ],
   controllers: [AppController],
   providers: [AppService, PrismaService],

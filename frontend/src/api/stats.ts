@@ -149,8 +149,11 @@ export const getMatchHistory = async (
   })
 
   // 実際のAPI実装時はこちらを使用
-  // const response = await api.get<MatchHistoryResponse>(`/api/scores/user/${userId}`, {
-  //   params: { page, limit },
-  // })
-  // return response.data
+  const response = await api.get<MatchHistoryResponse>(
+    `/scores/user/${userId}`,
+    {
+      params: { page, limit },
+    }
+  )
+  return response.data
 }
