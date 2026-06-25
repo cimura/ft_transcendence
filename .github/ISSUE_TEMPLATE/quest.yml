@@ -1,0 +1,143 @@
+name: Quest
+description: AI-assisted development quest
+title: "[Quest] "
+labels: ["enhancement"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Use this template for development quests that should be tracked by the AI-driven workflow.
+
+  - type: input
+    id: quest_id
+    attributes:
+      label: Quest ID
+      description: Use the ID from docs/quest-board.md if one exists.
+      placeholder: Q-001
+
+  - type: dropdown
+    id: phase
+    attributes:
+      label: Phase
+      options:
+        - Phase 2: Remote players
+        - Phase 3: 14-point MVP
+        - Phase 4: Quality / Docker / README
+        - Phase 5: Release buffer
+        - Unscheduled
+    validations:
+      required: true
+
+  - type: dropdown
+    id: module
+    attributes:
+      label: Module
+      options:
+        - Framework
+        - WebSocket
+        - User Interaction
+        - Bomberman
+        - Remote Players
+        - User Management
+        - Notifications
+        - Stats
+        - QA
+        - Docs
+        - Decision
+    validations:
+      required: true
+
+  - type: input
+    id: due
+    attributes:
+      label: Due date
+      description: Use YYYY-MM-DD.
+      placeholder: "2026-07-02"
+    validations:
+      required: true
+
+  - type: dropdown
+    id: risk
+    attributes:
+      label: Risk
+      options:
+        - Low
+        - Medium
+        - High
+        - Blocker
+    validations:
+      required: true
+
+  - type: textarea
+    id: goal
+    attributes:
+      label: Goal
+      description: Describe the outcome, not just the activity.
+      placeholder: Two authenticated users can complete one real-time Bomberman match.
+    validations:
+      required: true
+
+  - type: textarea
+    id: do
+    attributes:
+      label: Do
+      description: What belongs in this quest?
+      placeholder: |
+        - Implement ...
+        - Connect ...
+        - Verify ...
+    validations:
+      required: true
+
+  - type: textarea
+    id: do_not
+    attributes:
+      label: Do not
+      description: Explicitly exclude scope to prevent drift.
+      placeholder: |
+        - Do not add ...
+        - Do not redesign ...
+    validations:
+      required: true
+
+  - type: textarea
+    id: depends_on
+    attributes:
+      label: Depends on
+      description: Link quest IDs, issues, PRs, or decisions.
+      placeholder: |
+        - Q-001
+        - #72
+        - PR #74
+
+  - type: textarea
+    id: acceptance
+    attributes:
+      label: Acceptance criteria
+      description: What must be true before this can be Done?
+      placeholder: |
+        - Merged into develop
+        - CI passes
+        - Manual two-tab test passes
+    validations:
+      required: true
+
+  - type: textarea
+    id: verification
+    attributes:
+      label: Verification
+      description: Commands, manual checks, screenshots, or demo path.
+      placeholder: |
+        - npm run lint
+        - npm run format:check
+        - Manual smoke test:
+
+  - type: textarea
+    id: ai_notes
+    attributes:
+      label: AI handoff notes
+      description: What should AI check when this issue or related PR changes?
+      placeholder: |
+        - Watch for scope drift into ...
+        - Mark Q-... unblocked when this merges.
+
