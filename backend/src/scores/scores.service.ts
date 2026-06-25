@@ -1,7 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { MatchHistoryResponseDto } from './dto/match-history.dto';
-import { PrismaService } from 'src/prisma.service';
-import { MatchResult } from 'src/generated/prisma/enums';
+import { PrismaService } from '../prisma.service';
+import { MatchResult } from '../generated/prisma/enums';
 
 @Injectable()
 export class ScoresService {
