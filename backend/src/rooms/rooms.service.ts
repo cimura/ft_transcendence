@@ -153,7 +153,7 @@ export class RoomsService {
       if (
         room.participants.some((participant) => participant.userId === userId)
       ) {
-        throw new ConflictException('You have already joined this room');
+        return;
       }
 
       if (room.participants.length >= room.maxPlayers) {
