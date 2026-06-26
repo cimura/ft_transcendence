@@ -90,46 +90,48 @@ export function Lobby() {
       setCurrentRoom(joinedRoom)
       navigate(`/room/${roomId}`)
     } catch (error) {
-   if (axios.isAxiosError(error)) {
-    const status = error.response?.status
+      if (axios.isAxiosError(error)) {
+        const status = error.response?.status
 
-    if (status === 403 || status === 404) {
-      removeRoom(roomId)
-      console.error('Failed to join room:', error)
-      return
-    }
-
-    if (status === 409) {
-      try {
-        const latestRoom = await getRoom(roomId)
-
-        if (
-          latestRoom.players.some(
-            (player: { userId: string }) => player.userId === user.id
-          )
-        ) {
-          upsertRoom(latestRoom)
-          setCurrentRoom(latestRoom)
-          navigate(`/room/${roomId}`)
+        if (status === 403 || status === 404) {
+          removeRoom(roomId)
+          console.error('Failed to join room:', error)
           return
         }
 
-        upsertRoom(latestRoom)
-      } catch (refreshError) {
-        if (
-          axios.isAxiosError(refreshError) &&
-          [403, 404].includes(refreshError.response?.status ?? 0)
-        ) {
-          removeRoom(roomId)
+        if (status === 409) {
+          try {
+            const latestRoom = await getRoom(roomId)
+
+            if (
+              latestRoom.players.some(
+                (player: { userId: string }) => player.userId === user.id
+              )
+            ) {
+              upsertRoom(latestRoom)
+              setCurrentRoom(latestRoom)
+              navigate(`/room/${roomId}`)
+              return
+            }
+
+            upsertRoom(latestRoom)
+          } catch (refreshError) {
+            if (
+              axios.isAxiosError(refreshError) &&
+              [403, 404].includes(refreshError.response?.status ?? 0)
+            ) {
+              removeRoom(roomId)
+            }
+
+            console.error(
+              'Failed to refresh room after join conflict:',
+              refreshError
+            )
+          }
+
+          return
         }
-
-        console.error('Failed to refresh room after join conflict:', refreshError)
       }
-
-      return
-    }
-  }
-
 
       console.error('Failed to join room:', error)
     }
