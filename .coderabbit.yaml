@@ -1,0 +1,109 @@
+language: "ja-JP"
+
+early_access: false
+
+reviews:
+  profile: "chill"
+
+  high_level_summary: true
+  high_level_summary_placeholder: true
+  review_status: true
+  poem: false
+
+  auto_review:
+    enabled: true
+    drafts: false
+  auto_review_base_branches:
+    - main
+    - develop
+
+  request_changes_workflow: false
+
+  collapse_walkthrough: true
+
+  path_instructions:
+    - path: "frontend/**"
+      instructions: |
+        React / Next.js / TypeScript のベストプラクティスでレビューしてください。
+
+        優先順位:
+        1. バグになる可能性
+        2. パフォーマンス
+        3. 保守性
+
+        特に確認してください。
+        - Hooksの依存配列
+        - useMemo/useCallbackの不要・不足
+        - 再レンダリング
+        - keyの付け忘れ
+        - Suspense/Server Componentの利用
+        - anyの使用
+        - null/undefined安全性
+        - Tailwindの冗長なclass
+        - 命名規則
+        - 重複コード
+
+    - path: "backend/**"
+      instructions: |
+        NestJS / TypeScript のベストプラクティスでレビューしてください。
+
+        優先順位:
+        1. バグ
+        2. セキュリティ
+        3. 保守性
+
+        特に確認してください。
+        - Exception Filterの利用
+        - エラーハンドリング
+        - Promise漏れ
+        - await漏れ
+        - return漏れ
+        - Transaction漏れ
+        - SQL Injection
+        - DTO Validation
+        - Logger利用
+        - DIの適切性
+        - 重複コード
+
+    - path: "**/*.test.*"
+      instructions: |
+        テストコードでは以下を確認してください。
+        - テストケース不足
+        - 境界値
+        - Happy Pathだけになっていないか
+        - テスト名が分かりやすいか
+
+    - path: ".github/workflows/**"
+      instructions: |
+        GitHub Actionsでは
+        - Secret漏洩
+        - 権限(permission)
+        - Cache利用
+        - 不要なJob
+        を確認してください。
+
+chat:
+  auto_reply: true
+
+knowledge_base:
+  issues:
+    enabled: true
+
+  pull_requests:
+    enabled: true
+
+  code_guidelines: |
+    このプロジェクトでは以下を重要視してください。
+
+    - 可読性 > 短いコード
+    - 重複コードは積極的に指摘
+    - コメントよりリファクタリングを推奨
+    - 小さな関数へ分割する
+    - マジックナンバー禁止
+    - SOLID原則を意識
+    - 型安全を優先
+    - 不要な最適化は避ける
+    - 命名を重視する
+
+    AIは「LGTM」を安易に返さず、
+    改善点があれば優先度付きで提示してください。
