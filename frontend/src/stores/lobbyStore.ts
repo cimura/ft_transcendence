@@ -19,11 +19,10 @@ export const useLobbyStore = create<LobbyStore>()(
     setRooms: (rooms) =>
       set((state) => {
         state.rooms = rooms
-        if (
-          state.currentRoom &&
-          !rooms.some((room) => room.id === state.currentRoom?.id)
-        ) {
-          state.currentRoom = null
+        const currentRoomId = state.currentRoom?.id
+        if (currentRoomId) {
+          state.currentRoom =
+            rooms.find((room) => room.id === currentRoomId) ?? null
         }
       }),
     upsertRoom: (room) =>
