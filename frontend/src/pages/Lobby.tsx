@@ -16,7 +16,7 @@ type FilterType = 'all' | 'waiting' | 'playing' | 'finished'
 
 export function Lobby() {
   const navigate = useNavigate()
-  const { rooms, setCurrentRoom, upsertRoom } = useLobbyStore()
+  const { rooms, setCurrentRoom, upsertRoom, removeRoom } = useLobbyStore()
   const [filter, setFilter] = useState<FilterType>('waiting')
   const [isModalOpen, setIsModalOpen] = useState(false)
   const { currentUser, fetchCurrentUser } = useAuthStore()
@@ -90,7 +90,17 @@ export function Lobby() {
       setCurrentRoom(joinedRoom)
       navigate(`/room/${roomId}`)
     } catch (error) {
-      if (axios.isAxiosError(error) && error.response?.status === 409) {
+   if (axios.isAxiosError(error)) {
+    const status = error.response?.status
+
+    if (status === 403 || status === 404) {
+      removeRoom(roomId)
+      console.error('Failed to join room:', error)
+      return
+    }
+
+    if (status === 409) {
+      try {
         const latestRoom = await getRoom(roomId)
 
         if (
@@ -105,7 +115,21 @@ export function Lobby() {
         }
 
         upsertRoom(latestRoom)
+      } catch (refreshError) {
+        if (
+          axios.isAxiosError(refreshError) &&
+          [403, 404].includes(refreshError.response?.status ?? 0)
+        ) {
+          removeRoom(roomId)
+        }
+
+        console.error('Failed to refresh room after join conflict:', refreshError)
       }
+
+      return
+    }
+  }
+
 
       console.error('Failed to join room:', error)
     }
