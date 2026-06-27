@@ -11,7 +11,7 @@ import {
 import { Server, Socket } from 'socket.io';
 import { JwtService } from '@nestjs/jwt';
 import { GameService } from './game.service';
-import {
+import type {
   ClientToServerEvents,
   ServerToClientEvents,
 } from '@ft_transcendence/shared/game-events.types';
@@ -68,69 +68,33 @@ export class GameGateway
   }
 
   @SubscribeMessage('game:join')
-  handleJoin(
+  async handleJoin(
     @MessageBody() data: Parameters<ClientToServerEvents['game:join']>[0],
     @ConnectedSocket()
     client: GameSocket,
   ) {
     const user = client.data.user;
-    if (!user) {
-      console.error('未認証のユーザーからのjoinリクエストです');
-      client.disconnect();
-      return;
-    }
+    if (!user) return;
 
-    // TODO: ユーザーIDを元に送られてきた roomId のルームに参加しているかを調べる
-    // === 実装例 ===
-    // const participant = await this.prisma.roomParticipant.findUnique({
-    //   where: {
-    //     roomId_userId: { roomId: data.roomId, userId: user.id },
-    //   },
-    //   include: {
-    //     user: true, // (usernameを取るためにリレーションを含める)
-    //   },
-    // });
-    // if (!participant) {
-    //   console.error('このルームの参加権限がありません');
-    //   return;
-    // }
+    await client.join(data.roomId);
+    client.data.roomId = data.roomId;
+
+    const initData = this.gameService.handleGameJoin(data.roomId, user.id);
+    client.emit('game:init', initData);
 
     console.log(
       `[ルーム参加] ユーザーID: ${user.id} が 部屋: ${data.roomId} に参加します`,
     );
-
-    client.join(data.roomId);
-    client.data.roomId = data.roomId;
-
-    // TODO: 'test-username' を上でデータベースから取ってきたものにする
-    this.gameService.addPlayer(data.roomId, user.id, 'test-username');
-
-    const room = this.gameService.getOrCreateRoom(data.roomId);
-
-    client.emit('game:init', {
-      yourId: user.id,
-      serverTime: Date.now(),
-      mapRevision: room.mapRevision,
-      map: room.map,
-      players: room.players,
-      bombs: room.bombs,
-      phase: room.phase,
-    });
-
-    if (Object.keys(room.players).length >= 2 && room.phase === 'waiting') {
-      this.gameService.startGameLoop(data.roomId);
-    }
   }
 
   @SubscribeMessage('game:leave')
   handleLeave(
-    @MessageBody()
-    data: Parameters<ClientToServerEvents['game:leave']>[0],
     @ConnectedSocket()
     client: GameSocket,
   ) {
-    void data;
-    void client;
+    if (client.data.user) {
+      this.gameService.handleGameLeave(client.data.user.id);
+    }
   }
 
   @SubscribeMessage('player:input')
@@ -157,7 +121,7 @@ export class GameGateway
     @ConnectedSocket()
     client: GameSocket,
   ) {
-    const roomId = Array.from(client.rooms).find((r) => r !== client.id);
+    const roomId = client.data.roomId;
     if (!roomId || !client.data.user) return;
 
     this.gameService.handleBombPlace(roomId, client.data.user.id);
@@ -165,7 +129,7 @@ export class GameGateway
 
   handleDisconnect(client: GameSocket) {
     if (client.data.user) {
-      this.gameService.removePlayer(client.data.user.id);
+      this.gameService.handleGameLeave(client.data.user.id);
     }
   }
 }

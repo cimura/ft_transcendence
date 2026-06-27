@@ -1,10 +1,5 @@
-import { GameSession, PlayerStats } from '../game.types';
-
-export interface GameEndResult {
-  winnerId: string | null;
-  isDraw: boolean;
-  rankings: { playerId: string; stats: PlayerStats }[];
-}
+import { GameSession } from '../game.types';
+import type { ServerToClientEvents } from '@ft_transcendence/shared/game-events.types';
 
 /**
  * 勝敗判定およびリザルト集計のビジネスロジック
@@ -14,7 +9,7 @@ export interface GameEndResult {
 export function evaluateGameEnd(
   room: GameSession,
   now: number,
-): GameEndResult | null {
+): Parameters<ServerToClientEvents['game:end']>[0] | null {
   if (room.phase !== 'playing') return null;
 
   const totalPlayers = Object.keys(room.players).length;
@@ -43,14 +38,9 @@ export function evaluateGameEnd(
     room.stats[p.id].survivalTime = now - (room.startedAt || now);
   });
 
-  const rankings = Object.keys(room.players).map((id) => ({
-    playerId: id,
-    stats: room.stats[id],
-  }));
-
   return {
-    winnerId,
+    winnerId: winnerId,
     isDraw,
-    rankings,
+    rankings: room.stats,
   };
 }

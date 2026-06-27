@@ -1,7 +1,8 @@
 import { GameSession } from '../game.types';
-
-const MOVE_SPEED = 0.1;
-const COLLISION_SIZE = 0.3;
+import {
+  PLAYER_MOVE_SPEED,
+  PLAYER_COLLISION_SIZE,
+} from '../constants/game-constants';
 
 export function isPassable(
   room: GameSession,
@@ -36,10 +37,12 @@ export function getPlayersOverlappingTile(
     const p = room.players[pid];
     if (!p.alive) continue;
 
-    const currentLeft = Math.floor(p.position.x - COLLISION_SIZE + 0.5);
-    const currentRight = Math.floor(p.position.x + COLLISION_SIZE + 0.5);
-    const currentTop = Math.floor(p.position.z - COLLISION_SIZE + 0.5);
-    const currentBottom = Math.floor(p.position.z + COLLISION_SIZE + 0.5);
+    const currentLeft = Math.floor(p.position.x - PLAYER_COLLISION_SIZE + 0.5);
+    const currentRight = Math.floor(p.position.x + PLAYER_COLLISION_SIZE + 0.5);
+    const currentTop = Math.floor(p.position.z - PLAYER_COLLISION_SIZE + 0.5);
+    const currentBottom = Math.floor(
+      p.position.z + PLAYER_COLLISION_SIZE + 0.5,
+    );
 
     let isOverlapping = false;
     for (let y = currentTop; y <= currentBottom; y++) {
@@ -71,19 +74,19 @@ export function updatePlayerMovements(room: GameSession): void {
 
     switch (input.direction) {
       case 'up':
-        dz -= MOVE_SPEED;
+        dz -= PLAYER_MOVE_SPEED;
         player.direction = 'up';
         break;
       case 'down':
-        dz += MOVE_SPEED;
+        dz += PLAYER_MOVE_SPEED;
         player.direction = 'down';
         break;
       case 'left':
-        dx -= MOVE_SPEED;
+        dx -= PLAYER_MOVE_SPEED;
         player.direction = 'left';
         break;
       case 'right':
-        dx += MOVE_SPEED;
+        dx += PLAYER_MOVE_SPEED;
         player.direction = 'right';
         break;
     }
@@ -91,12 +94,11 @@ export function updatePlayerMovements(room: GameSession): void {
     const nextX = player.position.x + dx;
     const nextZ = player.position.z + dz;
 
-    // プレイヤーの矩形サイズを考慮した境界の衝突判定
     const checkCollision = (nx: number, nz: number) => {
-      const left = Math.floor(nx - COLLISION_SIZE + 0.5);
-      const right = Math.floor(nx + COLLISION_SIZE + 0.5);
-      const top = Math.floor(nz - COLLISION_SIZE + 0.5);
-      const bottom = Math.floor(nz + COLLISION_SIZE + 0.5);
+      const left = Math.floor(nx - PLAYER_COLLISION_SIZE + 0.5);
+      const right = Math.floor(nx + PLAYER_COLLISION_SIZE + 0.5);
+      const top = Math.floor(nz - PLAYER_COLLISION_SIZE + 0.5);
+      const bottom = Math.floor(nz + PLAYER_COLLISION_SIZE + 0.5);
 
       for (let y = top; y <= bottom; y++) {
         for (let x = left; x <= right; x++) {
@@ -106,7 +108,6 @@ export function updatePlayerMovements(room: GameSession): void {
       return false;
     };
 
-    // X軸とZ軸で独立して衝突判定を行うことで、壁沿いの滑らかな移動を可能にする
     if (!checkCollision(nextX, player.position.z)) {
       player.position.x = nextX;
     }
@@ -114,12 +115,19 @@ export function updatePlayerMovements(room: GameSession): void {
       player.position.z = nextZ;
     }
 
-    const currentLeft = Math.floor(player.position.x - COLLISION_SIZE + 0.5);
-    const currentRight = Math.floor(player.position.x + COLLISION_SIZE + 0.5);
-    const currentTop = Math.floor(player.position.z - COLLISION_SIZE + 0.5);
-    const currentBottom = Math.floor(player.position.z + COLLISION_SIZE + 0.5);
+    const currentLeft = Math.floor(
+      player.position.x - PLAYER_COLLISION_SIZE + 0.5,
+    );
+    const currentRight = Math.floor(
+      player.position.x + PLAYER_COLLISION_SIZE + 0.5,
+    );
+    const currentTop = Math.floor(
+      player.position.z - PLAYER_COLLISION_SIZE + 0.5,
+    );
+    const currentBottom = Math.floor(
+      player.position.z + PLAYER_COLLISION_SIZE + 0.5,
+    );
 
-    // 爆弾の設置マスから完全に離れたら、すり抜け可能リストから除外する
     for (const bombId in room.bombPassingPlayers) {
       const passingPlayers = room.bombPassingPlayers[bombId];
       if (passingPlayers.includes(playerId)) {

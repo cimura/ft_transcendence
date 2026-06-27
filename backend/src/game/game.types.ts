@@ -1,17 +1,11 @@
-import {
-  GamePhase,
+import type {
+  Direction,
   TileType,
+  GamePhase,
   PlayerSnapshot,
   BombSnapshot,
-  Direction,
+  PlayerStats,
 } from '@ft_transcendence/shared/game-events.types';
-
-export interface PlayerStats {
-  blocksDestroyed: number;
-  bombsPlaced: number;
-  kills: number;
-  survivalTime: number;
-}
 
 export interface GameSession {
   roomId: string;
@@ -26,4 +20,5 @@ export interface GameSession {
   bombPassingPlayers: Record<string, string[]>;
   stats: Record<string, PlayerStats>;
   startedAt?: number;
+  disconnectTimers?: Record<string, NodeJS.Timeout>;
 }

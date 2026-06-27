@@ -1,22 +1,14 @@
-import { TileType } from '@ft_transcendence/shared/game-events.types';
+import type { TileType } from '@ft_transcendence/shared/game-events.types';
+import { BOMBERMAN_GRID_SIZE, MAP_PATTERN } from '../constants/game-constants';
+
+// マップ生成のファイル
+// TODO: shared/ へ移行するか、設定ファイルから読み込む
 
 export const START_POSITIONS = [
   { x: 0, z: 0 },
-  { x: 8, z: 8 },
-  { x: 8, z: 0 },
-  { x: 0, z: 8 },
-];
-
-const MAP_PATTERN = [
-  '.........',
-  '.#x#x#x#.',
-  '..x...x..',
-  '.#x#.#x#.',
-  '...x.x...',
-  '.#x#.#x#.',
-  '..x...x..',
-  '.#x#x#x#.',
-  '.........',
+  { x: BOMBERMAN_GRID_SIZE - 1, z: BOMBERMAN_GRID_SIZE - 1 },
+  { x: BOMBERMAN_GRID_SIZE - 1, z: 0 },
+  { x: 0, z: BOMBERMAN_GRID_SIZE - 1 },
 ];
 
 const SPAWN_SAFE_RADIUS = 1;

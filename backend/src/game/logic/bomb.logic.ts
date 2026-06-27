@@ -1,9 +1,14 @@
 import { GameSession } from '../game.types';
 import { getPlayersOverlappingTile } from './movement.logic';
-import {
+import type {
   GridPosition,
   BombSnapshot,
 } from '@ft_transcendence/shared/game-events.types';
+import {
+  BOMB_EXPLOSION_TIME_MS,
+  DEFAULT_MAX_BOMBS,
+  DEFAULT_BOMB_RANGE,
+} from '../constants/game-constants';
 
 export interface ExplosionResult {
   bombId: string;
@@ -12,9 +17,6 @@ export interface ExplosionResult {
   damagedPlayerIds: string[];
 }
 
-/**
- * 爆発のビジネスロジック
- */
 export function processExplosions(
   room: GameSession,
   now: number,
@@ -108,10 +110,6 @@ export function processExplosions(
   return results;
 }
 
-/**
- * 爆弾設置のバリデーションと生成ロジック
- * 設置に成功した場合はBombSnapshotを返し、失敗(条件未達)の場合はnullを返す
- */
 export function tryPlaceBomb(
   room: GameSession,
   playerId: string,
@@ -125,13 +123,12 @@ export function tryPlaceBomb(
   const activeBombs = Object.values(room.bombs).filter(
     (b) => b.ownerId === playerId,
   ).length;
-  // 現在は最大1個まで
-  if (activeBombs >= 1) return null;
+
+  if (activeBombs >= DEFAULT_MAX_BOMBS) return null;
 
   const gridX = Math.round(player.position.x);
   const gridY = Math.round(player.position.z);
 
-  // 同じマスに既に爆弾があるかチェック
   if (
     Object.values(room.bombs).some(
       (b) => b.position.x === gridX && b.position.y === gridY,
@@ -145,8 +142,8 @@ export function tryPlaceBomb(
     id: bombId,
     ownerId: playerId,
     position: { x: gridX, y: gridY },
-    explodesAt: now + 3000,
-    blastRange: 2,
+    explodesAt: now + BOMB_EXPLOSION_TIME_MS,
+    blastRange: DEFAULT_BOMB_RANGE,
   };
 
   room.bombs[bombId] = bomb;

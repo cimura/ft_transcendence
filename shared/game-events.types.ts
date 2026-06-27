@@ -33,9 +33,16 @@ export type BombSnapshot = {
   blastRange: number;
 };
 
+export interface PlayerStats {
+  blocksDestroyed: number;
+  bombsPlaced: number;
+  kills: number;
+  survivalTime: number;
+}
+
 export interface ClientToServerEvents {
   "game:join": (data: { roomId: string }) => void;
-  "game:leave": (data: { roomId: string }) => void;
+  "game:leave": () => void;
 
   "player:input": (data: {
     direction: Direction | null;
@@ -80,7 +87,8 @@ export interface ServerToClientEvents {
 
   "game:end": (data: {
     winnerId: string | null;
-    rankings: { playerId: string; score: number }[];
+    isDraw: boolean;
+    rankings: Record<string, PlayerStats>;
   }) => void;
 
   "game:error": (data: { code: string; message: string }) => void;
