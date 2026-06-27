@@ -10,6 +10,8 @@ import { UsersModule } from './users/users.module';
 import { FriendsModule } from './friends/friends.module';
 import { GameGateway } from './game/game.gateway';
 import { GameModule } from './game/game.module';
+import { GamesModule } from './games/games.module';
+import { RoomsModule } from './rooms/rooms.module';
 
 @Module({
   imports: [
@@ -22,6 +24,8 @@ import { GameModule } from './game/game.module';
     UsersModule,
     FriendsModule,
     GameModule,
+    GamesModule,
+    RoomsModule,
   ],
   controllers: [AppController],
   providers: [AppService, PrismaService, GameGateway],

@@ -26,3 +26,8 @@ AGENTS.md
 
 # Visual Studio Code
 !.vscode/*settings.json
+
+#TypeScript generated Prisma files
+backend/prisma.config.js
+backend/prisma.config.js.map
+backend/prisma.config.d.ts
