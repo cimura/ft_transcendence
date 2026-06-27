@@ -3,23 +3,12 @@ import type { BombermanInput } from '../types/game'
 import type { Direction } from '@ft_transcendence/shared/game-events.types'
 
 export function useInputManager(onInput: (input: BombermanInput) => void) {
-  const activeDirections = useRef<Direction[]>([])
+  const activeKeys = useRef<string[]>([])
 
   const onInputRef = useRef(onInput)
   useEffect(() => {
     onInputRef.current = onInput
   }, [onInput])
-
-  const emitCurrentDirection = useCallback(() => {
-    if (activeDirections.current.length > 0) {
-      // 常にスタックの末尾（最後に押されたキー）を現在の進行方向とする
-      const currentDir =
-        activeDirections.current[activeDirections.current.length - 1]
-      onInputRef.current({ type: 'move', direction: currentDir })
-    } else {
-      onInputRef.current({ type: 'stop' })
-    }
-  }, [])
 
   const getDirectionFromKey = useCallback((code: string): Direction | null => {
     switch (code) {
@@ -40,6 +29,20 @@ export function useInputManager(onInput: (input: BombermanInput) => void) {
     }
   }, [])
 
+  const emitCurrentDirection = useCallback(() => {
+    if (activeKeys.current.length > 0) {
+      // 常にスタックの末尾（最後に押されたキー）を基準に方向を決定する
+      const lastKey = activeKeys.current[activeKeys.current.length - 1]
+      const currentDir = getDirectionFromKey(lastKey)
+
+      if (currentDir) {
+        onInputRef.current({ type: 'move', direction: currentDir })
+      }
+    } else {
+      onInputRef.current({ type: 'stop' })
+    }
+  }, [getDirectionFromKey])
+
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       const dir = getDirectionFromKey(e.code)
@@ -48,8 +51,8 @@ export function useInputManager(onInput: (input: BombermanInput) => void) {
         // OSのキーリピートによる連続入力は無視する
         if (e.repeat) return
 
-        if (!activeDirections.current.includes(dir)) {
-          activeDirections.current.push(dir)
+        if (!activeKeys.current.includes(e.code)) {
+          activeKeys.current.push(e.code)
           emitCurrentDirection()
         }
         return
@@ -57,7 +60,6 @@ export function useInputManager(onInput: (input: BombermanInput) => void) {
 
       if (e.code === 'Space' || e.code === 'Enter') {
         e.preventDefault()
-        // OSのキーリピートによる連続入力は無視する
         if (e.repeat) return
 
         onInputRef.current({ type: 'place_bomb' })
@@ -67,20 +69,19 @@ export function useInputManager(onInput: (input: BombermanInput) => void) {
     const handleKeyUp = (e: KeyboardEvent) => {
       const dir = getDirectionFromKey(e.code)
       if (dir) {
-        const index = activeDirections.current.indexOf(dir)
+        const index = activeKeys.current.indexOf(e.code)
         if (index > -1) {
-          activeDirections.current.splice(index, 1) // 離したキーをスタックから削除
+          activeKeys.current.splice(index, 1)
           emitCurrentDirection()
         }
       }
     }
 
     const handleBlur = () => {
-      activeDirections.current = []
+      activeKeys.current = []
       emitCurrentDirection()
     }
 
-    // イベントリスナーの登録とクリーンアップ（Reactのライフサイクルと同期）
     window.addEventListener('keydown', handleKeyDown)
     window.addEventListener('keyup', handleKeyUp)
     window.addEventListener('blur', handleBlur)
@@ -89,14 +90,14 @@ export function useInputManager(onInput: (input: BombermanInput) => void) {
       window.removeEventListener('keydown', handleKeyDown)
       window.removeEventListener('keyup', handleKeyUp)
       window.removeEventListener('blur', handleBlur)
-      activeDirections.current = []
+      activeKeys.current = []
     }
   }, [emitCurrentDirection, getDirectionFromKey])
 
   // タッチコントローラーからの直接入力用
   const emitTouchInput = useCallback((input: BombermanInput) => {
     if (input.type === 'move' || input.type === 'stop') {
-      activeDirections.current = []
+      activeKeys.current = []
     }
     onInputRef.current(input)
   }, [])

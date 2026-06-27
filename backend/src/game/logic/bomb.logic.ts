@@ -8,6 +8,7 @@ import {
   BOMB_EXPLOSION_TIME_MS,
   DEFAULT_MAX_BOMBS,
   DEFAULT_BOMB_RANGE,
+  PLAYER_COLLISION_SIZE,
 } from '../constants/game-constants';
 
 export interface ExplosionResult {
@@ -85,10 +86,16 @@ export function processExplosions(
       const p = room.players[playerId];
       if (!p.alive) continue;
 
-      const px = Math.round(p.position.x);
-      const py = Math.round(p.position.z);
+      const left = Math.floor(p.position.x - PLAYER_COLLISION_SIZE + 0.5);
+      const right = Math.floor(p.position.x + PLAYER_COLLISION_SIZE + 0.5);
+      const top = Math.floor(p.position.z - PLAYER_COLLISION_SIZE + 0.5);
+      const bottom = Math.floor(p.position.z + PLAYER_COLLISION_SIZE + 0.5);
 
-      if (affectedTiles.some((t) => t.x === px && t.y === py)) {
+      if (
+        affectedTiles.some(
+          (t) => t.x >= left && t.x <= right && t.y >= top && t.y <= bottom,
+        )
+      ) {
         p.alive = false;
         damagedPlayerIds.push(playerId);
 

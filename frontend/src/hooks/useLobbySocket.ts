@@ -3,7 +3,7 @@ import { io, Socket } from 'socket.io-client'
 import type { GameRoom } from '../types'
 import { useLobbyStore } from '../stores/lobbyStore'
 
-const BACKEND_URL = import.meta.env.VITE_BACKEND_URL || 'http://localhost:3000'
+const BACKEND_URL = import.meta.env.VITE_BACKEND_URL || window.location.origin
 
 export function useLobbySocket() {
   const socketRef = useRef<Socket | null>(null)

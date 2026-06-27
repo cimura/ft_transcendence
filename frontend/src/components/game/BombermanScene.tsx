@@ -22,12 +22,14 @@ import type { ClientGameState } from '../../types/game'
 import { BombermanCharacter } from './BombermanCharacter'
 import { BombermanEffects } from './BombermanEffects'
 import { SCENE_CONFIG } from '../../components/game/constants/scene-constants'
+import { useGameStore } from '../../stores/gameStore'
 
 type BombermanSceneProps = {
   gameState: ClientGameState
 }
 
 export function BombermanScene({ gameState }: BombermanSceneProps) {
+  const myPlayerId = useGameStore((state) => state.myPlayerId)
   const center = (BOMBERMAN_GRID_SIZE - 1) / SCENE_CONFIG.grid.centerDivisor
   const { blocks, bombs, colors } = SCENE_CONFIG
 
@@ -210,7 +212,7 @@ export function BombermanScene({ gameState }: BombermanSceneProps) {
           <mesh
             geometry={assets.bombCoreGeometry}
             material={
-              bomb.ownerId === 'local-player' // ※後で実際のIDチェックロジックに要修正
+              bomb.ownerId === myPlayerId
                 ? assets.localBombMaterial
                 : assets.enemyBombMaterial
             }

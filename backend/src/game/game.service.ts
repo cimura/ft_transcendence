@@ -67,6 +67,8 @@ export class GameService {
     if (!room || room.phase !== 'playing') return;
 
     if (!room.playerInputs) room.playerInputs = {};
+    const currentInput = room.playerInputs[playerId];
+    if (currentInput && seq <= currentInput.seq) return;
     room.playerInputs[playerId] = { direction, seq };
   }
 

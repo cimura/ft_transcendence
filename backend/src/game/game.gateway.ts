@@ -76,6 +76,11 @@ export class GameGateway
     const user = client.data.user;
     if (!user) return;
 
+    const previousRoomId = client.data.roomId;
+    if (previousRoomId && previousRoomId !== data.roomId) {
+      await client.leave(previousRoomId);
+    }
+
     await client.join(data.roomId);
     client.data.roomId = data.roomId;
 
@@ -88,10 +93,16 @@ export class GameGateway
   }
 
   @SubscribeMessage('game:leave')
-  handleLeave(
+  async handleLeave(
     @ConnectedSocket()
     client: GameSocket,
   ) {
+    const roomId = client.data.roomId;
+    if (roomId) {
+      await client.leave(roomId);
+      client.data.roomId = undefined;
+    }
+
     if (client.data.user) {
       this.gameService.handleGameLeave(client.data.user.id);
     }

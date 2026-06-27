@@ -86,6 +86,28 @@ export function useGameSocket(roomId: string) {
       }
     )
 
+    socket.on('game:error', (data: { message: string }) => {
+      setErrorMessage(data.message)
+      setGamePhase('ended')
+    })
+
+    socket.on('connect_error', (error: Error) => {
+      console.error('Socket connection error:', error)
+      setErrorMessage(
+        `接続エラー: ${error.message || 'サーバーに接続できません'}`
+      )
+      setGamePhase('ended')
+    })
+
+    socket.on('disconnect', (reason: string) => {
+      if (reason === 'io server disconnect') {
+        setErrorMessage(
+          'サーバーから切断されました（認証エラーの可能性があります）'
+        )
+        setGamePhase('ended')
+      }
+    })
+
     socket.emit('game:join', { roomId })
 
     return () => {
@@ -95,6 +117,9 @@ export function useGameSocket(roomId: string) {
       socket.off('bomb:spawn')
       socket.off('bomb:explode')
       socket.off('game:end')
+      socket.off('game:error')
+      socket.off('connect_error')
+      socket.off('disconnect')
 
       socket.disconnect()
       socketRef.current = null
@@ -136,8 +161,17 @@ export function useGameSocket(roomId: string) {
       setMyPlayerId(null)
       setResultStats(null)
       setErrorMessage(undefined)
+      setGamePhase('waiting')
+      setCountdown({ seconds: 0, startsAt: 0 })
     }
-  }, [setGameState, setMyPlayerId, setResultStats, setErrorMessage])
+  }, [
+    setGameState,
+    setMyPlayerId,
+    setResultStats,
+    setErrorMessage,
+    setGamePhase,
+    setCountdown,
+  ])
 
   return socketRef
 }

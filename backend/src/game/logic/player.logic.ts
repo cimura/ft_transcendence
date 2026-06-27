@@ -62,6 +62,7 @@ export function removePlayerFromRoom(
   } else {
     // 待機中の切断：単に部屋から退室させる
     delete room.players[playerId];
+    delete room.stats[playerId];
     if (room.playerInputs) {
       delete room.playerInputs[playerId];
     }

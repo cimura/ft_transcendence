@@ -13,4 +13,4 @@ COPY backend/ ./backend/
 
 EXPOSE 3000
 
-CMD ["npm", "run", "start:dev", "--workspace=backend"]
+CMD ["sh", "-c", "npm run prisma:deploy --workspace=backend && npm run start:dev --workspace=backend"]
