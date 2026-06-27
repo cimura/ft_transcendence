@@ -1,7 +1,7 @@
 import { create } from 'zustand'
-import { EXPLOSION_DURATION_MS } from '../constants/game-constants'
+import { computeBombExplosion } from '../game/bomb-explosion'
 import type { ServerToClientEvents } from '@ft_transcendence/shared/game-events.types'
-import type { BombermanExplosion, ClientGameState } from '../types/game'
+import type { ClientGameState } from '../types/game'
 
 type GameStore = {
   gameState: ClientGameState
@@ -44,43 +44,7 @@ export const useGameStore = create<GameStore>((set) => ({
   setErrorMessage: (msg) => set({ errorMessage: msg }),
 
   applyBombExplosion: (data) =>
-    set((state) => {
-      const current = state.gameState
-
-      // 爆弾の削除
-      const newBombs = { ...current.bombs }
-      delete newBombs[data.bombId]
-
-      // マップの更新（破壊されたブロックを空にする）
-      const newMap = [...current.map]
-      data.destroyedBlocks.forEach((pos) => {
-        newMap[pos.y] = [...newMap[pos.y]]
-        newMap[pos.y][pos.x] = 'empty'
-      })
-
-      // プレイヤーの生存状態の更新
-      const newPlayers = { ...current.players }
-      data.damagedPlayerIds.forEach((pid) => {
-        if (newPlayers[pid]) {
-          newPlayers[pid] = { ...newPlayers[pid], alive: false }
-        }
-      })
-
-      // 爆発エフェクトの追加
-      const explosion: BombermanExplosion = {
-        id: `exp_${Date.now()}_${Math.random()}`,
-        cells: data.affectedTiles,
-        expiresAt: Date.now() + EXPLOSION_DURATION_MS,
-      }
-
-      return {
-        gameState: {
-          ...current,
-          map: newMap,
-          bombs: newBombs,
-          players: newPlayers,
-          explosions: [...current.explosions, explosion],
-        },
-      }
-    }),
+    set((state) => ({
+      gameState: computeBombExplosion(state.gameState, data),
+    })),
 }))
