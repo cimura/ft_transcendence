@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react'
 import { Button } from '../components/common/Button'
 import { PlayerCard } from '../components/waitingRoom/PlayerCard'
 import { ChatPanel } from '../components/waitingRoom/ChatPanel'
-import { GameMapPreview } from '../components/game/GameMapPreview'
+import { GameMapPreview } from '../components/game/preview/GameMapPreview'
 import { useAuthStore } from '../stores/authStore'
 
 export function WaitingRoom() {

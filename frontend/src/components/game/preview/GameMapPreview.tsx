@@ -1,11 +1,11 @@
 import { useEffect, useMemo, useRef } from 'react'
-import {
-  BOMBERMAN_TILE_SIZE,
-  createInitialBombermanMap,
-  initialPlayers,
-} from '../../game/bomberman/bombermanMap'
-import { renderBombermanScene } from '../../game/bomberman/BombermanRenderer'
+import { createInitialBombermanMap, initialPlayers } from './map-mock'
+import { renderBombermanScene } from './BombermanRenderer'
 
+// TODO: ロビーにいるときにマップ情報を取得して表示できるようにする (現状map-mockを仕様)
+// (現在はゲームがスタートしてからサーバーからマップが送られてくるので表示できない)
+
+const PREVIEW_TILE_SIZE = 40
 const MAX_PREVIEW_SCALE = 1
 
 export function GameMapPreview() {
@@ -21,8 +21,8 @@ export function GameMapPreview() {
     const ctx = canvas.getContext('2d')
     if (!ctx) return
 
-    const mapWidth = (map[0]?.length ?? 0) * BOMBERMAN_TILE_SIZE
-    const mapHeight = map.length * BOMBERMAN_TILE_SIZE
+    const mapWidth = (map[0]?.length ?? 0) * PREVIEW_TILE_SIZE
+    const mapHeight = map.length * PREVIEW_TILE_SIZE
 
     const drawPreview = () => {
       const containerWidth = container.clientWidth
@@ -37,7 +37,7 @@ export function GameMapPreview() {
         ctx,
         map,
         players: initialPlayers,
-        tileSize: BOMBERMAN_TILE_SIZE,
+        tileSize: PREVIEW_TILE_SIZE,
       })
     }
 

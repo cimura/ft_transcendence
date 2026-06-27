@@ -3,26 +3,16 @@ import { TouchControls } from './TouchControls'
 import { useGameStore } from '../../stores/gameStore'
 import { useGameSocket } from '../../hooks/useGameSocket'
 import { useGameInput } from '../../hooks/useGameInput'
-import type {
-  BombermanInput,
-  GameEndPayload,
-} from '../../game/bomberman/bombermanTypes'
 
 type GameCanvasProps = {
   roomId: string
-  onInput?: (input: BombermanInput) => void
-  onGameEnd?: (
-    result: 'WIN' | 'LOSE' | 'DRAW',
-    rankings?: GameEndPayload['rankings']
-  ) => void
 }
 
-export function GameCanvas({ roomId, onInput, onGameEnd }: GameCanvasProps) {
+export function GameCanvas({ roomId }: GameCanvasProps) {
   const gameState = useGameStore((state) => state.gameState)
+  const socketRef = useGameSocket(roomId)
 
-  const socketRef = useGameSocket(roomId, onGameEnd)
-
-  const { activeControl, handleTouchInput } = useGameInput(socketRef, onInput)
+  const { activeControl, handleTouchInput } = useGameInput(socketRef)
 
   return (
     <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_180px]">

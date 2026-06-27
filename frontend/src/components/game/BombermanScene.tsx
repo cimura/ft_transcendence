@@ -15,16 +15,16 @@ import {
 } from 'three'
 import {
   BREAKABLE_COLORS,
-  BOMBERMAN_GRID_SIZE,
   getBreakableColor,
-} from '../../game/bomberman/bombermanMap'
-import type { BombermanGameState } from '../../game/bomberman/bombermanTypes'
+} from '../../components/game/utils/map-colors'
+import { BOMBERMAN_GRID_SIZE } from '../../constants/game-constants'
+import type { ClientGameState } from '../../types/game'
 import { BombermanCharacter } from './BombermanCharacter'
 import { BombermanEffects } from './BombermanEffects'
-import { SCENE_CONFIG } from '../../game/constants/scene.constants'
+import { SCENE_CONFIG } from '../../components/game/constants/scene-constants'
 
 type BombermanSceneProps = {
-  gameState: BombermanGameState
+  gameState: ClientGameState
 }
 
 export function BombermanScene({ gameState }: BombermanSceneProps) {
@@ -208,7 +208,7 @@ export function BombermanScene({ gameState }: BombermanSceneProps) {
           <mesh
             geometry={assets.bombCoreGeometry}
             material={
-              bomb.ownerId === 'local-player'
+              bomb.ownerId === 'local-player' // ※後で実際のIDチェックロジックに要修正
                 ? assets.localBombMaterial
                 : assets.enemyBombMaterial
             }
@@ -220,10 +220,7 @@ export function BombermanScene({ gameState }: BombermanSceneProps) {
         </group>
       ))}
 
-      <BombermanEffects
-        explosions={gameState.explosions}
-        smokes={gameState.smokes}
-      />
+      <BombermanEffects explosions={gameState.explosions} />
 
       {Object.values(gameState.players).map((player) => (
         <BombermanCharacter key={player.id} player={player} />

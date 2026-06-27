@@ -1,25 +1,15 @@
 import { useEffect, useRef } from 'react'
 import { io, Socket } from 'socket.io-client'
 import { useGameStore } from '../stores/gameStore'
-import type {
-  BombermanGameState,
-  BombermanBomb,
-  BombermanExplosion,
-  GridPosition,
-  GameEndPayload,
-} from '../game/bomberman/bombermanTypes'
+import type { ServerToClientEvents } from '@ft_transcendence/shared/game-events.types'
 
-export function useGameSocket(
-  roomId: string,
-  onGameEnd?: (
-    result: 'WIN' | 'LOSE' | 'DRAW',
-    rankings?: GameEndPayload['rankings']
-  ) => void
-) {
+export function useGameSocket(roomId: string) {
   const socketRef = useRef<Socket | null>(null)
-  const myIdRef = useRef<string | null>(null)
   const setGameState = useGameStore((state) => state.setGameState)
+  const setMyPlayerId = useGameStore((state) => state.setMyPlayerId)
   const setResultStats = useGameStore((state) => state.setResultStats)
+  const setErrorMessage = useGameStore((state) => state.setErrorMessage)
+  const applyBombExplosion = useGameStore((state) => state.applyBombExplosion)
 
   useEffect(() => {
     if (!socketRef.current) {
@@ -34,91 +24,57 @@ export function useGameSocket(
 
     const socket = socketRef.current
 
-    socket.emit('game:join', { roomId })
+    socket.on(
+      'game:init',
+      (data: Parameters<ServerToClientEvents['game:init']>[0]) => {
+        setMyPlayerId(data.yourId)
+        setGameState({
+          map: data.map,
+          players: data.players,
+          bombs: data.bombs,
+          explosions: [],
+        })
+      }
+    )
 
-    socket.on('game:init', (data) => {
-      myIdRef.current = data.yourId
-      setGameState({
-        map: data.map,
-        players: data.players,
-        bombs: data.bombs,
-        explosions: [],
-        smokes: [],
-      })
-    })
+    socket.on(
+      'game:state',
+      (data: Parameters<ServerToClientEvents['game:state']>[0]) => {
+        const currentGameState = useGameStore.getState().gameState
+        setGameState({
+          ...currentGameState,
+          players: data.players,
+          bombs: data.bombs,
+        })
+      }
+    )
 
-    socket.on('game:state', (data: BombermanGameState) => {
-      const currentGameState = useGameStore.getState().gameState
-      setGameState({
-        ...currentGameState,
-        players: data.players,
-        bombs: data.bombs,
-      })
-    })
-
-    socket.on('bomb:spawn', (data: { bomb: BombermanBomb }) => {
-      const state = useGameStore.getState().gameState
-      setGameState({
-        ...state,
-        bombs: { ...state.bombs, [data.bomb.id]: data.bomb },
-      })
-    })
+    socket.on(
+      'bomb:spawn',
+      (data: Parameters<ServerToClientEvents['bomb:spawn']>[0]) => {
+        const state = useGameStore.getState().gameState
+        setGameState({
+          ...state,
+          bombs: { ...state.bombs, [data.bomb.id]: data.bomb },
+        })
+      }
+    )
 
     socket.on(
       'bomb:explode',
-      (data: {
-        bombId: string
-        affectedTiles: GridPosition[]
-        destroyedBlocks: GridPosition[]
-        damagedPlayerIds: string[]
-        mapRevision: number
-      }) => {
-        const state = useGameStore.getState().gameState
-        const newBombs = { ...state.bombs }
-        delete newBombs[data.bombId]
-
-        const newMap = [...state.map]
-        data.destroyedBlocks.forEach((pos) => {
-          newMap[pos.y] = [...newMap[pos.y]]
-          newMap[pos.y][pos.x] = 'empty'
-        })
-
-        const newPlayers = { ...state.players }
-        data.damagedPlayerIds.forEach((pid) => {
-          if (newPlayers[pid]) {
-            newPlayers[pid] = { ...newPlayers[pid], alive: false }
-          }
-        })
-
-        const explosion: BombermanExplosion = {
-          id: `exp_${Date.now()}_${Math.random()}`,
-          cells: data.affectedTiles,
-          expiresAt: Date.now() + 500,
-        }
-
-        setGameState({
-          ...state,
-          map: newMap,
-          bombs: newBombs,
-          players: newPlayers,
-          explosions: [...state.explosions, explosion],
-        })
+      (data: Parameters<ServerToClientEvents['bomb:explode']>[0]) => {
+        applyBombExplosion(data)
       }
     )
 
     socket.on(
       'game:end',
-      (data: { winnerId: string | null; rankings: any[] }) => {
+      (data: Parameters<ServerToClientEvents['game:end']>[0]) => {
         setResultStats(data)
-        if (data.winnerId === null) {
-          onGameEnd?.('DRAW', data.rankings)
-        } else if (data.winnerId === myIdRef.current) {
-          onGameEnd?.('WIN', data.rankings)
-        } else {
-          onGameEnd?.('LOSE', data.rankings)
-        }
       }
     )
+
+    socket.emit('game:join', { roomId })
 
     return () => {
       socket.off('game:init')
@@ -126,8 +82,11 @@ export function useGameSocket(
       socket.off('bomb:spawn')
       socket.off('bomb:explode')
       socket.off('game:end')
+
+      socket.disconnect()
+      socketRef.current = null
     }
-  }, [roomId, setGameState, onGameEnd, setResultStats])
+  }, [roomId, setGameState, setMyPlayerId, setResultStats, setErrorMessage])
 
   useEffect(() => {
     const timer = setInterval(() => {
@@ -151,11 +110,12 @@ export function useGameSocket(
         players: {},
         bombs: {},
         explosions: [],
-        smokes: [],
       })
+      setMyPlayerId(null)
       setResultStats(null)
+      setErrorMessage(undefined)
     }
-  }, [setGameState, setResultStats])
+  }, [setGameState, setMyPlayerId, setResultStats, setErrorMessage])
 
   return socketRef
 }

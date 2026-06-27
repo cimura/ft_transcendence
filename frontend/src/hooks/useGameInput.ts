@@ -1,18 +1,12 @@
 import { useCallback, useRef, useState, MutableRefObject } from 'react'
 import { Socket } from 'socket.io-client'
 import { useInputManager } from './useInputManager'
-import type {
-  BombermanInput,
-  Direction,
-} from '../game/bomberman/bombermanTypes'
-import type { ActiveControl } from '../components/game/TouchControls'
+import type { BombermanInput, ActiveControl } from '../types/game'
+import type { Direction } from '@ft_transcendence/shared/game-events.types'
 
 const BOMB_HIGHLIGHT_DURATION_MS = 180
 
-export function useGameInput(
-  socketRef: MutableRefObject<Socket | null>,
-  onInput?: (input: BombermanInput) => void
-) {
+export function useGameInput(socketRef: MutableRefObject<Socket | null>) {
   const bombHighlightTimeoutRef = useRef<number | null>(null)
   const seqRef = useRef<number>(0)
 
@@ -52,12 +46,10 @@ export function useGameInput(
     [clearBombHighlightTimeout, highlightBomb]
   )
 
-  // 入力イベントが発生した際の統合処理
   const handleCombinedInput = useCallback(
     (input: BombermanInput) => {
       handleInputState(input)
 
-      // サーバーへの送信（インフラレイヤー）
       if (socketRef.current) {
         seqRef.current += 1
         const clientTime = performance.now()
@@ -81,13 +73,10 @@ export function useGameInput(
           })
         }
       }
-
-      onInput?.(input)
     },
-    [handleInputState, socketRef, onInput]
+    [handleInputState, socketRef]
   )
 
-  // 新しく作成したReact Hooksを呼び出す
   const { emitTouchInput } = useInputManager(handleCombinedInput)
 
   return {

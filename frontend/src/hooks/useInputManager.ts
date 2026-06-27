@@ -1,14 +1,10 @@
 import { useEffect, useRef, useCallback } from 'react'
-import type {
-  BombermanInput,
-  Direction,
-} from '../game/bomberman/bombermanTypes'
+import type { BombermanInput } from '../types/game'
+import type { Direction } from '@ft_transcendence/shared/game-events.types'
 
 export function useInputManager(onInput: (input: BombermanInput) => void) {
-  // 押下中のキー（進行方向）のスタック。再描画を防ぐため useRef で管理
   const activeDirections = useRef<Direction[]>([])
 
-  // コールバックが更新されてもイベントリスナーを再登録しなくて済むよう useRef に保持
   const onInputRef = useRef(onInput)
   useEffect(() => {
     onInputRef.current = onInput
@@ -46,11 +42,12 @@ export function useInputManager(onInput: (input: BombermanInput) => void) {
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      // OSのキーリピートによる連続入力は無視する
-      if (e.repeat) return
-
       const dir = getDirectionFromKey(e.code)
       if (dir) {
+        e.preventDefault() // 画面スクロールを防ぐ
+        // OSのキーリピートによる連続入力は無視する
+        if (e.repeat) return
+
         if (!activeDirections.current.includes(dir)) {
           activeDirections.current.push(dir)
           emitCurrentDirection()
@@ -59,6 +56,10 @@ export function useInputManager(onInput: (input: BombermanInput) => void) {
       }
 
       if (e.code === 'Space' || e.code === 'Enter') {
+        e.preventDefault()
+        // OSのキーリピートによる連続入力は無視する
+        if (e.repeat) return
+
         onInputRef.current({ type: 'place_bomb' })
       }
     }
@@ -74,13 +75,20 @@ export function useInputManager(onInput: (input: BombermanInput) => void) {
       }
     }
 
+    const handleBlur = () => {
+      activeDirections.current = []
+      emitCurrentDirection()
+    }
+
     // イベントリスナーの登録とクリーンアップ（Reactのライフサイクルと同期）
     window.addEventListener('keydown', handleKeyDown)
     window.addEventListener('keyup', handleKeyUp)
+    window.addEventListener('blur', handleBlur)
 
     return () => {
       window.removeEventListener('keydown', handleKeyDown)
       window.removeEventListener('keyup', handleKeyUp)
+      window.removeEventListener('blur', handleBlur)
       activeDirections.current = []
     }
   }, [emitCurrentDirection, getDirectionFromKey])

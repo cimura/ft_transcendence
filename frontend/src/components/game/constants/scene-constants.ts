@@ -1,3 +1,5 @@
+// frontend のみで使う定数を定義
+
 export const SCENE_CONFIG = {
   grid: {
     centerDivisor: 2,
