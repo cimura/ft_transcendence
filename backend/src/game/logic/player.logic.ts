@@ -28,6 +28,7 @@ export function addPlayerToRoom(
     visorColor: colors.visorColor,
   };
   room.stats[playerId] = {
+    alive: true,
     blocksDestroyed: 0,
     bombsPlaced: 0,
     kills: 0,

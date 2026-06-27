@@ -4,7 +4,7 @@ import {
   Direction,
   ServerToClientEvents,
 } from '@ft_transcendence/shared/game-events.types';
-import { GAME_TICK_RATE } from './constants/game-constants';
+import { GAME_COUNTDOWN_SEC, GAME_TICK_RATE } from './constants/game-constants';
 import { GameSession } from './game.types';
 import { createInitialMap } from './logic/map.logic';
 import { processExplosions, tryPlaceBomb } from './logic/bomb.logic';
@@ -34,7 +34,7 @@ export class GameService {
     addPlayerToRoom(room, playerId, 'test-username');
     // DEBUG: 2人での動作確認のための仮条件（本来はLobby側で管理）
     if (Object.keys(room.players).length >= 2 && room.phase === 'waiting') {
-      this.startGameLoop(room.roomId);
+      this.startCountdown(room.roomId);
     }
 
     return {
@@ -127,9 +127,35 @@ export class GameService {
 
     if (result.isEmpty) {
       this.stopGameLoop(room.roomId);
+      if (room.countdownTimerId) {
+        clearTimeout(room.countdownTimerId);
+        room.countdownTimerId = undefined;
+      }
       this.rooms.delete(room.roomId);
       this.logger.log(`Room ${room.roomId} deleted because it is empty`);
     }
+  }
+
+  private startCountdown(roomId: string) {
+    const room = this.rooms.get(roomId);
+    if (!room) return;
+
+    room.phase = 'countdown';
+
+    const startsAt = Date.now() + GAME_COUNTDOWN_SEC * 1000;
+
+    this.server.to(roomId).emit('game:countdown', {
+      seconds: GAME_COUNTDOWN_SEC,
+      startsAt: startsAt,
+    });
+    this.logger.log(
+      `Room ${roomId} countdown started. Game starts at ${startsAt}`,
+    );
+
+    room.countdownTimerId = setTimeout(() => {
+      room.countdownTimerId = undefined;
+      this.startGameLoop(roomId);
+    }, GAME_COUNTDOWN_SEC * 1000);
   }
 
   private startGameLoop(roomId: string) {

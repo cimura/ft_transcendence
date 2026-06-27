@@ -34,6 +34,7 @@ export type BombSnapshot = {
 };
 
 export interface PlayerStats {
+  alive: boolean;
   blocksDestroyed: number;
   bombsPlaced: number;
   kills: number;
@@ -42,6 +43,7 @@ export interface PlayerStats {
 
 export interface ClientToServerEvents {
   "game:join": (data: { roomId: string }) => void;
+
   "game:leave": () => void;
 
   "player:input": (data: {
@@ -65,7 +67,6 @@ export interface ServerToClientEvents {
   }) => void;
 
   "game:countdown": (data: { seconds: number; startsAt: number }) => void;
-  "game:start": (data: { serverTime: number }) => void;
 
   "game:state": (data: {
     serverTick: number;

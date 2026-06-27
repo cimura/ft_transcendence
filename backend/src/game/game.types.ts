@@ -16,9 +16,9 @@ export interface GameSession {
   bombs: Record<string, BombSnapshot>;
   serverTick: number;
   timerId?: NodeJS.Timeout;
+  countdownTimerId?: NodeJS.Timeout;
   playerInputs: Record<string, { direction: Direction | null; seq: number }>;
   bombPassingPlayers: Record<string, string[]>;
   stats: Record<string, PlayerStats>;
   startedAt?: number;
-  disconnectTimers?: Record<string, NodeJS.Timeout>;
 }

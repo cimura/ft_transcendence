@@ -33,9 +33,13 @@ export function evaluateGameEnd(
     isDraw = true; // 全滅した場合は引き分け
   }
 
-  // ゲーム終了時点で生き残っていたプレイヤーの生存時間を確定する
-  livingPlayers.forEach((p) => {
-    room.stats[p.id].survivalTime = now - (room.startedAt || now);
+  Object.values(room.players).forEach((p) => {
+    room.stats[p.id].alive = p.alive;
+    console.log(`room.stats[p.id].alive: ${room.stats[p.id].alive}`);
+
+    if (p.alive) {
+      room.stats[p.id].survivalTime = now - (room.startedAt || now);
+    }
   });
 
   return {
