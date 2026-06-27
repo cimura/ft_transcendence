@@ -1,6 +1,11 @@
 import { useNavigate } from 'react-router-dom'
+import { useMemo } from 'react'
 import { Button } from '../common/Button'
 import { useGameStore } from '../../stores/gameStore'
+import { sortRankings } from '../../game/ranking-logic'
+import type { PlayerStats } from '@ft_transcendence/shared/game-events.types'
+
+const EMPTY_RANKINGS: Record<string, PlayerStats> = {}
 
 export function GameResultOverlay() {
   const navigate = useNavigate()
@@ -8,6 +13,12 @@ export function GameResultOverlay() {
   const myPlayerId = useGameStore((state) => state.myPlayerId)
   const resultStats = useGameStore((state) => state.resultStats)
   const errorMessage = useGameStore((state) => state.errorMessage)
+
+  const safeRankings = resultStats?.rankings || EMPTY_RANKINGS
+
+  const sortedRankings = useMemo(() => {
+    return Object.entries(safeRankings).sort(sortRankings)
+  }, [safeRankings])
 
   if (!resultStats && !errorMessage) return null
 
@@ -23,8 +34,6 @@ export function GameResultOverlay() {
       displayResult = 'LOSE'
     }
   }
-
-  const safeRankings = resultStats?.rankings || {}
 
   return (
     <div className="pointer-events-none absolute inset-x-4 top-1/2 z-10 flex -translate-y-1/2 justify-center sm:inset-x-6 lg:inset-x-8">
@@ -53,33 +62,51 @@ export function GameResultOverlay() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-800">
-                {Object.entries(safeRankings)
-                  .sort(
-                    ([, statsA], [, statsB]) =>
-                      statsB.survivalTime - statsA.survivalTime
-                  )
-                  .map(([playerId, stats], i) => {
-                    const username =
-                      players?.[playerId]?.username || playerId.slice(0, 8)
-                    return (
-                      <tr
-                        key={playerId}
-                        className={i % 2 === 0 ? 'bg-gray-900/30' : ''}
+                {sortedRankings.map(([playerId, stats], i) => {
+                  const username =
+                    players?.[playerId]?.username || playerId.slice(0, 8)
+                  return (
+                    <tr
+                      key={playerId}
+                      className={i % 2 === 0 ? 'bg-gray-900/30' : ''}
+                    >
+                      <td
+                        className={`px-4 py-2 ${!stats.alive ? 'text-gray-500' : 'text-gray-100 font-bold'}`}
                       >
-                        <td className="px-4 py-2">{username}</td>
-                        <td className="px-4 py-2 text-center">{stats.kills}</td>
-                        <td className="px-4 py-2 text-center">
-                          {stats.blocksDestroyed}
-                        </td>
-                        <td className="px-4 py-2 text-center">
-                          {stats.bombsPlaced}
-                        </td>
-                        <td className="px-4 py-2 text-right">
-                          {(stats.survivalTime / 1000).toFixed(1)}s
-                        </td>
-                      </tr>
-                    )
-                  })}
+                        {username}
+                        {!stats.alive && (
+                          <span
+                            className="ml-2 opacity-80"
+                            role="img"
+                            aria-label="dead"
+                          >
+                            ☠️
+                          </span>
+                        )}
+                      </td>
+                      <td
+                        className={`px-4 py-2 text-center ${!stats.alive && 'text-gray-500'}`}
+                      >
+                        {stats.kills}
+                      </td>
+                      <td
+                        className={`px-4 py-2 text-center ${!stats.alive && 'text-gray-500'}`}
+                      >
+                        {stats.blocksDestroyed}
+                      </td>
+                      <td
+                        className={`px-4 py-2 text-center ${!stats.alive && 'text-gray-500'}`}
+                      >
+                        {stats.bombsPlaced}
+                      </td>
+                      <td
+                        className={`px-4 py-2 text-right ${!stats.alive && 'text-gray-500'}`}
+                      >
+                        {(stats.survivalTime / 1000).toFixed(1)}s
+                      </td>
+                    </tr>
+                  )
+                })}
               </tbody>
             </table>
           </div>

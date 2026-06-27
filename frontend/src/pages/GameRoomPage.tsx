@@ -48,7 +48,7 @@ export function GameRoomPage() {
       mapId: 'local-bomberman',
       createdAt: new Date(),
     })
-  }, [navigate, roomId, rooms, setCurrentRoom])
+  }, [navigate, roomId, rooms, setCurrentRoom, currentRoom?.id])
 
   if (!currentRoom) {
     return null

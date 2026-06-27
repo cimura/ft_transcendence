@@ -6,6 +6,8 @@ import type { ServerToClientEvents } from '@ft_transcendence/shared/game-events.
 export function useGameSocket(roomId: string) {
   const socketRef = useRef<Socket | null>(null)
   const setGameState = useGameStore((state) => state.setGameState)
+  const setGamePhase = useGameStore((state) => state.setGamePhase)
+  const setCountdown = useGameStore((state) => state.setCountdown)
   const setMyPlayerId = useGameStore((state) => state.setMyPlayerId)
   const setResultStats = useGameStore((state) => state.setResultStats)
   const setErrorMessage = useGameStore((state) => state.setErrorMessage)
@@ -34,6 +36,15 @@ export function useGameSocket(roomId: string) {
           bombs: data.bombs,
           explosions: [],
         })
+        setGamePhase(data.phase)
+      }
+    )
+
+    socket.on(
+      'game:countdown',
+      (data: Parameters<ServerToClientEvents['game:countdown']>[0]) => {
+        setGamePhase('countdown')
+        setCountdown(data)
       }
     )
 
@@ -70,6 +81,7 @@ export function useGameSocket(roomId: string) {
     socket.on(
       'game:end',
       (data: Parameters<ServerToClientEvents['game:end']>[0]) => {
+        setGamePhase('ended')
         setResultStats(data)
       }
     )
@@ -78,6 +90,7 @@ export function useGameSocket(roomId: string) {
 
     return () => {
       socket.off('game:init')
+      socket.off('game:countdown')
       socket.off('game:state')
       socket.off('bomb:spawn')
       socket.off('bomb:explode')
@@ -86,7 +99,16 @@ export function useGameSocket(roomId: string) {
       socket.disconnect()
       socketRef.current = null
     }
-  }, [roomId, setGameState, setMyPlayerId, setResultStats, setErrorMessage])
+  }, [
+    roomId,
+    setGameState,
+    setCountdown,
+    setGamePhase,
+    setMyPlayerId,
+    setResultStats,
+    setErrorMessage,
+    applyBombExplosion,
+  ])
 
   useEffect(() => {
     const timer = setInterval(() => {

@@ -1,6 +1,7 @@
 import { useCallback, useRef, useState, MutableRefObject } from 'react'
 import { Socket } from 'socket.io-client'
 import { useInputManager } from './useInputManager'
+import { useGameStore } from '../stores/gameStore'
 import type { BombermanInput, ActiveControl } from '../types/game'
 import type { Direction } from '@ft_transcendence/shared/game-events.types'
 
@@ -48,6 +49,11 @@ export function useGameInput(socketRef: MutableRefObject<Socket | null>) {
 
   const handleCombinedInput = useCallback(
     (input: BombermanInput) => {
+      const phase = useGameStore.getState().gamePhase
+      if (phase !== 'playing') {
+        return
+      }
+
       handleInputState(input)
 
       if (socketRef.current) {

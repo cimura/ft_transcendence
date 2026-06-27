@@ -123,6 +123,8 @@ export function BombermanScene({ gameState }: BombermanSceneProps) {
       <OrbitControls
         target={[center, 0, center]}
         enablePan={false}
+        enableRotate={false}
+        enableZoom={false}
         minDistance={SCENE_CONFIG.orbit.minDistance}
         maxDistance={SCENE_CONFIG.orbit.maxDistance}
         maxPolarAngle={Math.PI * SCENE_CONFIG.orbit.maxPolarAngleRatio}
