@@ -1,4 +1,5 @@
-import { useCallback, useRef, useState, MutableRefObject } from 'react'
+import { useCallback, useRef, useState } from 'react'
+import type { MutableRefObject } from 'react'
 import { Socket } from 'socket.io-client'
 import { useInputManager } from './useInputManager'
 import { useGameStore } from '../stores/gameStore'
