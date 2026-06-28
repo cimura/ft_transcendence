@@ -19,7 +19,7 @@ export const MatchHistoryCard = ({ match }: MatchHistoryCardProps) => {
         ? '敗北'
         : '引き分け'
 
-  const formatDate = (date: Date) => {
+  const formatDate = (date: string) => {
     const now = new Date()
     const diff = now.getTime() - new Date(date).getTime()
     const hours = Math.floor(diff / (1000 * 60 * 60))
@@ -52,12 +52,14 @@ export const MatchHistoryCard = ({ match }: MatchHistoryCardProps) => {
           <p className="text-white/60 text-sm mb-2">
             vs {match.opponents.join(', ')}
           </p>
-          <div className="flex items-center gap-4 text-sm">
-            <span className="text-white/80">
-              キル数:{' '}
-              <span className="font-semibold text-white">{match.kills}</span>
-            </span>
-          </div>
+          {match.kills !== undefined && (
+            <div className="flex items-center gap-4 text-sm">
+              <span className="text-white/80">
+                キル数:{' '}
+                <span className="font-semibold text-white">{match.kills}</span>
+              </span>
+            </div>
+          )}
         </div>
       </div>
     </div>

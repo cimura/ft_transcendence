@@ -9,17 +9,18 @@ datasource db {
 }
 
 model User {
-  id                     String            @id @default(uuid())
-  email                  String            @unique
-  username               String            @unique
+  id                     String             @id @default(uuid())
+  email                  String             @unique
+  username               String             @unique
   passwordHash           String
   displayName            String?
   avatarUrl              String?
-  createdAt              DateTime          @default(now())
-  updatedAt              DateTime          @updatedAt
-  sentFriendRequests     Friendship[]      @relation("FriendRequester")
-  receivedFriendRequests Friendship[]      @relation("FriendReceiver")
-  hostedRooms            GameRoom[]        @relation("RoomHost")
+  createdAt              DateTime           @default(now())
+  updatedAt              DateTime           @updatedAt
+  sentFriendRequests     Friendship[]       @relation("FriendRequester")
+  receivedFriendRequests Friendship[]       @relation("FriendReceiver")
+  matchParticipants      MatchParticipant[]
+  hostedRooms            GameRoom[]         @relation("RoomHost")
   roomParticipants       RoomParticipant[]
   roomMessages           RoomMessage[]
 }
@@ -53,6 +54,38 @@ model Friendship {
   receiver  User @relation("FriendReceiver", fields: [receiverId], references: [id])
 
   @@unique([requesterId, receiverId])
+}
+
+enum MatchResult {
+  WIN
+  LOSS
+  DRAW
+}
+
+model Match {
+  id         String   @id @default(uuid())
+  gameType   String
+  finishedAt DateTime
+  createdAt  DateTime @default(now())
+
+  participants MatchParticipant[]
+}
+
+model MatchParticipant {
+  id      String      @id @default(uuid())
+  matchId String
+  userId  String
+  result  MatchResult
+  kills   Int?
+  score   Int?
+  rank    Int?
+
+  match Match @relation(fields: [matchId], references: [id])
+  user  User  @relation(fields: [userId], references: [id])
+
+  @@unique([matchId, userId])
+  @@index([userId])
+  @@index([matchId])
 }
 
 enum RoomStatus {
