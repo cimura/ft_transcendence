@@ -1,4 +1,13 @@
-import { Controller, Get, Param, Query, UseGuards } from '@nestjs/common';
+import {
+  BadRequestException,
+  Controller,
+  DefaultValuePipe,
+  Get,
+  Param,
+  ParseIntPipe,
+  Query,
+  UseGuards,
+} from '@nestjs/common';
 import {
   ApiBearerAuth,
   ApiOkResponse,
@@ -39,13 +48,19 @@ export class ScoresController {
   })
   getMatchHistory(
     @Param('userId') userId: string,
-    @Query('page') page = '1',
-    @Query('limit') limit = '20',
+    @Query('page', new DefaultValuePipe(1), ParseIntPipe) page: number,
+    @Query('limit', new DefaultValuePipe(20), ParseIntPipe) limit: number,
   ): Promise<MatchHistoryResponseDto> {
-    return this.scoresService.getMatchHistory(
-      userId,
-      Number(page),
-      Number(limit),
-    );
+    const maxPage = 10000;
+    const maxLimit = 100;
+
+    if (page < 1 || page > maxPage) {
+      throw new BadRequestException(`page must be between 1 and ${maxPage}`);
+    }
+    if (limit < 1 || limit > maxLimit) {
+      throw new BadRequestException(`limit must be between 1 and ${maxLimit}`);
+    }
+
+    return this.scoresService.getMatchHistory(userId, page, limit);
   }
 }
