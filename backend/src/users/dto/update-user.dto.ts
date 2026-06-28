@@ -1,5 +1,11 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { IsEmail, IsString, IsOptional, MinLength } from 'class-validator';
+import {
+  IsEmail,
+  IsString,
+  IsOptional,
+  MinLength,
+  Matches,
+} from 'class-validator';
 
 export class UpdateUserDto {
   @ApiProperty({
@@ -10,6 +16,28 @@ export class UpdateUserDto {
   @IsOptional()
   @IsEmail()
   email?: string;
+
+  @ApiProperty({
+    example: 'new_username',
+    required: false,
+    description: '変更後の新しいユーザー名（変更しない場合は送信しない）',
+  })
+  @IsOptional()
+  @IsString()
+  @Matches(/^[a-zA-Z0-9_-]+$/, {
+    message:
+      'Username can only contain alphanumeric characters, underscores, and hyphens (no symbols like @).',
+  })
+  username?: string;
+
+  @ApiProperty({
+    example: 'current-password123',
+    required: false,
+    description: '現在のパスワード（パスワード変更時のみ必須）',
+  })
+  @IsOptional()
+  @IsString()
+  currentPassword?: string;
 
   @ApiProperty({
     example: 'new-password123',

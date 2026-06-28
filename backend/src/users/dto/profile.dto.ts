@@ -14,6 +14,12 @@ export class ProfileUserDto {
   email: string;
 
   @ApiProperty({
+    example: 'user_name',
+    description: 'ユーザー名',
+  })
+  username: string;
+
+  @ApiProperty({
     example: 'Bob',
     description: '表示名 (被りOK)',
     nullable: true,
@@ -26,6 +32,18 @@ export class ProfileUserDto {
     nullable: true,
   })
   avatarUrl: string | null;
+
+  @ApiProperty({
+    example: '2026-06-24T12:34:56.000Z',
+    description: '作成日時',
+  })
+  createdAt: Date;
+
+  @ApiProperty({
+    example: '2026-06-24T12:34:56.000Z',
+    description: '更新日時',
+  })
+  updatedAt: Date;
 }
 
 export class ProfileResponseDto {
