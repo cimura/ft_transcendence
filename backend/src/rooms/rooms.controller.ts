@@ -21,13 +21,17 @@ import { CreateRoomMessageDto } from './dto/create-room-message.dto';
 import { QueryRoomsDto } from './dto/query-rooms.dto';
 import { ReadyRoomDto } from './dto/ready-room.dto';
 import { RoomsService } from './rooms.service';
+import { RoomsGateway } from './rooms.gateway';
 
 @ApiTags('rooms')
 @ApiBearerAuth()
 @UseGuards(JwtAuthGuard)
 @Controller('rooms')
 export class RoomsController {
-  constructor(private readonly roomsService: RoomsService) {}
+  constructor(
+    private readonly roomsService: RoomsService,
+    private readonly roomsGateway: RoomsGateway,
+  ) {}
 
   @Get()
   @ApiOperation({ summary: 'ルーム一覧を取得' })
@@ -39,8 +43,10 @@ export class RoomsController {
   @Post()
   @ApiOperation({ summary: 'ルームを作成' })
   @ApiResponse({ status: 201, description: '成功時' })
-  create(@Request() req: UserRequest, @Body() dto: CreateRoomDto) {
-    return this.roomsService.create(req.user.userId, dto);
+  async create(@Request() req: UserRequest, @Body() dto: CreateRoomDto) {
+    const room = await this.roomsService.create(req.user.userId, dto);
+    this.roomsGateway.emitRoomCreated(room);
+    return room;
   }
 
   @Get(':roomId')
@@ -53,15 +59,25 @@ export class RoomsController {
   @Post(':roomId/join')
   @ApiOperation({ summary: 'ルームに参加' })
   @ApiResponse({ status: 201, description: '成功時' })
-  join(@Request() req: UserRequest, @Param('roomId') roomId: string) {
-    return this.roomsService.join(roomId, req.user.userId);
+  async join(@Request() req: UserRequest, @Param('roomId') roomId: string) {
+    const room = await this.roomsService.join(roomId, req.user.userId);
+    this.roomsGateway.emitRoomUpdated(room);
+    return room;
   }
 
   @Post(':roomId/leave')
   @ApiOperation({ summary: 'ルームから退出' })
   @ApiResponse({ status: 201, description: '成功時' })
-  leave(@Request() req: UserRequest, @Param('roomId') roomId: string) {
-    return this.roomsService.leave(roomId, req.user.userId);
+  async leave(@Request() req: UserRequest, @Param('roomId') roomId: string) {
+    const result = await this.roomsService.leave(roomId, req.user.userId);
+
+    if ('id' in result) {
+      this.roomsGateway.emitRoomUpdated(result);
+    } else {
+      this.roomsGateway.emitRoomDeleted(result.roomId);
+    }
+
+    return result;
   }
 
   @Post(':roomId/ready')

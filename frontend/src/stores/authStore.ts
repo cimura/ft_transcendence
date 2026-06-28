@@ -73,17 +73,23 @@ export const useAuthStore = create<AuthState>((set) => ({
   },
 
   logout: async () => {
+    let logoutError: unknown = null
+
     try {
       set({ loading: true, error: null })
       await authApi.logout()
-      storeAccessToken(null)
-      set({ currentUser: null, accessToken: null, loading: false })
     } catch (error) {
+      logoutError = error
       set({
         error: error instanceof Error ? error.message : 'Failed to logout',
-        loading: false,
       })
-      throw error
+    } finally {
+      storeAccessToken(null)
+      set({ currentUser: null, accessToken: null, loading: false })
+    }
+
+    if (logoutError) {
+      throw logoutError
     }
   },
 }))
