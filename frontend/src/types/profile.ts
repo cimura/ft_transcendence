@@ -16,8 +16,8 @@ export interface MatchHistory {
   id: string
   result: 'win' | 'loss' | 'draw'
   opponents: string[]
-  kills: number
-  playedAt: Date
+  kills?: number
+  playedAt: string
   gameType: string
 }
 

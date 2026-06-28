@@ -6,7 +6,7 @@ reviews:
   profile: "chill"
 
   high_level_summary: true
-  high_level_summary_placeholder: true
+  high_level_summary_placeholder: "@coderabbitai summary"
   review_status: true
   poem: false
 
@@ -17,7 +17,7 @@ reviews:
     - main
     - develop
 
-  request_changes_workflow: false
+  request_changes_workflow: true
 
   collapse_walkthrough: true
 
@@ -87,23 +87,12 @@ chat:
 
 knowledge_base:
   issues:
-    enabled: true
+    scope: "auto"
 
   pull_requests:
+    scope: "auto"
+
+  code_guidelines:
     enabled: true
-
-  code_guidelines: |
-    このプロジェクトでは以下を重要視してください。
-
-    - 可読性 > 短いコード
-    - 重複コードは積極的に指摘
-    - コメントよりリファクタリングを推奨
-    - 小さな関数へ分割する
-    - マジックナンバー禁止
-    - SOLID原則を意識
-    - 型安全を優先
-    - 不要な最適化は避ける
-    - 命名を重視する
-
-    AIは「LGTM」を安易に返さず、
-    改善点があれば優先度付きで提示してください。
+    filePatterns:
+      - ".coderabbit/code-guidelines.md"
