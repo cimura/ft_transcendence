@@ -30,8 +30,8 @@ export const PasswordChangeModal = ({
       return
     }
 
-    if (newPassword.length < 6) {
-      setError('新しいパスワードは6文字以上で入力してください。')
+    if (newPassword.length < 8) {
+      setError('新しいパスワードは8文字以上で入力してください。')
       return
     }
 

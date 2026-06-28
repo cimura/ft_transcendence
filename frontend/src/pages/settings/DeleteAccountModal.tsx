@@ -47,12 +47,21 @@ export const DeleteAccountModal = ({
       danger
       onClose={onClose}
     >
-      <p className="mb-4 text-sm text-white/70">
+      <p id="delete-confirm-help" className="mb-4 text-sm text-white/70">
         退会するとアカウントは削除されます。確認のため「削除」と入力してください。
       </p>
       <SettingsFormError message={error} className="mb-4" />
 
+      <label
+        htmlFor="delete-confirm"
+        className="mb-2 block text-sm text-white/70"
+      >
+        確認のため「削除」と入力してください
+      </label>
+
       <input
+        id="delete-confirm"
+        aria-describedby="delete-confirm-help"
         type="text"
         value={deleteConfirm}
         onChange={(e) => setDeleteConfirm(e.target.value)}
@@ -62,7 +71,8 @@ export const DeleteAccountModal = ({
       <div className="flex gap-3">
         <button
           onClick={onClose}
-          className="flex-1 rounded-md border border-white/10 bg-white/5 px-4 py-3 text-white hover:bg-white/10"
+          disabled={loading}
+          className="flex-1 rounded-md border border-white/10 bg-white/5 px-4 py-3 text-white hover:bg-white/10 disabled:cursor-not-allowed disabled:opacity-60"
         >
           キャンセル
         </button>

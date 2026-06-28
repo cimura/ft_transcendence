@@ -31,7 +31,7 @@ export const NotificationSettings = () => {
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between rounded-md border border-white/10 bg-white/5 p-4">
-        <span className="text-white">プッシュ通知</span>
+        <span className="text-white">プッシュ通知（未実装）</span>
         <Toggle
           checked={pushEnabled}
           onClick={() => setPushEnabled((checked) => !checked)}
@@ -39,7 +39,7 @@ export const NotificationSettings = () => {
         />
       </div>
       <div className="flex items-center justify-between rounded-md border border-white/10 bg-white/5 p-4">
-        <span className="text-white">メール通知</span>
+        <span className="text-white">メール通知（未実装）</span>
         <Toggle
           checked={emailEnabled}
           onClick={() => setEmailEnabled((checked) => !checked)}
