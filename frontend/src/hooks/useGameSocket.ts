@@ -57,6 +57,10 @@ export function useGameSocket(roomId: string) {
           players: data.players,
           bombs: data.bombs,
         })
+        setGamePhase(data.phase)
+        if (data.phase !== 'countdown') {
+          setCountdown(null)
+        }
       }
     )
 

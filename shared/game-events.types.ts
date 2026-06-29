@@ -74,6 +74,7 @@ export interface ServerToClientEvents {
     mapRevision: number;
     players: Record<string, PlayerSnapshot>;
     bombs: Record<string, BombSnapshot>;
+    phase: GamePhase;
   }) => void;
 
   "bomb:spawn": (data: { bomb: BombSnapshot }) => void;
