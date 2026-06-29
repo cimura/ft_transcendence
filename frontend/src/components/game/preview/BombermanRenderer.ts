@@ -1,8 +1,11 @@
-import type { BombermanMap, BombermanPlayerPreview } from './bombermanTypes'
+import type { BombermanPlayerPreview } from './map-mock'
+import type { TileType } from '@ft_transcendence/shared/game-events.types'
+
+// マップのプレビューを描画するためのファイル
 
 type RenderBombermanSceneOptions = {
   ctx: CanvasRenderingContext2D
-  map: BombermanMap
+  map: TileType[][]
   players: BombermanPlayerPreview[]
   tileSize: number
 }

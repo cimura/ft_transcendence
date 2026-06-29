@@ -2,10 +2,10 @@ import { forwardRef, useImperativeHandle, useRef } from 'react'
 import { useFrame } from '@react-three/fiber'
 import { Box, Sphere } from '@react-three/drei'
 import type { Group } from 'three'
-import type { BombermanPlayer } from '../../game/bomberman/bombermanTypes'
+import type { PlayerSnapshot } from '@ft_transcendence/shared/game-events.types'
 
 type BombermanCharacterProps = {
-  player: BombermanPlayer
+  player: PlayerSnapshot
 }
 
 const MOVEMENT_EPSILON = 0.001
