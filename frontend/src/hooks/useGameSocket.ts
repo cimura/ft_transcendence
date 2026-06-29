@@ -37,6 +37,9 @@ export function useGameSocket(roomId: string) {
           explosions: [],
         })
         setGamePhase(data.phase)
+        if (data.phase !== 'countdown') {
+          setCountdown(null)
+        }
       }
     )
 
@@ -166,7 +169,7 @@ export function useGameSocket(roomId: string) {
       setResultStats(null)
       setErrorMessage(undefined)
       setGamePhase('waiting')
-      setCountdown({ seconds: 0, startsAt: 0 })
+      setCountdown(null)
     }
   }, [
     setGameState,
