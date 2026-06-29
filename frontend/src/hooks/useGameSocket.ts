@@ -17,7 +17,7 @@ export function useGameSocket(roomId: string) {
     if (!socketRef.current) {
       const token = localStorage.getItem('accessToken')
 
-      socketRef.current = io({
+      socketRef.current = io('/game', {
         transports: ['websocket'],
         secure: true,
         auth: { token: `Bearer ${token}` },

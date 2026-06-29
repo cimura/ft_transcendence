@@ -32,6 +32,7 @@ type GameSocket = Socket<
 >;
 
 @WebSocketGateway({
+  namespace: '/game',
   cors: { origin: '*' },
 })
 export class GameGateway
