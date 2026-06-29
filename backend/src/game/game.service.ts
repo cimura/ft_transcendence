@@ -12,6 +12,8 @@ import { updatePlayerMovements } from './logic/movement.logic';
 import { evaluateGameEnd } from './logic/end.logic';
 import { addPlayerToRoom, removePlayerFromRoom } from './logic/player.logic';
 
+const MIN_PLAYERS_TO_START = 2;
+
 @Injectable()
 export class GameService {
   private static readonly brand = 'GameService';
@@ -33,7 +35,10 @@ export class GameService {
     // TODO: playerIdを使ってusernameをデータベースから引っ張ってくる処理(一旦仮の'test-username'で統一)
     addPlayerToRoom(room, playerId, 'test-username');
     // DEBUG: 2人での動作確認のための仮条件（本来はLobby側で管理）
-    if (Object.keys(room.players).length >= 2 && room.phase === 'waiting') {
+    if (
+      Object.keys(room.players).length >= MIN_PLAYERS_TO_START &&
+      room.phase === 'waiting'
+    ) {
       this.startCountdown(room.roomId);
     }
 
@@ -121,10 +126,15 @@ export class GameService {
         mapRevision: room.mapRevision,
         players: room.players,
         bombs: room.bombs,
+        phase: room.phase,
       });
       this.checkGameEnd(room, now);
     } else {
       this.logger.log(`Player ${playerId} removed from room ${room.roomId}`);
+    }
+
+    if (room.phase === 'countdown') {
+      this.cancelCountdownIfStartConditionIsNotMet(room, now);
     }
 
     if (result.isEmpty) {
@@ -164,6 +174,14 @@ export class GameService {
     const room = this.rooms.get(roomId);
     if (!room || room.timerId) return;
 
+    if (
+      room.phase !== 'countdown' ||
+      Object.keys(room.players).length < MIN_PLAYERS_TO_START
+    ) {
+      room.phase = 'waiting';
+      return;
+    }
+
     room.phase = 'playing';
     room.startedAt = Date.now();
 
@@ -197,6 +215,7 @@ export class GameService {
       mapRevision: room.mapRevision,
       players: room.players,
       bombs: room.bombs,
+      phase: room.phase,
     });
 
     this.checkGameEnd(room, now);
@@ -226,5 +245,30 @@ export class GameService {
       room.timerId = undefined;
       this.logger.log(`Game loop stopped for room: ${roomId}`);
     }
+  }
+
+  private cancelCountdownIfStartConditionIsNotMet(
+    room: GameSession,
+    now: number,
+  ) {
+    if (Object.keys(room.players).length >= MIN_PLAYERS_TO_START) return;
+
+    if (room.countdownTimerId) {
+      clearTimeout(room.countdownTimerId);
+      room.countdownTimerId = undefined;
+    }
+
+    room.phase = 'waiting';
+    this.server.to(room.roomId).emit('game:state', {
+      serverTick: room.serverTick,
+      serverTime: now,
+      mapRevision: room.mapRevision,
+      players: room.players,
+      bombs: room.bombs,
+      phase: room.phase,
+    });
+    this.logger.log(
+      `Room ${room.roomId} countdown cancelled because start condition is not met`,
+    );
   }
 }
