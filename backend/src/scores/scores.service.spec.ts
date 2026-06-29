@@ -106,17 +106,29 @@ describe('ScoresService', () => {
       where: { userId },
       skip: 0,
       take: 20,
-      orderBy: {
-        match: {
-          finishedAt: 'desc',
+      orderBy: [
+        {
+          match: {
+            finishedAt: 'desc',
+          },
         },
-      },
+        { matchId: 'desc' },
+      ],
       include: {
         match: {
-          include: {
+          select: {
+            id: true,
+            gameType: true,
+            finishedAt: true,
             participants: {
-              include: {
-                user: true,
+              select: {
+                userId: true,
+                user: {
+                  select: {
+                    username: true,
+                    displayName: true,
+                  },
+                },
               },
             },
           },
