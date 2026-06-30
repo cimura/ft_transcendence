@@ -1,3 +1,4 @@
+import { DISCONNECT_TIMEOUT_MS } from '../constants/game-constants';
 import { GameSession } from '../game.types';
 import type { ServerToClientEvents } from '@ft_transcendence/shared/game-events.types';
 
@@ -21,8 +22,10 @@ export function evaluateGameEnd(
   // 1人のみのテストプレイ等の場合は、その1人が死んだら終了。
   const isGameOver =
     totalPlayers >= 2 ? livingPlayers.length <= 1 : livingPlayers.length === 0;
+  // 終了条件: 全員が切断して DISCONNECT_TIMEOUT_MS 以上経過していたら終了。
+  const isAllDisconnected = checkAllDisconnected(room, now);
 
-  if (!isGameOver) return null;
+  if (!isGameOver && !isAllDisconnected) return null;
 
   let winnerId: string | null = null;
   let isDraw = false;
@@ -47,4 +50,17 @@ export function evaluateGameEnd(
     isDraw,
     rankings: room.stats,
   };
+}
+
+function checkAllDisconnected(room: GameSession, now: number): boolean {
+  const totalPlayers = Object.keys(room.players).length;
+  if (
+    totalPlayers > 0 &&
+    room.disconnectedPlayers == totalPlayers &&
+    room.disconnectedAt !== 0 &&
+    now - room.disconnectedAt >= DISCONNECT_TIMEOUT_MS
+  ) {
+    return true;
+  }
+  return false;
 }

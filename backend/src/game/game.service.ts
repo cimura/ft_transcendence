@@ -4,13 +4,18 @@ import {
   Direction,
   ServerToClientEvents,
 } from '@ft_transcendence/shared/game-events.types';
-import { GAME_COUNTDOWN_SEC, GAME_TICK_RATE } from './constants/game-constants';
+import {
+  GAME_COUNTDOWN_SEC,
+  GAME_TICK_RATE,
+  DISCONNECT_TIMEOUT_MS,
+} from './constants/game-constants';
 import { GameSession } from './game.types';
 import { createInitialMap } from './logic/map.logic';
 import { processExplosions, tryPlaceBomb } from './logic/bomb.logic';
 import { updatePlayerMovements } from './logic/movement.logic';
 import { evaluateGameEnd } from './logic/end.logic';
 import { addPlayerToRoom, removePlayerFromRoom } from './logic/player.logic';
+import { WsException } from '@nestjs/websockets';
 
 const MIN_PLAYERS_TO_START = 2;
 
@@ -30,10 +35,21 @@ export class GameService {
     roomId: string,
     playerId: string,
   ): Parameters<ServerToClientEvents['game:init']>[0] {
-    // TODO: 再接続されたときにルームに参加を許可するかどうかの処理
+    if (!this.checkRoomEntryPermission(roomId, playerId)) {
+      throw new WsException('Cannot join the room');
+    }
     const room = this.getOrCreateRoom(roomId);
-    // TODO: playerIdを使ってusernameをデータベースから引っ張ってくる処理(一旦仮の'test-username'で統一)
-    addPlayerToRoom(room, playerId, 'test-username');
+    const player = room.players[playerId];
+    if (room.phase === 'waiting') {
+      // TODO: playerIdを使ってusernameをデータベースから引っ張ってくる処理(一旦仮の'test-username'で統一)
+      addPlayerToRoom(room, playerId, 'test-username');
+    } else if (room.phase === 'countdown' || room.phase === 'playing') {
+      if (player && player.isDisconnected) {
+        player.isDisconnected = false;
+        room.disconnectedPlayers -= 1;
+        room.disconnectedAt = 0; // 誰か一人でも戻ってきたらルームタイマーをリセット
+      }
+    }
     // DEBUG: 2人での動作確認のための仮条件（本来はLobby側で管理）
     if (
       Object.keys(room.players).length >= MIN_PLAYERS_TO_START &&
@@ -57,7 +73,23 @@ export class GameService {
     const now = Date.now();
     for (const room of this.rooms.values()) {
       if (room.players[playerId]) {
-        this.executeRemovePlayer(room, playerId, now);
+        if (room.phase === 'waiting' || room.phase === 'ended') {
+          // room から削除
+          this.executeRemovePlayer(room, playerId, now);
+        } else if (room.phase === 'countdown' || room.phase === 'playing') {
+          const player = room.players[playerId];
+          if (!player.isDisconnected) {
+            // 切断時の時間を保存（タイムアウト判定のため）
+            player.isDisconnected = true;
+            player.lastActiveTime = Date.now();
+            room.disconnectedPlayers += 1;
+            // room 自体の寿命を図るため、現在の時間を保存
+            const totalPlayers = Object.keys(room.players).length;
+            if (room.disconnectedPlayers === totalPlayers) {
+              room.disconnectedAt = Date.now();
+            }
+          }
+        }
       }
     }
   }
@@ -88,6 +120,43 @@ export class GameService {
     }
   }
 
+  private checkRoomEntryPermission(roomId: string, playerId: string): boolean {
+    const room = this.rooms.get(roomId);
+    if (!room) {
+      // TODO: LobbyAPI と繋げたら false にする（現在は暫定許容）
+      return true;
+    }
+    if (room.phase === 'ended') {
+      return false;
+    }
+
+    const player = room.players[playerId];
+
+    if (room.phase === 'waiting') {
+      // TODO: MIN_PLAYERS_TO_START ではなく MAX_PLAYERS など適切な定数に変更する
+      if (!player && Object.keys(room.players).length >= MIN_PLAYERS_TO_START) {
+        return false;
+      }
+      return true;
+    }
+
+    if (room.phase === 'countdown' || room.phase === 'playing') {
+      // プレイヤー情報がない、または切断扱いになっていない（多重ログイン防止）場合は弾く
+      if (!player || !player.isDisconnected) {
+        return false;
+      }
+      // タイムアウトチェック
+      const isTimedOut =
+        Date.now() - player.lastActiveTime >= DISCONNECT_TIMEOUT_MS;
+      if (isTimedOut) {
+        return false;
+      }
+      return true;
+    }
+
+    return false;
+  }
+
   private getOrCreateRoom(roomId: string): GameSession {
     let room = this.rooms.get(roomId);
     if (!room) {
@@ -101,6 +170,8 @@ export class GameService {
         serverTick: 0,
         playerInputs: {},
         bombPassingPlayers: {},
+        disconnectedPlayers: 0,
+        disconnectedAt: 0,
         stats: {},
       };
       this.rooms.set(roomId, room);

@@ -20,5 +20,7 @@ export interface GameSession {
   playerInputs: Record<string, { direction: Direction | null; seq: number }>;
   bombPassingPlayers: Record<string, string[]>;
   stats: Record<string, PlayerStats>;
+  disconnectedPlayers: number;
+  disconnectedAt: number;
   startedAt?: number;
 }

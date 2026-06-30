@@ -77,20 +77,28 @@ export class GameGateway
     const user = client.data.user;
     if (!user) return;
 
-    const previousRoomId = client.data.roomId;
-    if (previousRoomId && previousRoomId !== data.roomId) {
-      await client.leave(previousRoomId);
+    try {
+      const initData = this.gameService.handleGameJoin(data.roomId, user.id);
+
+      const previousRoomId = client.data.roomId;
+      if (previousRoomId && previousRoomId !== data.roomId) {
+        await client.leave(previousRoomId);
+      }
+
+      await client.join(data.roomId);
+      client.data.roomId = data.roomId;
+
+      client.emit('game:init', initData);
+      console.log(`[Join] roomId: ${data.roomId} UserId: ${user.id}`);
+    } catch (error) {
+      client.emit('game:error', {
+        message:
+          error instanceof Error ? error.message : 'Cannot join the room',
+      });
+      console.log(
+        `[Rejected] roomId: ${data.roomId} UserId: ${user.id}: ${error instanceof Error ? error.message : 'Unknown error'}`,
+      );
     }
-
-    await client.join(data.roomId);
-    client.data.roomId = data.roomId;
-
-    const initData = this.gameService.handleGameJoin(data.roomId, user.id);
-    client.emit('game:init', initData);
-
-    console.log(
-      `[ルーム参加] ユーザーID: ${user.id} が 部屋: ${data.roomId} に参加します`,
-    );
   }
 
   @SubscribeMessage('game:leave')

@@ -20,9 +20,10 @@ export type PlayerSnapshot = {
   position: WorldPosition;
   direction: Direction;
   alive: boolean;
-  score: number;
   color: string;
   visorColor: string;
+  isDisconnected: boolean;
+  lastActiveTime: number;
 };
 
 export type BombSnapshot = {
@@ -46,13 +47,9 @@ export interface ClientToServerEvents {
 
   "game:leave": () => void;
 
-  "player:input": (data: {
-    direction: Direction | null;
-    seq: number;
-    clientTime: number;
-  }) => void;
+  "player:input": (data: { direction: Direction | null; seq: number }) => void;
 
-  "bomb:place": (data: { seq: number; clientTime: number }) => void;
+  "bomb:place": (data: { seq: number }) => void;
 }
 
 export interface ServerToClientEvents {
@@ -93,5 +90,5 @@ export interface ServerToClientEvents {
     rankings: Record<string, PlayerStats>;
   }) => void;
 
-  "game:error": (data: { code: string; message: string }) => void;
+  "game:error": (data: { message: string }) => void;
 }

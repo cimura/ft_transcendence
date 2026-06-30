@@ -23,9 +23,10 @@ export function addPlayerToRoom(
     position: { x: position.x, z: position.z },
     direction: 'down',
     alive: true,
-    score: 0,
     color: colors.color,
     visorColor: colors.visorColor,
+    isDisconnected: false,
+    lastActiveTime: 0,
   };
   room.stats[playerId] = {
     alive: true,
