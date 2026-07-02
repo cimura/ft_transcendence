@@ -3,5 +3,15 @@
   "version": "1.0.0",
   "private": true,
   "main": "./game-events.types.ts",
-  "types": "./game-events.types.ts"
+  "types": "./game-events.types.d.ts",
+  "exports": {
+    ".": {
+      "types": "./game-events.types.d.ts",
+      "default": "./game-events.types.ts"
+    },
+    "./game-events.types": {
+      "types": "./game-events.types.d.ts",
+      "default": "./game-events.types.ts"
+    }
+  }
 }

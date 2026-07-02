@@ -31,3 +31,7 @@ AGENTS.md
 backend/prisma.config.js
 backend/prisma.config.js.map
 backend/prisma.config.d.ts
+
+# Shared TypeScript generated files
+shared/*.js
+shared/*.js.map
