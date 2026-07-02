@@ -1,10 +1,12 @@
 import { useNavigate } from 'react-router-dom'
 import { useEffect } from 'react'
 import { useAuthStore } from '../stores/authStore'
+import { useNotifications } from '../hooks/useNotifications'
 
 export function Home() {
   const navigate = useNavigate()
   const { currentUser, fetchCurrentUser, loading } = useAuthStore()
+  const { notifications } = useNotifications()
 
   useEffect(() => {
     if (!currentUser) {
@@ -56,8 +58,19 @@ export function Home() {
             待機場
           </button>
 
-          {/* 下段: 設定 */}
-          <div className="flex justify-center">
+          {/* 下段: 通知・設定 */}
+          <div className="grid grid-cols-2 gap-8">
+            <button
+              onClick={() => navigate('/notifications')}
+              className="relative rounded-full bg-black bg-opacity-70 px-12 py-6 text-2xl font-bold text-white transition-all hover:bg-opacity-90"
+            >
+              通知
+              {notifications.length > 0 && (
+                <span className="absolute -right-2 -top-2 flex h-8 min-w-8 items-center justify-center rounded-full bg-red-600 px-2 text-base font-bold text-white">
+                  {notifications.length}
+                </span>
+              )}
+            </button>
             <button
               onClick={() => navigate('/settings')}
               className="rounded-full bg-black bg-opacity-70 px-12 py-6 text-2xl font-bold text-white transition-all hover:bg-opacity-90"

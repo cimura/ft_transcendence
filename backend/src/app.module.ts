@@ -13,6 +13,7 @@ import { GameModule } from './game/game.module';
 import { ScoresModule } from './scores/scores.module';
 import { GamesModule } from './games/games.module';
 import { RoomsModule } from './rooms/rooms.module';
+import { NotificationsModule } from './notifications/notifications.module';
 
 @Module({
   imports: [
@@ -28,6 +29,7 @@ import { RoomsModule } from './rooms/rooms.module';
     ScoresModule,
     GamesModule,
     RoomsModule,
+    NotificationsModule,
   ],
   controllers: [AppController],
   providers: [AppService, PrismaService, GameGateway],

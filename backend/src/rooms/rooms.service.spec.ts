@@ -1,5 +1,10 @@
-import { ConflictException } from '@nestjs/common';
-import { RoomMode, RoomStatus } from '../generated/prisma/enums';
+import { ConflictException, ForbiddenException } from '@nestjs/common';
+import {
+  FriendRequestStatus,
+  RoomInvitationStatus,
+  RoomMode,
+  RoomStatus,
+} from '../generated/prisma/enums';
 import { PrismaService } from '../prisma.service';
 import { bombermanGame } from '../games/games.constants';
 import { GamesService } from '../games/games.service';
@@ -60,6 +65,22 @@ const createRoom = (
   ],
 });
 
+const createInvitation = () => ({
+  id: 'invitation-1',
+  roomId: 'room-1',
+  inviterId: user.id,
+  inviteeId: guest.id,
+  status: RoomInvitationStatus.PENDING,
+  createdAt: now,
+  updatedAt: now,
+  inviter: user,
+  invitee: guest,
+  room: {
+    id: 'room-1',
+    name: 'Test Room',
+  },
+});
+
 describe('RoomsService', () => {
   let service: RoomsService;
 
@@ -70,6 +91,18 @@ describe('RoomsService', () => {
       findUnique: jest.fn(),
       update: jest.fn(),
       delete: jest.fn(),
+    },
+    user: {
+      findUnique: jest.fn(),
+    },
+    friendship: {
+      findFirst: jest.fn(),
+    },
+    roomInvitation: {
+      findFirst: jest.fn(),
+      create: jest.fn(),
+      findUnique: jest.fn(),
+      update: jest.fn(),
     },
     roomParticipant: {
       create: jest.fn(),
@@ -137,6 +170,61 @@ describe('RoomsService', () => {
         ],
       }),
     );
+  });
+
+  it('creates a pending room invitation for a friend', async () => {
+    const room = createRoom();
+    const invitation = createInvitation();
+    prisma.gameRoom.findUnique.mockResolvedValue(room);
+    prisma.user.findUnique.mockResolvedValue({ id: guest.id });
+    prisma.friendship.findFirst.mockResolvedValue({ id: 'friendship-1' });
+    prisma.roomInvitation.findFirst.mockResolvedValue(null);
+    prisma.roomInvitation.create.mockResolvedValue(invitation);
+
+    const result = await service.createInvitation(room.id, user.id, {
+      inviteeId: guest.id,
+    });
+
+    expect(prisma.friendship.findFirst).toHaveBeenCalledWith({
+      where: {
+        status: FriendRequestStatus.ACCEPTED,
+        OR: [
+          { requesterId: user.id, receiverId: guest.id },
+          { requesterId: guest.id, receiverId: user.id },
+        ],
+      },
+      select: { id: true },
+    });
+    expect(prisma.roomInvitation.create).toHaveBeenCalledWith({
+      data: {
+        roomId: room.id,
+        inviterId: user.id,
+        inviteeId: guest.id,
+      },
+      include: expect.any(Object),
+    });
+    expect(result).toEqual(
+      expect.objectContaining({
+        id: invitation.id,
+        status: 'pending',
+        room: {
+          id: room.id,
+          name: room.name,
+        },
+      }),
+    );
+  });
+
+  it('rejects room invitations to users who are not friends', async () => {
+    const room = createRoom();
+    prisma.gameRoom.findUnique.mockResolvedValue(room);
+    prisma.user.findUnique.mockResolvedValue({ id: guest.id });
+    prisma.friendship.findFirst.mockResolvedValue(null);
+
+    await expect(
+      service.createInvitation(room.id, user.id, { inviteeId: guest.id }),
+    ).rejects.toThrow(ForbiddenException);
+    expect(prisma.roomInvitation.create).not.toHaveBeenCalled();
   });
 
   it('filters rooms by status for the lobby list', async () => {
