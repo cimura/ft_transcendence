@@ -34,7 +34,12 @@ export class MatchHistoryResponseDto {
 }
 
 export class MatchHistoryQueryDto {
-  @ApiPropertyOptional({ example: 1, minimum: 1, maximum: 10000 })
+  @ApiPropertyOptional({
+    example: 1,
+    default: 1,
+    minimum: 1,
+    maximum: 10000,
+  })
   @IsOptional()
   @Type(() => Number)
   @IsInt()
@@ -42,7 +47,12 @@ export class MatchHistoryQueryDto {
   @Max(10000)
   page?: number;
 
-  @ApiPropertyOptional({ example: 20, minimum: 1, maximum: 100 })
+  @ApiPropertyOptional({
+    example: 20,
+    default: 20,
+    minimum: 1,
+    maximum: 100,
+  })
   @IsOptional()
   @Type(() => Number)
   @IsInt()
