@@ -56,13 +56,13 @@ function getSortedRankings(
   playersRecord: Record<string, PlayerStats>,
 ): PlayerRanking[] {
   const entries = Object.entries(playersRecord);
-  return entries.sort(sortRankings).map(([playerId, stats]) => ({
+  return entries.sort(sortPlayerRankings).map(([playerId, stats]) => ({
     playerId,
     ...stats,
   }));
 }
 
-function sortRankings(
+function sortPlayerRankings(
   entryA: [string, PlayerStats],
   entryB: [string, PlayerStats],
 ) {
