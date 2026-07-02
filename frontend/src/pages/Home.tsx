@@ -4,13 +4,27 @@ import { useAuthStore } from '../stores/authStore'
 
 export function Home() {
   const navigate = useNavigate()
-  const { currentUser, fetchCurrentUser } = useAuthStore()
+  const { currentUser, fetchCurrentUser, loading } = useAuthStore()
 
   useEffect(() => {
     if (!currentUser) {
       fetchCurrentUser()
     }
   }, [currentUser, fetchCurrentUser])
+
+  const handleMyProfileClick = async () => {
+    if (currentUser) {
+      navigate(`/profile/${currentUser.id}`)
+      return
+    }
+
+    await fetchCurrentUser()
+    const fetchedUser = useAuthStore.getState().currentUser
+
+    if (fetchedUser) {
+      navigate(`/profile/${fetchedUser.id}`)
+    }
+  }
 
   return (
     <div className="relative min-h-screen bg-gradient-to-b from-purple-900 via-blue-900 to-black">
@@ -20,9 +34,8 @@ export function Home() {
           {/* 上段: マイプロフィール・フレンド */}
           <div className="grid grid-cols-2 gap-8">
             <button
-              onClick={() =>
-                currentUser && navigate(`/profile/${currentUser.id}`)
-              }
+              onClick={handleMyProfileClick}
+              disabled={loading}
               className="rounded-full bg-black bg-opacity-70 px-12 py-6 text-2xl font-bold text-white transition-all hover:bg-opacity-90"
             >
               マイプロフィール
