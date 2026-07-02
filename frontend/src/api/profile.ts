@@ -92,24 +92,27 @@ const mockUsers: Record<string, UserProfile> = {
  * @returns Promise<UserProfile> User profile data
  */
 export const getProfile = async (userId: string): Promise<UserProfile> => {
-  const response = await api.get<BackendProfileResponse>('/users/profile')
-  const currentUserProfile = toUserProfile(response.data.user, true)
+  const mockUser = mockUsers[userId]
 
-  if (currentUserProfile.id === userId) {
-    return currentUserProfile
+  try {
+    const response = await api.get<BackendProfileResponse>('/users/profile')
+    const currentUserProfile = toUserProfile(response.data.user, true)
+
+    if (currentUserProfile.id === userId) {
+      return currentUserProfile
+    }
+  } catch (error) {
+    if (!mockUser) {
+      throw error
+    }
   }
 
   // 他ユーザーのプロフィールAPIができるまで、固定モックを暫定利用する
-  return new Promise((resolve, reject) => {
-    setTimeout(() => {
-      const user = mockUsers[userId]
-      if (user) {
-        resolve(user)
-      } else {
-        reject(new Error('User not found'))
-      }
-    }, 300)
-  })
+  if (mockUser) {
+    return mockUser
+  }
+
+  throw new Error('User not found')
 }
 
 /**
