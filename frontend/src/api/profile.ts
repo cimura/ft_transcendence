@@ -1,16 +1,36 @@
 import type { UserProfile } from '../types/user'
 import type { UpdateProfileDto } from '../types/profile'
+import api from './client'
 
-/**
- * TODO: 実際のAPI実装時は以下のaxiosインスタンスを使用
- *
- * import axios from 'axios'
- *
- * const api = axios.create({
- *   baseURL: import.meta.env.VITE_API_URL || 'http://localhost:4000',
- *   withCredentials: true,
- * })
- */
+interface BackendProfileUser {
+  id: string
+  email: string
+  username: string
+  displayName: string | null
+  avatarUrl: string | null
+  createdAt: string
+  updatedAt: string
+}
+
+interface BackendProfileResponse {
+  user: BackendProfileUser
+}
+
+const toUserProfile = (
+  user: BackendProfileUser,
+  isCurrentUser: boolean
+): UserProfile => ({
+  id: user.id,
+  email: user.email,
+  username: user.username,
+  displayName: user.displayName ?? undefined,
+  avatarUrl: user.avatarUrl ?? undefined,
+  isGuest: false,
+  createdAt: new Date(user.createdAt),
+  updatedAt: new Date(user.updatedAt),
+  isFriend: false,
+  isCurrentUser,
+})
 
 /**
  * モックユーザーデータ
@@ -72,21 +92,32 @@ const mockUsers: Record<string, UserProfile> = {
  * @returns Promise<UserProfile> User profile data
  */
 export const getProfile = async (userId: string): Promise<UserProfile> => {
-  // モックデータを返す
-  return new Promise((resolve, reject) => {
-    setTimeout(() => {
-      const user = mockUsers[userId]
-      if (user) {
-        resolve(user)
-      } else {
-        reject(new Error('User not found'))
-      }
-    }, 300)
-  })
+  const mockUser = mockUsers[userId]
+  let currentUser: BackendProfileUser | null = null
 
-  // 実際のAPI実装時はこちらを使用
-  // const response = await api.get<UserProfile>(`/api/users/${userId}`)
-  // return response.data
+  try {
+    const response = await api.get<BackendProfileResponse>('/users/profile')
+    currentUser = response.data.user
+  } catch (error) {
+    if (!mockUser) {
+      throw error
+    }
+  }
+
+  if (currentUser) {
+    const currentUserProfile = toUserProfile(currentUser, true)
+
+    if (currentUserProfile.id === userId) {
+      return currentUserProfile
+    }
+  }
+
+  // 他ユーザーのプロフィールAPIができるまで、固定モックを暫定利用する
+  if (mockUser) {
+    return mockUser
+  }
+
+  throw new Error('User not found')
 }
 
 /**
