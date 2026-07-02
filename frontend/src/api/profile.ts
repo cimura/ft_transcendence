@@ -93,17 +93,22 @@ const mockUsers: Record<string, UserProfile> = {
  */
 export const getProfile = async (userId: string): Promise<UserProfile> => {
   const mockUser = mockUsers[userId]
+  let currentUser: BackendProfileUser | null = null
 
   try {
     const response = await api.get<BackendProfileResponse>('/users/profile')
-    const currentUserProfile = toUserProfile(response.data.user, true)
-
-    if (currentUserProfile.id === userId) {
-      return currentUserProfile
-    }
+    currentUser = response.data.user
   } catch (error) {
     if (!mockUser) {
       throw error
+    }
+  }
+
+  if (currentUser) {
+    const currentUserProfile = toUserProfile(currentUser, true)
+
+    if (currentUserProfile.id === userId) {
+      return currentUserProfile
     }
   }
 
