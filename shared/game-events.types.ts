@@ -41,6 +41,10 @@ export interface PlayerStats {
   survivalTime: number;
 }
 
+export interface PlayerRanking extends PlayerStats {
+  playerId: string;
+}
+
 export interface ClientToServerEvents {
   "game:join": (data: { roomId: string }) => void;
 
@@ -90,7 +94,7 @@ export interface ServerToClientEvents {
   "game:end": (data: {
     winnerId: string | null;
     isDraw: boolean;
-    rankings: Record<string, PlayerStats>;
+    rankings: PlayerRanking[];
   }) => void;
 
   "game:error": (data: { code: string; message: string }) => void;

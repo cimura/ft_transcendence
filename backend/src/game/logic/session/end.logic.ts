@@ -1,5 +1,9 @@
 import { GameSession } from '../../game.types';
-import type { ServerToClientEvents } from '@ft_transcendence/shared/game-events.types';
+import type {
+  PlayerStats,
+  PlayerRanking,
+  ServerToClientEvents,
+} from '@ft_transcendence/shared/game-events.types';
 
 /**
  * 勝敗判定およびリザルト集計のビジネスロジック
@@ -35,7 +39,6 @@ export function evaluateGameEnd(
 
   Object.values(room.players).forEach((p) => {
     room.stats[p.id].alive = p.alive;
-    console.log(`room.stats[p.id].alive: ${room.stats[p.id].alive}`);
 
     if (p.alive) {
       room.stats[p.id].survivalTime = now - (room.startedAt || now);
@@ -45,6 +48,32 @@ export function evaluateGameEnd(
   return {
     winnerId: winnerId,
     isDraw,
-    rankings: room.stats,
+    rankings: getSortedRankings(room.stats),
   };
+}
+
+function getSortedRankings(
+  playersRecord: Record<string, PlayerStats>,
+): PlayerRanking[] {
+  const entries = Object.entries(playersRecord);
+  return entries.sort(sortPlayerRankings).map(([playerId, stats]) => ({
+    playerId,
+    ...stats,
+  }));
+}
+
+function sortPlayerRankings(
+  entryA: [string, PlayerStats],
+  entryB: [string, PlayerStats],
+) {
+  const [, statsA] = entryA;
+  const [, statsB] = entryB;
+
+  if (statsB.alive !== statsA.alive) return statsB.alive ? 1 : -1;
+  if (statsB.survivalTime !== statsA.survivalTime)
+    return statsB.survivalTime - statsA.survivalTime;
+  if (statsB.kills !== statsA.kills) return statsB.kills - statsA.kills;
+  if (statsB.blocksDestroyed !== statsA.blocksDestroyed)
+    return statsB.blocksDestroyed - statsA.blocksDestroyed;
+  return statsB.bombsPlaced - statsA.bombsPlaced;
 }
