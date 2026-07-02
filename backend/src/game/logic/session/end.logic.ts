@@ -1,4 +1,4 @@
-import { GameSession } from '../game.types';
+import { GameSession } from '../../game.types';
 import type { ServerToClientEvents } from '@ft_transcendence/shared/game-events.types';
 
 /**
