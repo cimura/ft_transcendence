@@ -1,9 +1,5 @@
-import type {
-  BombermanInput,
-  Direction,
-} from '../../game/bomberman/bombermanTypes'
-
-export type ActiveControl = Direction | 'bomb' | null
+import type { BombermanInput, ActiveControl } from '../../types/game'
+import type { Direction } from '@ft_transcendence/shared/game-events.types'
 
 type TouchControlsProps = {
   onInput: (input: BombermanInput) => void
