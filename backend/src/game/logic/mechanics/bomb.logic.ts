@@ -1,4 +1,4 @@
-import { GameSession } from '../game.types';
+import { GameSession } from '../../game.types';
 import { getPlayersOverlappingTile } from './movement.logic';
 import type {
   GridPosition,
@@ -9,7 +9,7 @@ import {
   DEFAULT_MAX_BOMBS,
   DEFAULT_BOMB_RANGE,
   PLAYER_COLLISION_SIZE,
-} from '../constants/game-constants';
+} from '../../constants/game-constants';
 
 export interface ExplosionResult {
   bombId: string;
