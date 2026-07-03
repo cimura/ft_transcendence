@@ -1,4 +1,5 @@
 import { create } from 'zustand'
+import axios from 'axios'
 import type { User } from '../types/user'
 import * as authApi from '../api/auth'
 
@@ -62,6 +63,17 @@ export const useAuthStore = create<AuthState>((set) => ({
       const user = await authApi.getCurrentUser()
       set({ currentUser: user, loading: false })
     } catch (error) {
+      if (axios.isAxiosError(error) && error.response?.status === 401) {
+        storeAccessToken(null)
+        set({
+          currentUser: null,
+          accessToken: null,
+          error: 'Session expired. Please sign in again.',
+          loading: false,
+        })
+        return
+      }
+
       set({
         error:
           error instanceof Error

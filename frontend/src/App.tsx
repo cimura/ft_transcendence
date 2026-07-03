@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useEffect } from 'react'
 import SignIn from './components/SignIn'
 import Signup from './components/SignUp'
 import {
@@ -23,6 +23,7 @@ import { SettingsMenu } from './pages/settings/SettingsMenu'
 import { AccountManagement } from './pages/settings/AccountManagement'
 import { NotificationSettings } from './pages/settings/NotificationPage'
 import { PrivacySettings } from './pages/settings/PrivacySettings'
+import { useAuthStore } from './stores/authStore'
 
 function App() {
   return (
@@ -35,13 +36,7 @@ function App() {
 function AppRoutes() {
   const navigate = useNavigate()
   const location = useLocation()
-
-  const [isLoggedIn, setIsLoggedIn] = useState(() => {
-    if (typeof window !== 'undefined') {
-      return !!localStorage.getItem('accessToken')
-    }
-    return false
-  })
+  const isLoggedIn = useAuthStore((state) => Boolean(state.accessToken))
 
   useEffect(() => {
     if (
@@ -55,17 +50,14 @@ function AppRoutes() {
   }, [isLoggedIn, location.pathname, navigate])
 
   const handleSignInSuccess = () => {
-    setIsLoggedIn(true)
     navigate('/home')
   }
 
   const handleSignupSuccess = () => {
-    setIsLoggedIn(true)
     navigate('/home')
   }
 
   const handleLogoutSuccess = () => {
-    setIsLoggedIn(false)
     navigate('/signin', { replace: true })
   }
 

@@ -1,5 +1,5 @@
-import { GameSession } from '../game.types';
-import { START_POSITIONS } from './map.logic';
+import { GameSession } from '../../game.types';
+import { START_POSITIONS } from '../setup/map.logic';
 
 export const PLAYER_COLORS = [
   { color: '#ff8800', visorColor: '#00ff00' },

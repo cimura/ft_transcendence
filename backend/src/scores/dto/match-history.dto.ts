@@ -1,4 +1,6 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
+import { Type } from 'class-transformer';
+import { IsInt, IsOptional, Max, Min } from 'class-validator';
 
 export class MatchHistoryItemDto {
   @ApiProperty({ example: 'match-1' })
@@ -32,8 +34,29 @@ export class MatchHistoryResponseDto {
 }
 
 export class MatchHistoryQueryDto {
-  @ApiPropertyOptional({ example: 1 })
+  @ApiPropertyOptional({
+    example: 1,
+    default: 1,
+    minimum: 1,
+    maximum: 10000,
+  })
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(1)
+  @Max(10000)
   page?: number;
-  @ApiPropertyOptional({ example: 2 })
+
+  @ApiPropertyOptional({
+    example: 20,
+    default: 20,
+    minimum: 1,
+    maximum: 100,
+  })
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(1)
+  @Max(100)
   limit?: number;
 }

@@ -1,24 +1,17 @@
-import {
-  BadRequestException,
-  Controller,
-  DefaultValuePipe,
-  Get,
-  Param,
-  ParseIntPipe,
-  Query,
-  UseGuards,
-} from '@nestjs/common';
+import { Controller, Get, Param, Query, UseGuards } from '@nestjs/common';
 import {
   ApiBearerAuth,
   ApiOkResponse,
   ApiOperation,
-  ApiQuery,
   ApiTags,
   ApiUnauthorizedResponse,
 } from '@nestjs/swagger';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { ScoresService } from './scores.service';
-import { MatchHistoryResponseDto } from './dto/match-history.dto';
+import {
+  MatchHistoryQueryDto,
+  MatchHistoryResponseDto,
+} from './dto/match-history.dto';
 
 @Controller('scores')
 @ApiTags('scores')
@@ -30,37 +23,16 @@ export class ScoresController {
 
   @Get('user/:userId')
   @ApiOperation({ summary: 'ユーザーの対戦履歴を取得' })
-  @ApiQuery({
-    name: 'page',
-    required: false,
-    example: 1,
-    description: 'ページ番号',
-  })
-  @ApiQuery({
-    name: 'limit',
-    required: false,
-    example: 20,
-    description: '１ページあたりの取得件数',
-  })
   @ApiOkResponse({
     description: '成功時',
     type: MatchHistoryResponseDto,
   })
   getMatchHistory(
     @Param('userId') userId: string,
-    @Query('page', new DefaultValuePipe(1), ParseIntPipe) page: number,
-    @Query('limit', new DefaultValuePipe(20), ParseIntPipe) limit: number,
+    @Query() query: MatchHistoryQueryDto,
   ): Promise<MatchHistoryResponseDto> {
-    const maxPage = 10000;
-    const maxLimit = 100;
-
-    if (page < 1 || page > maxPage) {
-      throw new BadRequestException(`page must be between 1 and ${maxPage}`);
-    }
-    if (limit < 1 || limit > maxLimit) {
-      throw new BadRequestException(`limit must be between 1 and ${maxLimit}`);
-    }
-
+    const page = query.page ?? 1;
+    const limit = query.limit ?? 20;
     return this.scoresService.getMatchHistory(userId, page, limit);
   }
 }

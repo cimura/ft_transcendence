@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { signUpApi, AuthApiError } from '../api/auth'
+import { useAuthStore } from '../stores/authStore'
 
 interface SignupProps {
   onSignupSuccess: () => void
@@ -16,6 +17,7 @@ export default function Signup({
     username?: string
   }>({})
   const [loading, setLoading] = useState(false) // 連打防止用
+  const setAccessToken = useAuthStore((state) => state.setAccessToken)
 
   const handleSignup = async (formData: FormData) => {
     const email = formData.get('email') as string
@@ -44,7 +46,7 @@ export default function Signup({
 
       const data = await signUpApi({ email, username, password })
 
-      localStorage.setItem('accessToken', data.accessToken)
+      setAccessToken(data.accessToken)
 
       console.log('Signup successful!')
       onSignupSuccess()
