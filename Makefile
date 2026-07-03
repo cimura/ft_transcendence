@@ -25,6 +25,12 @@ re: fclean build
 
 # === 開発用 ===
 
+rebuild:
+	docker compose -f $(COMPOSE_FILE) up --build --force-recreate -d
+
+rebuild-clean:
+	docker compose -f $(COMPOSE_FILE) up --build --force-recreate -V -d
+
 logs:
 	docker compose -f $(COMPOSE_FILE) logs -f
 
