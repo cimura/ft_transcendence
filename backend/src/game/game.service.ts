@@ -6,11 +6,14 @@ import {
 } from '@ft_transcendence/shared/game-events.types';
 import { GAME_COUNTDOWN_SEC, GAME_TICK_RATE } from './constants/game-constants';
 import { GameSession } from './game.types';
-import { createInitialMap } from './logic/map.logic';
-import { processExplosions, tryPlaceBomb } from './logic/bomb.logic';
-import { updatePlayerMovements } from './logic/movement.logic';
-import { evaluateGameEnd } from './logic/end.logic';
-import { addPlayerToRoom, removePlayerFromRoom } from './logic/player.logic';
+import { createInitialMap } from './logic/setup/map.logic';
+import { processExplosions, tryPlaceBomb } from './logic/mechanics/bomb.logic';
+import { updatePlayerMovements } from './logic/mechanics/movement.logic';
+import { evaluateGameEnd } from './logic/session/end.logic';
+import {
+  addPlayerToRoom,
+  removePlayerFromRoom,
+} from './logic/session/player.logic';
 
 const MIN_PLAYERS_TO_START = 2;
 

@@ -1,11 +1,9 @@
 import { useNavigate } from 'react-router-dom'
-import { useMemo } from 'react'
 import { Button } from '../common/Button'
 import { useGameStore } from '../../stores/gameStore'
-import { sortRankings } from '../../game/ranking-logic'
-import type { PlayerStats } from '@ft_transcendence/shared/game-events.types'
+import type { PlayerRanking } from '@ft_transcendence/shared/game-events.types'
 
-const EMPTY_RANKINGS: Record<string, PlayerStats> = {}
+const EMPTY_RANKINGS: PlayerRanking[] = []
 
 export function GameResultOverlay() {
   const navigate = useNavigate()
@@ -14,11 +12,7 @@ export function GameResultOverlay() {
   const resultStats = useGameStore((state) => state.resultStats)
   const errorMessage = useGameStore((state) => state.errorMessage)
 
-  const safeRankings = resultStats?.rankings || EMPTY_RANKINGS
-
-  const sortedRankings = useMemo(() => {
-    return Object.entries(safeRankings).sort(sortRankings)
-  }, [safeRankings])
+  const rankings = resultStats?.rankings || EMPTY_RANKINGS
 
   if (!resultStats && !errorMessage) return null
 
@@ -49,7 +43,7 @@ export function GameResultOverlay() {
           <p className="mt-4 text-lg font-bold text-red-400">{errorMessage}</p>
         )}
 
-        {Object.keys(safeRankings).length > 0 && (
+        {rankings.length > 0 && (
           <div className="mt-6 w-full overflow-x-auto text-left">
             <table className="w-full text-sm text-gray-300">
               <thead className="bg-gray-800/50 text-gray-400">
@@ -62,7 +56,8 @@ export function GameResultOverlay() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-800">
-                {sortedRankings.map(([playerId, stats], i) => {
+                {rankings.map((stats, i) => {
+                  const playerId = stats.playerId
                   const username =
                     players?.[playerId]?.username || playerId.slice(0, 8)
                   return (

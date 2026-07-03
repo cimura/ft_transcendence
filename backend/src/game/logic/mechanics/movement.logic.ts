@@ -1,8 +1,8 @@
-import { GameSession } from '../game.types';
+import { GameSession } from '../../game.types';
 import {
   PLAYER_MOVE_SPEED,
   PLAYER_COLLISION_SIZE,
-} from '../constants/game-constants';
+} from '../../constants/game-constants';
 
 export function isPassable(
   room: GameSession,
