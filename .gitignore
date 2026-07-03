@@ -31,3 +31,8 @@ AGENTS.md
 backend/prisma.config.js
 backend/prisma.config.js.map
 backend/prisma.config.d.ts
+
+# Shared TypeScript generated files
+shared/game-events.types.js
+shared/game-events.types.js.map
+shared/game-events.types.d.ts

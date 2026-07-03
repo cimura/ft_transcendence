@@ -25,10 +25,16 @@ re: fclean build
 
 # === 開発用 ===
 
+rebuild:
+	docker compose -f $(COMPOSE_FILE) up --build --force-recreate -d
+
+rebuild-clean:
+	docker compose -f $(COMPOSE_FILE) up --build --force-recreate -V -d
+
 logs:
 	docker compose -f $(COMPOSE_FILE) logs -f
 
 migrate:
 	docker compose -f $(COMPOSE_FILE) exec -w /app/backend backend npx prisma migrate dev
 
-.PHONY: all up build down clean fclean re logs
+.PHONY: all up build down clean fclean re logs rebuild rebuild-clean
