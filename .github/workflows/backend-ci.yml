@@ -27,20 +27,16 @@ jobs:
         with:
           node-version: "22"
           cache: "npm"
-          cache-dependency-path: backend/package-lock.json
+          cache-dependency-path: package-lock.json
 
       - name: Install dependencies
-        working-directory: backend
-        run: npm ci
+        run: npm ci --workspace=backend --workspace=shared
 
       - name: Generate Prisma Client
-        working-directory: backend
-        run: npx prisma generate
+        run: npm --workspace=backend exec prisma -- generate
 
       - name: Run ESLint
-        working-directory: backend
-        run: npm run lint
+        run: npm --workspace=backend run lint
 
       - name: Check code formatting
-        working-directory: backend
-        run: npm run format:check
+        run: npm --workspace=backend run format:check
