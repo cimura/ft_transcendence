@@ -111,7 +111,7 @@ export function useGameSocket(roomId: string) {
         setErrorMessage(
           'サーバーから切断されました（認証エラーの可能性があります）'
         )
-        setGamePhase('ended')
+        // setGamePhase('ended')
       }
     })
 

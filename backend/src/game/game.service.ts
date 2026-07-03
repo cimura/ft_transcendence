@@ -74,6 +74,7 @@ export class GameService {
       room.phase === 'waiting'
     ) {
       this.startCountdown(room.roomId);
+      console.log(`[service] handleGameStart room.phase: ${room.phase}`);
     }
   }
 

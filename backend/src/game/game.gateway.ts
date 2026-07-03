@@ -82,6 +82,7 @@ export class GameGateway
 
       const previousRoomId = client.data.roomId;
       if (previousRoomId && previousRoomId !== data.roomId) {
+        console.log(`[LeavePrevious] roomId: ${previousRoomId}`);
         await client.leave(previousRoomId);
       }
 
@@ -118,6 +119,7 @@ export class GameGateway
     if (client.data.user) {
       this.gameService.handleGameLeave(client.data.user.id);
     }
+    console.log(`[game:leave] useId: ${client.data.user.id}`);
   }
 
   @SubscribeMessage('player:input')
@@ -153,6 +155,7 @@ export class GameGateway
   handleDisconnect(client: GameSocket) {
     if (client.data.user) {
       this.gameService.handleGameLeave(client.data.user.id);
+      console.log(`[disconnect] useId: ${client.data.user.id}`);
     }
   }
 }
