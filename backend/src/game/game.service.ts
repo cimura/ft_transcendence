@@ -53,13 +53,6 @@ export class GameService {
         room.disconnectedAt = 0; // 誰か一人でも戻ってきたらルームタイマーをリセット
       }
     }
-    // DEBUG: 2人での動作確認のための仮条件（本来はLobby側で管理）
-    if (
-      Object.keys(room.players).length >= MIN_PLAYERS_TO_START &&
-      room.phase === 'waiting'
-    ) {
-      this.startCountdown(room.roomId);
-    }
 
     return {
       yourId: playerId,
@@ -70,6 +63,18 @@ export class GameService {
       bombs: room.bombs,
       phase: room.phase,
     };
+  }
+
+  handleGameStart(roomId: string) {
+    // すでにRoomに参加したあとの処理なので、roomが存在する前提で扱う
+    const room = this.getOrCreateRoom(roomId);
+    // DEBUG: 2人での動作確認のための仮条件（本来はLobby側で管理）
+    if (
+      Object.keys(room.players).length >= MIN_PLAYERS_TO_START &&
+      room.phase === 'waiting'
+    ) {
+      this.startCountdown(room.roomId);
+    }
   }
 
   handleGameLeave(playerId: string) {

@@ -90,6 +90,9 @@ export class GameGateway
 
       client.emit('game:init', initData);
       console.log(`[Join] roomId: ${data.roomId} UserId: ${user.id}`);
+
+      // ゲーム開始条件が満たされた場合のみゲームループを開始させる
+      this.gameService.handleGameStart(data.roomId);
     } catch (error) {
       client.emit('game:error', {
         message:
