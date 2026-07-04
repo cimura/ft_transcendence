@@ -23,7 +23,6 @@ export type PlayerSnapshot = {
   color: string;
   visorColor: string;
   isDisconnected: boolean;
-  lastActiveTime: number;
 };
 
 export type BombSnapshot = {
@@ -60,7 +59,6 @@ export interface ServerToClientEvents {
   "game:init": (data: {
     yourId: string;
     serverTime: number;
-    mapRevision: number;
     map: TileType[][];
     players: Record<string, PlayerSnapshot>;
     bombs: Record<string, BombSnapshot>;
@@ -69,13 +67,11 @@ export interface ServerToClientEvents {
 
   "game:countdown": (data: { seconds: number; startsAt: number }) => void;
 
+  "game:playing": () => void;
+
   "game:state": (data: {
-    serverTick: number;
-    serverTime: number;
-    mapRevision: number;
     players: Record<string, PlayerSnapshot>;
     bombs: Record<string, BombSnapshot>;
-    phase: GamePhase;
   }) => void;
 
   "bomb:spawn": (data: { bomb: BombSnapshot }) => void;
@@ -85,7 +81,6 @@ export interface ServerToClientEvents {
     affectedTiles: GridPosition[];
     destroyedBlocks: GridPosition[];
     damagedPlayerIds: string[];
-    mapRevision: number;
   }) => void;
 
   "game:end": (data: {

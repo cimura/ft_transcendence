@@ -61,10 +61,8 @@ export class GameGateway
       client.data.user = {
         id: payload.sub,
       };
-      console.log(`[接続成功] ユーザーId: ${client.data.user.id}`);
     } catch {
       client.disconnect();
-      console.log(`[接続失敗] JWT未認証`);
     }
   }
 
@@ -78,19 +76,22 @@ export class GameGateway
     if (!user) return;
 
     try {
-      const initData = this.gameService.handleGameJoin(data.roomId, user.id);
+      const initData = this.gameService.handleGameJoin(
+        data.roomId,
+        user.id,
+        client.id,
+      );
 
       const previousRoomId = client.data.roomId;
       if (previousRoomId && previousRoomId !== data.roomId) {
-        console.log(`[LeavePrevious] roomId: ${previousRoomId}`);
         await client.leave(previousRoomId);
+        this.gameService.handleGameLeave(user.id, client.id);
       }
 
       await client.join(data.roomId);
       client.data.roomId = data.roomId;
 
       client.emit('game:init', initData);
-      console.log(`[Join] roomId: ${data.roomId} UserId: ${user.id}`);
 
       // ゲーム開始条件が満たされた場合のみゲームループを開始させる
       this.gameService.handleGameStart(data.roomId);
@@ -99,9 +100,6 @@ export class GameGateway
         message:
           error instanceof Error ? error.message : 'Cannot join the room',
       });
-      console.log(
-        `[Rejected] roomId: ${data.roomId} UserId: ${user.id}: ${error instanceof Error ? error.message : 'Unknown error'}`,
-      );
     }
   }
 
@@ -117,9 +115,8 @@ export class GameGateway
     }
 
     if (client.data.user) {
-      this.gameService.handleGameLeave(client.data.user.id);
+      this.gameService.handleGameLeave(client.data.user.id, client.id);
     }
-    console.log(`[game:leave] useId: ${client.data.user.id}`);
   }
 
   @SubscribeMessage('player:input')
@@ -154,8 +151,7 @@ export class GameGateway
 
   handleDisconnect(client: GameSocket) {
     if (client.data.user) {
-      this.gameService.handleGameLeave(client.data.user.id);
-      console.log(`[disconnect] useId: ${client.data.user.id}`);
+      this.gameService.handleGameLeave(client.data.user.id, client.id);
     }
   }
 }

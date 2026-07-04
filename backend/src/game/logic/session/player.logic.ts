@@ -11,6 +11,7 @@ export const PLAYER_COLORS = [
 export function addPlayerToRoom(
   room: GameSession,
   playerId: string,
+  clientId: string,
   username: string,
 ): void {
   const playerIndex = Object.keys(room.players).length % 4;
@@ -26,7 +27,6 @@ export function addPlayerToRoom(
     color: colors.color,
     visorColor: colors.visorColor,
     isDisconnected: false,
-    lastActiveTime: 0,
   };
   room.stats[playerId] = {
     alive: true,
@@ -35,11 +35,14 @@ export function addPlayerToRoom(
     kills: 0,
     survivalTime: 0,
   };
+  room.playerConnections[playerId] = {
+    clientId: clientId,
+    lastActiveTime: 0,
+  };
 }
 
 export interface RemovePlayerResult {
   isEmpty: boolean; // 部屋が空になったかどうか
-  surrendered: boolean; // 試合中に降参した扱いかどうか
 }
 
 export function removePlayerFromRoom(
@@ -47,29 +50,17 @@ export function removePlayerFromRoom(
   playerId: string,
   now: number,
 ): RemovePlayerResult {
-  const result: RemovePlayerResult = { isEmpty: false, surrendered: false };
+  const result: RemovePlayerResult = { isEmpty: false };
 
   if (!room.players[playerId]) return result;
 
-  if (room.phase === 'playing') {
-    // 試合中の切断：自爆（死亡）扱いにする
-    room.players[playerId].alive = false;
-    room.stats[playerId].survivalTime = now - (room.startedAt || now);
-    result.surrendered = true;
-
-    if (room.playerInputs) {
-      delete room.playerInputs[playerId];
-    }
-  } else {
-    // 待機中の切断：単に部屋から退室させる
-    delete room.players[playerId];
-    delete room.stats[playerId];
-    if (room.playerInputs) {
-      delete room.playerInputs[playerId];
-    }
+  delete room.players[playerId];
+  delete room.stats[playerId];
+  if (room.playerInputs) {
+    delete room.playerInputs[playerId];
   }
 
-  // 爆弾すり抜けリストからの除外（共通処理）
+  // 爆弾すり抜けリストからの除外
   if (room.bombPassingPlayers) {
     for (const bombId in room.bombPassingPlayers) {
       room.bombPassingPlayers[bombId] = room.bombPassingPlayers[bombId].filter(

@@ -37,6 +37,7 @@ export class GameService {
   handleGameJoin(
     roomId: string,
     playerId: string,
+    clientId: string,
   ): Parameters<ServerToClientEvents['game:init']>[0] {
     if (!this.checkRoomEntryPermission(roomId, playerId)) {
       throw new WsException('Cannot join the room');
@@ -45,19 +46,34 @@ export class GameService {
     const player = room.players[playerId];
     if (room.phase === 'waiting') {
       // TODO: playerIdを使ってusernameをデータベースから引っ張ってくる処理(一旦仮の'test-username'で統一)
-      addPlayerToRoom(room, playerId, 'test-username');
+      addPlayerToRoom(room, playerId, clientId, 'test-username');
+      this.server.to(room.roomId).emit('game:state', {
+        players: room.players,
+        bombs: room.bombs,
+      });
+      this.logger.log(
+        `Player joined { roomId: '${room.roomId}', playerId: '${playerId}' }`,
+      );
     } else if (room.phase === 'countdown' || room.phase === 'playing') {
       if (player && player.isDisconnected) {
         player.isDisconnected = false;
+        room.playerConnections[playerId].clientId = clientId;
+        room.playerConnections[playerId].lastActiveTime = 0;
         room.disconnectedPlayers -= 1;
         room.disconnectedAt = 0; // 誰か一人でも戻ってきたらルームタイマーをリセット
+        if (room.playerInputs[playerId]) {
+          // 再接続時はクライアントが送るseqが初期値に戻るため、サーバー側も初期化する
+          room.playerInputs[playerId].seq = 0;
+        }
+        this.logger.debug(
+          `Player reconnected { roomId: '${room.roomId}', playerId: '${playerId}' }`,
+        );
       }
     }
 
     return {
       yourId: playerId,
       serverTime: Date.now(),
-      mapRevision: room.mapRevision,
       map: room.map,
       players: room.players,
       bombs: room.bombs,
@@ -74,28 +90,40 @@ export class GameService {
       room.phase === 'waiting'
     ) {
       this.startCountdown(room.roomId);
-      console.log(`[service] handleGameStart room.phase: ${room.phase}`);
     }
   }
 
-  handleGameLeave(playerId: string) {
+  handleGameLeave(playerId: string, clientId: string) {
     const now = Date.now();
     for (const room of this.rooms.values()) {
       if (room.players[playerId]) {
+        if (room.playerConnections[playerId].clientId !== clientId) {
+          // 以前のソケットインスタンスの切断イベントは無視する
+          this.logger.debug(
+            `Ignored disconnect from different socket { roomId: '${room.roomId}', playerId: '${playerId}', socketId: '${clientId}' }`,
+          );
+          continue;
+        }
         if (room.phase === 'waiting' || room.phase === 'ended') {
           // room から削除
           this.executeRemovePlayer(room, playerId, now);
         } else if (room.phase === 'countdown' || room.phase === 'playing') {
-          const player = room.players[playerId];
-          if (!player.isDisconnected) {
+          if (!room.players[playerId].isDisconnected) {
             // 切断時の時間を保存（タイムアウト判定のため）
-            player.isDisconnected = true;
-            player.lastActiveTime = Date.now();
+            room.players[playerId].isDisconnected = true;
+            room.playerConnections[playerId].clientId = '';
+            room.playerConnections[playerId].lastActiveTime = Date.now();
+            this.logger.debug(
+              `Player disconnected { roomId: '${room.roomId}', playerId: '${playerId}' }`,
+            );
             room.disconnectedPlayers += 1;
             // room 自体の寿命を図るため、現在の時間を保存
             const totalPlayers = Object.keys(room.players).length;
             if (room.disconnectedPlayers === totalPlayers) {
               room.disconnectedAt = Date.now();
+              this.logger.log(
+                `All players disconnected { roomId: '${room.roomId}' }`,
+              );
             }
           }
         }
@@ -113,8 +141,6 @@ export class GameService {
     if (!room || room.phase !== 'playing') return;
 
     if (!room.playerInputs) room.playerInputs = {};
-    const currentInput = room.playerInputs[playerId];
-    if (currentInput && seq <= currentInput.seq) return;
     room.playerInputs[playerId] = { direction, seq };
   }
 
@@ -142,7 +168,7 @@ export class GameService {
     const player = room.players[playerId];
 
     if (room.phase === 'waiting') {
-      // TODO: MIN_PLAYERS_TO_START ではなく MAX_PLAYERS など適切な定数に変更する
+      // TODO: MIN_PLAYERS_TO_START ではなく MAX_PLAYERS など適切な値に変更する
       if (!player && Object.keys(room.players).length >= MIN_PLAYERS_TO_START) {
         return false;
       }
@@ -150,19 +176,23 @@ export class GameService {
     }
 
     if (room.phase === 'countdown' || room.phase === 'playing') {
-      // プレイヤー情報がない、または切断扱いになっていない（多重ログイン防止）場合は弾く
-      if (!player || !player.isDisconnected) {
+      // プレイヤー情報がない
+      if (!player) {
         return false;
       }
-      // タイムアウトチェック
+      if (!player.isDisconnected) {
+        // 切断扱いになっていない（多重ログイン防止）
+        return false;
+      }
+      // タイムアウトかどうか
       const isTimedOut =
-        Date.now() - player.lastActiveTime >= DISCONNECT_TIMEOUT_MS;
+        Date.now() - room.playerConnections[playerId].lastActiveTime >=
+        DISCONNECT_TIMEOUT_MS;
       if (isTimedOut) {
         return false;
       }
       return true;
     }
-
     return false;
   }
 
@@ -172,19 +202,19 @@ export class GameService {
       room = {
         roomId,
         phase: 'waiting',
-        mapRevision: 1,
         map: createInitialMap(),
         players: {},
         bombs: {},
         serverTick: 0,
         playerInputs: {},
         bombPassingPlayers: {},
+        playerConnections: {},
         disconnectedPlayers: 0,
         disconnectedAt: 0,
         stats: {},
       };
       this.rooms.set(roomId, room);
-      this.logger.log(`Room created: ${roomId}`);
+      this.logger.log(`Room created { roomId: '${roomId}' }`);
     }
     return room;
   }
@@ -195,27 +225,9 @@ export class GameService {
     now: number,
   ) {
     const result = removePlayerFromRoom(room, playerId, now);
-
-    if (result.surrendered) {
-      this.logger.log(
-        `Player ${playerId} disconnected and surrendered in room ${room.roomId}`,
-      );
-      this.server.to(room.roomId).emit('game:state', {
-        serverTick: room.serverTick,
-        serverTime: now,
-        mapRevision: room.mapRevision,
-        players: room.players,
-        bombs: room.bombs,
-        phase: room.phase,
-      });
-      this.checkGameEnd(room, now);
-    } else {
-      this.logger.log(`Player ${playerId} removed from room ${room.roomId}`);
-    }
-
-    if (room.phase === 'countdown') {
-      this.cancelCountdownIfStartConditionIsNotMet(room, now);
-    }
+    this.logger.log(
+      `Player left { roomId: '${room.roomId}', playerId: '${playerId}' }`,
+    );
 
     if (result.isEmpty) {
       this.stopGameLoop(room.roomId);
@@ -223,8 +235,8 @@ export class GameService {
         clearTimeout(room.countdownTimerId);
         room.countdownTimerId = undefined;
       }
+      this.logger.log(`Room deleted { roomId: '${room.roomId}' }`);
       this.rooms.delete(room.roomId);
-      this.logger.log(`Room ${room.roomId} deleted because it is empty`);
     }
   }
 
@@ -240,13 +252,12 @@ export class GameService {
       seconds: GAME_COUNTDOWN_SEC,
       startsAt: startsAt,
     });
-    this.logger.log(
-      `Room ${roomId} countdown started. Game starts at ${startsAt}`,
-    );
+    this.logger.debug(`Countdown started { roomId: '${room.roomId}' }`);
 
     room.countdownTimerId = setTimeout(() => {
       room.countdownTimerId = undefined;
       this.startGameLoop(roomId);
+      this.server.to(roomId).emit('game:playing');
     }, GAME_COUNTDOWN_SEC * 1000);
   }
 
@@ -268,8 +279,7 @@ export class GameService {
     room.timerId = setInterval(() => {
       this.updateGame(room);
     }, 1000 / GAME_TICK_RATE);
-
-    this.logger.log(`Game loop started for room: ${roomId}`);
+    this.logger.log(`Game loop started { roomId: '${roomId}' }`);
   }
 
   private updateGame(room: GameSession) {
@@ -285,17 +295,33 @@ export class GameService {
         affectedTiles: res.affectedTiles,
         destroyedBlocks: res.destroyedBlocks,
         damagedPlayerIds: res.damagedPlayerIds,
-        mapRevision: room.mapRevision,
       });
     }
 
+    if (
+      room.disconnectedPlayers > 0 &&
+      room.serverTick % GAME_TICK_RATE === 0
+    ) {
+      for (const playerId in room.players) {
+        const player = room.players[playerId];
+        const connection = room.playerConnections[playerId];
+
+        if (player.alive && player.isDisconnected) {
+          if (now - connection.lastActiveTime >= DISCONNECT_TIMEOUT_MS) {
+            // 30秒経過したら自爆（死亡）扱いにする
+            player.alive = false;
+            room.stats[playerId].survivalTime = now - (room.startedAt || now);
+            this.logger.debug(
+              `Player eliminated { roomId: '${room.roomId}', playerId: '${playerId}' }`,
+            );
+          }
+        }
+      }
+    }
+
     this.server.to(room.roomId).emit('game:state', {
-      serverTick: room.serverTick,
-      serverTime: now,
-      mapRevision: room.mapRevision,
       players: room.players,
       bombs: room.bombs,
-      phase: room.phase,
     });
 
     this.checkGameEnd(room, now);
@@ -314,8 +340,8 @@ export class GameService {
       rankings: endResult.rankings,
     });
 
+    this.logger.log(`Room deleted { roomId: '${room.roomId}' }`);
     this.rooms.delete(room.roomId);
-    this.logger.log(`Room ${room.roomId} deleted after game end`);
   }
 
   private stopGameLoop(roomId: string) {
@@ -323,32 +349,7 @@ export class GameService {
     if (room && room.timerId) {
       clearInterval(room.timerId);
       room.timerId = undefined;
-      this.logger.log(`Game loop stopped for room: ${roomId}`);
+      this.logger.log(`Game loop stopped { roomId: '${roomId}' }`);
     }
-  }
-
-  private cancelCountdownIfStartConditionIsNotMet(
-    room: GameSession,
-    now: number,
-  ) {
-    if (Object.keys(room.players).length >= MIN_PLAYERS_TO_START) return;
-
-    if (room.countdownTimerId) {
-      clearTimeout(room.countdownTimerId);
-      room.countdownTimerId = undefined;
-    }
-
-    room.phase = 'waiting';
-    this.server.to(room.roomId).emit('game:state', {
-      serverTick: room.serverTick,
-      serverTime: now,
-      mapRevision: room.mapRevision,
-      players: room.players,
-      bombs: room.bombs,
-      phase: room.phase,
-    });
-    this.logger.log(
-      `Room ${room.roomId} countdown cancelled because start condition is not met`,
-    );
   }
 }

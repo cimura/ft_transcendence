@@ -22,6 +22,15 @@ export const GameCountdownOverlay = memo(function GameCountdownOverlay() {
           setDisplay((prev) => (prev !== remainingSec ? remainingSec : prev))
 
           animationFrameId = requestAnimationFrame(updateDisplay)
+        } else {
+          setDisplay(null)
+          setShowGo(true)
+
+          const timer = setTimeout(() => {
+            setShowGo(false)
+          }, 1000)
+
+          return () => clearTimeout(timer)
         }
       }
 
@@ -29,19 +38,6 @@ export const GameCountdownOverlay = memo(function GameCountdownOverlay() {
 
       return () => cancelAnimationFrame(animationFrameId)
     }
-
-    if (gamePhase === 'playing') {
-      setDisplay(null)
-      setShowGo(true)
-
-      const timer = setTimeout(() => {
-        setShowGo(false)
-      }, 1000)
-      return () => clearTimeout(timer)
-    }
-
-    setDisplay(null)
-    setShowGo(false)
   }, [gamePhase, countdown])
 
   if (gamePhase === 'countdown' && display) {

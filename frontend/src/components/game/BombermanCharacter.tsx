@@ -1,7 +1,7 @@
 import { forwardRef, useImperativeHandle, useRef } from 'react'
 import { useFrame } from '@react-three/fiber'
 import { Box, Sphere } from '@react-three/drei'
-import type { Group } from 'three'
+import type { Group, Mesh, Material } from 'three'
 import type { PlayerSnapshot } from '@ft_transcendence/shared/game-events.types'
 
 type BombermanCharacterProps = {
@@ -35,6 +35,11 @@ const BODY_METALNESS = 0.5
 const HEAD_ROUGHNESS = 0.2
 const HEAD_METALNESS = 0.8
 
+// Blinking effect constants
+const DISCONNECTED_BLINK_SPEED = 5
+const MIN_OPACITY = 0.2
+const MAX_OPACITY = 0.7
+
 export const BombermanCharacter = forwardRef<Group, BombermanCharacterProps>(
   ({ player }, ref) => {
     const groupRef = useRef<Group>(null)
@@ -53,6 +58,7 @@ export const BombermanCharacter = forwardRef<Group, BombermanCharacterProps>(
       const isMoving =
         Math.abs(dx) > MOVEMENT_EPSILON || Math.abs(dz) > MOVEMENT_EPSILON
       const time = state.clock.elapsedTime
+
       const bobbing = isMoving
         ? Math.abs(Math.sin(time * WALK_BOB_FREQUENCY)) * WALK_BOB_AMPLITUDE
         : Math.sin(time * IDLE_BOB_FREQUENCY) * IDLE_BOB_AMPLITUDE
@@ -80,6 +86,33 @@ export const BombermanCharacter = forwardRef<Group, BombermanCharacterProps>(
           : 0
       }
 
+      // --- BLINKING LOGIC ---
+      if (player.isDisconnected) {
+        // Calculate a pulsating opacity using a sine wave based on elapsed time
+        const blinkOpacity =
+          MIN_OPACITY +
+          Math.abs(Math.sin(time * DISCONNECTED_BLINK_SPEED)) *
+            (MAX_OPACITY - MIN_OPACITY)
+
+        // Traverse the 3D group and update opacity directly for performance
+        group.traverse((child) => {
+          const mesh = child as Mesh
+          if (mesh.isMesh && mesh.material) {
+            const material = mesh.material as Material
+            material.opacity = blinkOpacity
+          }
+        })
+      } else {
+        // Guarantee opacity is fully reset if the player reconnects mid-blink
+        group.traverse((child) => {
+          const mesh = child as Mesh
+          if (mesh.isMesh && mesh.material) {
+            const material = mesh.material as Material
+            material.opacity = 1
+          }
+        })
+      }
+
       lastPositionRef.current = { ...player.position }
     })
 
@@ -92,6 +125,7 @@ export const BombermanCharacter = forwardRef<Group, BombermanCharacterProps>(
             color={player.color}
             roughness={BODY_ROUGHNESS}
             metalness={BODY_METALNESS}
+            transparent={player.isDisconnected}
           />
         </Box>
         <Sphere
@@ -102,6 +136,7 @@ export const BombermanCharacter = forwardRef<Group, BombermanCharacterProps>(
             color="#dddddd"
             roughness={HEAD_ROUGHNESS}
             metalness={HEAD_METALNESS}
+            transparent={player.isDisconnected}
           />
         </Sphere>
         <Box args={VISOR_SIZE} position={VISOR_POSITION}>
@@ -110,19 +145,29 @@ export const BombermanCharacter = forwardRef<Group, BombermanCharacterProps>(
             emissive={player.visorColor}
             emissiveIntensity={VISOR_EMISSIVE_INTENSITY}
             toneMapped={false}
+            transparent={player.isDisconnected}
           />
         </Box>
         <Box args={BACKPACK_SIZE} position={BACKPACK_POSITION}>
-          <meshStandardMaterial color="#222222" />
+          <meshStandardMaterial
+            color="#222222"
+            transparent={player.isDisconnected}
+          />
         </Box>
         <group position={LEFT_LEG_POSITION} ref={leftLegRef}>
           <Box args={LEG_SIZE} position={LEG_MESH_POSITION}>
-            <meshStandardMaterial color="#333333" />
+            <meshStandardMaterial
+              color="#333333"
+              transparent={player.isDisconnected}
+            />
           </Box>
         </group>
         <group position={RIGHT_LEG_POSITION} ref={rightLegRef}>
           <Box args={LEG_SIZE} position={LEG_MESH_POSITION}>
-            <meshStandardMaterial color="#333333" />
+            <meshStandardMaterial
+              color="#333333"
+              transparent={player.isDisconnected}
+            />
           </Box>
         </group>
       </group>
