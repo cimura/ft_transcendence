@@ -20,7 +20,7 @@ export function useNotifications() {
 
   return {
     notifications,
-    loading: storeLoading || !loaded,
+    loading: storeLoading || (!loaded && !error),
     error,
     refetch,
     removeNotification,

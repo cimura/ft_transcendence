@@ -30,7 +30,7 @@ export const useNotificationStore = create<NotificationStore>((set, get) => ({
       set({
         error: toErrorMessage(error),
         loading: false,
-        loaded: true,
+        loaded: false,
       })
     }
   },
