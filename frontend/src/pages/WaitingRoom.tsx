@@ -7,6 +7,7 @@ import { ChatPanel } from '../components/waitingRoom/ChatPanel'
 import { GameMapPreview } from '../components/game/preview/GameMapPreview'
 import { useAuthStore } from '../stores/authStore'
 import { createRoomInvitation, leaveRoom } from '../api/rooms'
+import { getApiErrorMessage } from '../api/errors'
 import { useLobbySocket } from '../hooks/useLobbySocket'
 import { useFriends } from '../hooks/friends/useFriends'
 
@@ -123,9 +124,7 @@ export function WaitingRoom() {
       )
       setSelectedInviteeId('')
     } catch (error) {
-      setInviteError(
-        error instanceof Error ? error.message : '招待の送信に失敗しました'
-      )
+      setInviteError(getApiErrorMessage(error, '招待の送信に失敗しました'))
     } finally {
       setInviteLoading(false)
     }

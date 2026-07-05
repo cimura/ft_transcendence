@@ -1,6 +1,5 @@
 import { create } from 'zustand'
 import { immer } from 'zustand/middleware/immer'
-import { mockRooms } from '../mocks/room'
 import type { GameRoom } from '../types/room'
 
 interface LobbyStore {
@@ -14,7 +13,7 @@ interface LobbyStore {
 
 export const useLobbyStore = create<LobbyStore>()(
   immer((set) => ({
-    rooms: mockRooms,
+    rooms: [],
     currentRoom: null,
     setRooms: (rooms) =>
       set((state) => {

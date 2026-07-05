@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { acceptFriendRequest, rejectFriendRequest } from '../api/friend'
 import { acceptRoomInvitation, declineRoomInvitation } from '../api/rooms'
+import { getApiErrorMessage } from '../api/errors'
 import { useNotifications } from '../hooks/useNotifications'
 import { useLobbyStore } from '../stores/lobbyStore'
 import type { NotificationItem } from '../types/notification'
@@ -31,7 +32,7 @@ export function NotificationsPage() {
       await action()
       await refetch()
     } catch (err) {
-      setActionError(err instanceof Error ? err.message : '操作に失敗しました')
+      setActionError(getApiErrorMessage(err, '操作に失敗しました'))
     } finally {
       setProcessingId(null)
     }
