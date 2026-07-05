@@ -71,7 +71,7 @@ describe('NotificationsService', () => {
     expect(result).toEqual([
       {
         id: 'invitation-1',
-        type: 'game_invite',
+        type: 'room_invitation',
         createdAt: '2026-07-02T10:00:00.000Z',
         actor: {
           id: 'user-bob',

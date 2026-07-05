@@ -103,6 +103,7 @@ describe('RoomsService', () => {
       create: jest.fn(),
       findUnique: jest.fn(),
       update: jest.fn(),
+      updateMany: jest.fn(),
     },
     roomParticipant: {
       create: jest.fn(),
@@ -225,6 +226,129 @@ describe('RoomsService', () => {
       service.createInvitation(room.id, user.id, { inviteeId: guest.id }),
     ).rejects.toThrow(ForbiddenException);
     expect(prisma.roomInvitation.create).not.toHaveBeenCalled();
+  });
+
+  it('accepts a pending invitation with guarded status update and locked room join', async () => {
+    const invitation = {
+      id: 'invitation-1',
+      roomId: 'room-1',
+      inviteeId: guest.id,
+      status: RoomInvitationStatus.PENDING,
+    };
+    const waitingRoom = createRoom({ maxPlayers: 2 });
+    const joinedRoom = createRoom({
+      maxPlayers: 2,
+      participants: [
+        {
+          userId: user.id,
+          isHost: true,
+          isReady: true,
+          joinedAt: now,
+          user,
+        },
+        {
+          userId: guest.id,
+          isHost: false,
+          isReady: false,
+          joinedAt: now,
+          user: guest,
+        },
+      ],
+    });
+    const tx = {
+      $queryRaw: jest.fn(),
+      roomInvitation: {
+        findUnique: jest.fn().mockResolvedValue(invitation),
+        updateMany: jest.fn().mockResolvedValue({ count: 1 }),
+      },
+      gameRoom: {
+        findUnique: jest.fn().mockResolvedValue(waitingRoom),
+      },
+      roomParticipant: {
+        create: jest.fn(),
+      },
+    };
+    prisma.$transaction.mockImplementation(
+      async (callback: (transaction: typeof tx) => Promise<unknown>) =>
+        callback(tx),
+    );
+    prisma.gameRoom.findUnique.mockResolvedValue(joinedRoom);
+
+    const result = await service.acceptInvitation('invitation-1', guest.id);
+
+    expect(tx.roomInvitation.updateMany).toHaveBeenCalledWith({
+      where: {
+        id: 'invitation-1',
+        inviteeId: guest.id,
+        status: RoomInvitationStatus.PENDING,
+      },
+      data: { status: RoomInvitationStatus.ACCEPTED },
+    });
+    expect(tx.$queryRaw).toHaveBeenCalled();
+    expect(tx.roomParticipant.create).toHaveBeenCalledWith({
+      data: {
+        roomId: 'room-1',
+        userId: guest.id,
+        isHost: false,
+        isReady: false,
+      },
+    });
+    expect(result.id).toBe('room-1');
+  });
+
+  it('rejects an invitation accept when the guarded status update loses the race', async () => {
+    const invitation = {
+      id: 'invitation-1',
+      roomId: 'room-1',
+      inviteeId: guest.id,
+      status: RoomInvitationStatus.PENDING,
+    };
+    const tx = {
+      roomInvitation: {
+        findUnique: jest.fn().mockResolvedValue(invitation),
+        updateMany: jest.fn().mockResolvedValue({ count: 0 }),
+      },
+    };
+    prisma.$transaction.mockImplementation(
+      async (callback: (transaction: typeof tx) => Promise<unknown>) =>
+        callback(tx),
+    );
+
+    await expect(
+      service.acceptInvitation('invitation-1', guest.id),
+    ).rejects.toThrow(ConflictException);
+  });
+
+  it('declines a pending invitation with a guarded status update', async () => {
+    prisma.roomInvitation.findUnique.mockResolvedValue({
+      inviteeId: guest.id,
+      status: RoomInvitationStatus.PENDING,
+    });
+    prisma.roomInvitation.updateMany.mockResolvedValue({ count: 1 });
+
+    const result = await service.declineInvitation('invitation-1', guest.id);
+
+    expect(prisma.roomInvitation.updateMany).toHaveBeenCalledWith({
+      where: {
+        id: 'invitation-1',
+        inviteeId: guest.id,
+        status: RoomInvitationStatus.PENDING,
+      },
+      data: { status: RoomInvitationStatus.DECLINED },
+    });
+    expect(result).toEqual({ message: 'Room invitation declined.' });
+  });
+
+  it('rejects an invitation decline when the guarded status update loses the race', async () => {
+    prisma.roomInvitation.findUnique.mockResolvedValue({
+      inviteeId: guest.id,
+      status: RoomInvitationStatus.PENDING,
+    });
+    prisma.roomInvitation.updateMany.mockResolvedValue({ count: 0 });
+
+    await expect(
+      service.declineInvitation('invitation-1', guest.id),
+    ).rejects.toThrow(ConflictException);
   });
 
   it('filters rooms by status for the lobby list', async () => {

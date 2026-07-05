@@ -29,6 +29,9 @@ CREATE INDEX "RoomInvitation_status_idx" ON "RoomInvitation"("status");
 -- CreateIndex
 CREATE INDEX "RoomInvitation_inviteeId_status_createdAt_idx" ON "RoomInvitation"("inviteeId", "status", "createdAt");
 
+-- CreateIndex
+CREATE UNIQUE INDEX "RoomInvitation_roomId_inviteeId_status_key" ON "RoomInvitation"("roomId", "inviteeId", "status");
+
 -- AddForeignKey
 ALTER TABLE "RoomInvitation" ADD CONSTRAINT "RoomInvitation_roomId_fkey" FOREIGN KEY ("roomId") REFERENCES "GameRoom"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 

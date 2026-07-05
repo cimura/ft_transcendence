@@ -14,6 +14,11 @@ const apiErrorMessages: Record<string, string> = {
   USER_NOT_FOUND: 'ユーザーが見つかりません。',
 }
 
+const isValidationMessages = (message: unknown): message is string[] =>
+  Array.isArray(message) &&
+  message.length > 0 &&
+  message.every((item) => typeof item === 'string')
+
 export const getApiErrorMessage = (error: unknown, fallback: string) => {
   if (!axios.isAxiosError(error)) {
     return fallback
@@ -26,11 +31,7 @@ export const getApiErrorMessage = (error: unknown, fallback: string) => {
     return apiErrorMessages[data.code]
   }
 
-  if (typeof data?.message === 'string') {
-    return data.message
-  }
-
-  if (Array.isArray(data?.message) && data.message.length > 0) {
+  if (status === 400 && isValidationMessages(data?.message)) {
     return data.message.join(' ')
   }
 

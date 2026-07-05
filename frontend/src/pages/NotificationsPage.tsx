@@ -17,24 +17,34 @@ const formatDate = (value: string) =>
 
 export function NotificationsPage() {
   const navigate = useNavigate()
-  const { notifications, loading, error, refetch } = useNotifications()
+  const { notifications, loading, error, refetch, removeNotification } =
+    useNotifications()
   const { setCurrentRoom, upsertRoom } = useLobbyStore()
   const [processingId, setProcessingId] = useState<string | null>(null)
   const [actionError, setActionError] = useState<string | null>(null)
 
   const runAction = async (
     notificationId: string,
-    action: () => Promise<void>
+    action: () => Promise<void>,
+    options: { skipRefetch?: boolean; skipReset?: boolean } = {}
   ) => {
+    let completed = false
     try {
       setProcessingId(notificationId)
       setActionError(null)
       await action()
-      await refetch()
+      completed = true
+      if (!options.skipRefetch) {
+        await refetch()
+      } else {
+        removeNotification(notificationId)
+      }
     } catch (err) {
       setActionError(getApiErrorMessage(err, '操作に失敗しました'))
     } finally {
-      setProcessingId(null)
+      if (!options.skipReset || !completed) {
+        setProcessingId(null)
+      }
     }
   }
 
@@ -49,17 +59,21 @@ export function NotificationsPage() {
   }
 
   const handleAcceptInvite = (item: NotificationItem) => {
-    if (item.type !== 'game_invite') return
-    runAction(item.id, async () => {
-      const room = await acceptRoomInvitation(item.invitationId)
-      upsertRoom(room)
-      setCurrentRoom(room)
-      navigate(`/room/${room.id}`)
-    })
+    if (item.type !== 'room_invitation') return
+    runAction(
+      item.id,
+      async () => {
+        const room = await acceptRoomInvitation(item.invitationId)
+        upsertRoom(room)
+        setCurrentRoom(room)
+        navigate(`/room/${room.id}`)
+      },
+      { skipRefetch: true, skipReset: true }
+    )
   }
 
   const handleDeclineInvite = (item: NotificationItem) => {
-    if (item.type !== 'game_invite') return
+    if (item.type !== 'room_invitation') return
     runAction(item.id, () => declineRoomInvitation(item.invitationId))
   }
 
@@ -103,7 +117,7 @@ export function NotificationsPage() {
                 const title =
                   item.type === 'friend_request'
                     ? `${item.actor.username} からフレンド申請が届いています`
-                    : `${item.actor.username} からゲーム招待が届いています`
+                    : `${item.actor.username} からルーム招待が届いています`
                 const detail =
                   item.type === 'friend_request'
                     ? '承認するとフレンドに追加されます'

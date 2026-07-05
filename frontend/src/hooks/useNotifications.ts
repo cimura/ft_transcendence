@@ -1,56 +1,28 @@
-import { useCallback, useEffect, useState } from 'react'
-import { getNotifications } from '../api/notifications'
-import type { NotificationItem } from '../types/notification'
+import { useEffect } from 'react'
+import { useNotificationStore } from '../stores/notificationStore'
 
 export function useNotifications() {
-  const [notifications, setNotifications] = useState<NotificationItem[]>([])
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
-
-  const refetch = useCallback(async () => {
-    try {
-      setLoading(true)
-      setError(null)
-      const nextNotifications = await getNotifications()
-      setNotifications(nextNotifications)
-    } catch (err) {
-      setError(
-        err instanceof Error ? err.message : 'Failed to fetch notifications'
-      )
-    } finally {
-      setLoading(false)
-    }
-  }, [])
+  const notifications = useNotificationStore((state) => state.notifications)
+  const storeLoading = useNotificationStore((state) => state.loading)
+  const loaded = useNotificationStore((state) => state.loaded)
+  const error = useNotificationStore((state) => state.error)
+  const refetch = useNotificationStore((state) => state.fetchNotifications)
+  const removeNotification = useNotificationStore(
+    (state) => state.removeNotification
+  )
+  const ensureNotifications = useNotificationStore(
+    (state) => state.ensureNotifications
+  )
 
   useEffect(() => {
-    let ignore = false
-
-    getNotifications()
-      .then((nextNotifications) => {
-        if (ignore) return
-        setNotifications(nextNotifications)
-        setError(null)
-      })
-      .catch((err) => {
-        if (ignore) return
-        setError(
-          err instanceof Error ? err.message : 'Failed to fetch notifications'
-        )
-      })
-      .finally(() => {
-        if (ignore) return
-        setLoading(false)
-      })
-
-    return () => {
-      ignore = true
-    }
-  }, [])
+    void ensureNotifications()
+  }, [ensureNotifications])
 
   return {
     notifications,
-    loading,
+    loading: storeLoading || !loaded,
     error,
     refetch,
+    removeNotification,
   }
 }

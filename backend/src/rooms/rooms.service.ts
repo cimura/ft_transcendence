@@ -8,7 +8,7 @@ import {
 import { PrismaService } from '../prisma.service';
 import { GamesService } from '../games/games.service';
 import { BOMBERMAN_GAME_ID } from '../games/games.constants';
-import type { Prisma } from '../generated/prisma/client';
+import { Prisma } from '../generated/prisma/client';
 import {
   FriendRequestStatus,
   RoomInvitationStatus,
@@ -25,6 +25,7 @@ const MESSAGE_COOLDOWN_MS = 1000;
 
 type RoomStatusResponse = 'waiting' | 'playing' | 'finished';
 type RoomModeResponse = 'online' | 'local_cpu';
+type InvitationStatusResponse = 'pending' | 'accepted' | 'declined' | 'expired';
 type CreateRoomMode = NonNullable<CreateRoomDto['mode']>;
 
 const ROOM_STATUS_MAP: Record<QueryRoomStatus, RoomStatus> = {
@@ -131,49 +132,7 @@ export class RoomsService {
 
   async join(roomId: string, userId: string) {
     await this.prisma.$transaction(async (tx) => {
-      await tx.$queryRaw`
-        SELECT id FROM "GameRoom" WHERE id = ${roomId} FOR UPDATE
-      `;
-
-      const room = await tx.gameRoom.findUnique({
-        where: { id: roomId },
-        include: {
-          participants: {
-            select: { userId: true },
-          },
-        },
-      });
-
-      if (!room) {
-        throw new NotFoundException('Room not found');
-      }
-
-      if (room.status !== RoomStatus.WAITING) {
-        throw new ConflictException('Only waiting rooms can be joined');
-      }
-
-      if (room.mode === RoomMode.LOCAL_CPU && room.hostId !== userId) {
-        throw new ConflictException('Local CPU rooms cannot be joined');
-      }
-
-      if (
-        room.participants.some((participant) => participant.userId === userId)
-      ) {
-        return;
-      }
-
-      if (room.participants.length >= room.maxPlayers) {
-        throw new ConflictException('Room is full');
-      }
-
-      await tx.roomParticipant.create({
-        data: {
-          roomId,
-          userId,
-          isHost: false,
-          isReady: false,
-        },
-      });
+      await this.joinRoomWithinTransaction(tx, roomId, userId);
     });
 
     return this.findOne(roomId);
@@ -241,14 +200,32 @@ export class RoomsService {
       return this.toInvitationResponse(existingInvitation);
     }
 
-    const invitation = await this.prisma.roomInvitation.create({
-      data: {
-        roomId,
-        inviterId,
-        inviteeId,
-      },
-      include: this.invitationInclude(),
-    });
+    let invitation: Parameters<typeof this.toInvitationResponse>[0];
+    try {
+      invitation = await this.prisma.roomInvitation.create({
+        data: {
+          roomId,
+          inviterId,
+          inviteeId,
+        },
+        include: this.invitationInclude(),
+      });
+    } catch (error) {
+      if (this.isUniqueConstraintError(error)) {
+        const pendingInvitation = await this.prisma.roomInvitation.findFirst({
+          where: {
+            roomId,
+            inviteeId,
+            status: RoomInvitationStatus.PENDING,
+          },
+          include: this.invitationInclude(),
+        });
+        if (pendingInvitation) {
+          return this.toInvitationResponse(pendingInvitation);
+        }
+      }
+      throw error;
+    }
 
     return this.toInvitationResponse(invitation);
   }
@@ -281,55 +258,25 @@ export class RoomsService {
         );
       }
 
-      await tx.$queryRaw`
-        SELECT id FROM "GameRoom" WHERE id = ${invitation.roomId} FOR UPDATE
-      `;
-
-      const room = await tx.gameRoom.findUnique({
-        where: { id: invitation.roomId },
-        include: {
-          participants: {
-            select: { userId: true },
-          },
+      const updateResult = await tx.roomInvitation.updateMany({
+        where: {
+          id: invitationId,
+          inviteeId: userId,
+          status: RoomInvitationStatus.PENDING,
         },
-      });
-
-      if (!room) {
-        throw new NotFoundException('Room not found');
-      }
-
-      if (room.status !== RoomStatus.WAITING) {
-        throw new ConflictException('Only waiting rooms can be joined');
-      }
-
-      if (room.mode === RoomMode.LOCAL_CPU && room.hostId !== userId) {
-        throw new ConflictException('Local CPU rooms cannot be joined');
-      }
-
-      const alreadyJoined = room.participants.some(
-        (participant) => participant.userId === userId,
-      );
-      if (!alreadyJoined) {
-        if (room.participants.length >= room.maxPlayers) {
-          throw new ConflictException('Room is full');
-        }
-
-        await tx.roomParticipant.create({
-          data: {
-            roomId: room.id,
-            userId,
-            isHost: false,
-            isReady: false,
-          },
-        });
-      }
-
-      await tx.roomInvitation.update({
-        where: { id: invitationId },
         data: { status: RoomInvitationStatus.ACCEPTED },
       });
+      if (updateResult.count === 0) {
+        throw new ConflictException(
+          'Invitation has already been accepted or declined',
+        );
+      }
 
-      acceptedRoomId = room.id;
+      acceptedRoomId = await this.joinRoomWithinTransaction(
+        tx,
+        invitation.roomId,
+        userId,
+      );
     });
 
     if (!acceptedRoomId) {
@@ -362,10 +309,19 @@ export class RoomsService {
       );
     }
 
-    await this.prisma.roomInvitation.update({
-      where: { id: invitationId },
+    const updateResult = await this.prisma.roomInvitation.updateMany({
+      where: {
+        id: invitationId,
+        inviteeId: userId,
+        status: RoomInvitationStatus.PENDING,
+      },
       data: { status: RoomInvitationStatus.DECLINED },
     });
+    if (updateResult.count === 0) {
+      throw new ConflictException(
+        'Invitation has already been accepted or declined',
+      );
+    }
 
     return { message: 'Room invitation declined.' };
   }
@@ -593,6 +549,58 @@ export class RoomsService {
     return room;
   }
 
+  private async joinRoomWithinTransaction(
+    tx: Prisma.TransactionClient,
+    roomId: string,
+    userId: string,
+  ) {
+    await tx.$queryRaw`
+      SELECT id FROM "GameRoom" WHERE id = ${roomId} FOR UPDATE
+    `;
+
+    const room = await tx.gameRoom.findUnique({
+      where: { id: roomId },
+      include: {
+        participants: {
+          select: { userId: true },
+        },
+      },
+    });
+
+    if (!room) {
+      throw new NotFoundException('Room not found');
+    }
+
+    if (room.status !== RoomStatus.WAITING) {
+      throw new ConflictException('Only waiting rooms can be joined');
+    }
+
+    if (room.mode === RoomMode.LOCAL_CPU && room.hostId !== userId) {
+      throw new ConflictException('Local CPU rooms cannot be joined');
+    }
+
+    if (
+      room.participants.some((participant) => participant.userId === userId)
+    ) {
+      return room.id;
+    }
+
+    if (room.participants.length >= room.maxPlayers) {
+      throw new ConflictException('Room is full');
+    }
+
+    await tx.roomParticipant.create({
+      data: {
+        roomId,
+        userId,
+        isHost: false,
+        isReady: false,
+      },
+    });
+
+    return room.id;
+  }
+
   private roomInclude() {
     return {
       host: {
@@ -702,7 +710,7 @@ export class RoomsService {
       roomId: invitation.roomId,
       inviterId: invitation.inviterId,
       inviteeId: invitation.inviteeId,
-      status: invitation.status.toLowerCase(),
+      status: this.toInvitationStatusResponse(invitation.status),
       createdAt: invitation.createdAt,
       updatedAt: invitation.updatedAt,
       inviter: {
@@ -736,6 +744,22 @@ export class RoomsService {
   private toModeResponse(mode: RoomMode): RoomModeResponse {
     if (mode === RoomMode.LOCAL_CPU) return 'local_cpu';
     return 'online';
+  }
+
+  private toInvitationStatusResponse(
+    status: RoomInvitationStatus,
+  ): InvitationStatusResponse {
+    if (status === RoomInvitationStatus.PENDING) return 'pending';
+    if (status === RoomInvitationStatus.ACCEPTED) return 'accepted';
+    if (status === RoomInvitationStatus.DECLINED) return 'declined';
+    return 'expired';
+  }
+
+  private isUniqueConstraintError(error: unknown) {
+    return (
+      error instanceof Prisma.PrismaClientKnownRequestError &&
+      error.code === 'P2002'
+    );
   }
 
   private assertStartable(room: RoomWithParticipants) {

@@ -179,4 +179,5 @@ model RoomInvitation {
   @@index([inviteeId])
   @@index([status])
   @@index([inviteeId, status, createdAt])
+  @@unique([roomId, inviteeId, status])
 }

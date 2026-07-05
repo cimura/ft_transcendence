@@ -1,4 +1,4 @@
-export type NotificationType = 'friend_request' | 'game_invite'
+export type NotificationType = 'friend_request' | 'room_invitation'
 
 export interface NotificationActor {
   id: string
@@ -14,9 +14,9 @@ export interface FriendRequestNotification {
   friendRequestId: string
 }
 
-export interface GameInviteNotification {
+export interface RoomInvitationNotification {
   id: string
-  type: 'game_invite'
+  type: 'room_invitation'
   createdAt: string
   actor: NotificationActor
   room: {
@@ -28,4 +28,4 @@ export interface GameInviteNotification {
 
 export type NotificationItem =
   | FriendRequestNotification
-  | GameInviteNotification
+  | RoomInvitationNotification

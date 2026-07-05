@@ -23,8 +23,8 @@ export class NotificationResponseDto {
   @ApiProperty()
   id!: string;
 
-  @ApiProperty({ enum: ['friend_request', 'game_invite'] })
-  type!: 'friend_request' | 'game_invite';
+  @ApiProperty({ enum: ['friend_request', 'room_invitation'] })
+  type!: 'friend_request' | 'room_invitation';
 
   @ApiProperty()
   createdAt!: string;

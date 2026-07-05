@@ -6,6 +6,8 @@ import {
 import { PrismaService } from '../prisma.service';
 import { NotificationResponseDto } from './dto/notification-response.dto';
 
+const NOTIFICATION_QUERY_LIMIT = 50;
+
 @Injectable()
 export class NotificationsService {
   constructor(private readonly prisma: PrismaService) {}
@@ -26,6 +28,8 @@ export class NotificationsService {
             },
           },
         },
+        orderBy: { createdAt: 'desc' },
+        take: NOTIFICATION_QUERY_LIMIT,
       }),
       this.prisma.roomInvitation.findMany({
         where: {
@@ -47,6 +51,8 @@ export class NotificationsService {
             },
           },
         },
+        orderBy: { createdAt: 'desc' },
+        take: NOTIFICATION_QUERY_LIMIT,
       }),
     ]);
 
@@ -64,7 +70,7 @@ export class NotificationsService {
       })),
       ...roomInvitations.map((invitation) => ({
         id: invitation.id,
-        type: 'game_invite' as const,
+        type: 'room_invitation' as const,
         createdAt: invitation.createdAt.toISOString(),
         actor: {
           id: invitation.inviter.id,
