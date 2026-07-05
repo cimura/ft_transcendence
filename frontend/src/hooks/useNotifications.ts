@@ -4,7 +4,7 @@ import type { NotificationItem } from '../types/notification'
 
 export function useNotifications() {
   const [notifications, setNotifications] = useState<NotificationItem[]>([])
-  const [loading, setLoading] = useState(false)
+  const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
   const refetch = useCallback(async () => {
@@ -23,8 +23,29 @@ export function useNotifications() {
   }, [])
 
   useEffect(() => {
-    refetch()
-  }, [refetch])
+    let ignore = false
+
+    getNotifications()
+      .then((nextNotifications) => {
+        if (ignore) return
+        setNotifications(nextNotifications)
+        setError(null)
+      })
+      .catch((err) => {
+        if (ignore) return
+        setError(
+          err instanceof Error ? err.message : 'Failed to fetch notifications'
+        )
+      })
+      .finally(() => {
+        if (ignore) return
+        setLoading(false)
+      })
+
+    return () => {
+      ignore = true
+    }
+  }, [])
 
   return {
     notifications,
