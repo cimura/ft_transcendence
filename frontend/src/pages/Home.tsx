@@ -1,10 +1,14 @@
 import { useNavigate } from 'react-router-dom'
-import { useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import { useAuthStore } from '../stores/authStore'
+import { useLobbyStore } from '../stores/lobbyStore'
+import { createRoom } from '../api/rooms'
 
 export function Home() {
   const navigate = useNavigate()
   const { currentUser, fetchCurrentUser, loading } = useAuthStore()
+  const { setCurrentRoom, upsertRoom } = useLobbyStore()
+  const [isCreatingRoom, setIsCreatingRoom] = useState(false)
 
   useEffect(() => {
     if (!currentUser) {
@@ -23,6 +27,33 @@ export function Home() {
 
     if (fetchedUser) {
       navigate(`/profile/${fetchedUser.id}`)
+    }
+  }
+
+  const handleWaitingRoomClick = async () => {
+    if (isCreatingRoom) return
+
+    setIsCreatingRoom(true)
+    try {
+      let user = currentUser
+      if (!user) {
+        await fetchCurrentUser()
+        user = useAuthStore.getState().currentUser
+      }
+
+      const username = user?.displayName || user?.username || 'Player'
+      const room = await createRoom({
+        name: `${username} の部屋`,
+        maxPlayers: 2,
+      })
+
+      upsertRoom(room)
+      setCurrentRoom(room)
+      navigate(`/room/${room.id}`)
+    } catch (error) {
+      console.error('Failed to create waiting room:', error)
+    } finally {
+      setIsCreatingRoom(false)
     }
   }
 
@@ -50,10 +81,11 @@ export function Home() {
 
           {/* 中央: 待機場（メイン） */}
           <button
-            onClick={() => navigate('/lobby')}
+            onClick={handleWaitingRoomClick}
+            disabled={isCreatingRoom}
             className="rounded-3xl bg-black bg-opacity-70 px-16 py-12 text-4xl font-bold text-white transition-all hover:bg-opacity-90"
           >
-            待機場
+            {isCreatingRoom ? '作成中...' : '待機場'}
           </button>
 
           {/* 下段: 設定 */}

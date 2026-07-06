@@ -6,8 +6,15 @@ import { PlayerCard } from '../components/waitingRoom/PlayerCard'
 import { ChatPanel } from '../components/waitingRoom/ChatPanel'
 import { GameMapPreview } from '../components/game/preview/GameMapPreview'
 import { useAuthStore } from '../stores/authStore'
-import { leaveRoom } from '../api/rooms'
+import {
+  getRoom,
+  joinRoom,
+  leaveRoom,
+  setRoomReady,
+  startRoom,
+} from '../api/rooms'
 import { useLobbySocket } from '../hooks/useLobbySocket'
+import axios from 'axios'
 
 export function WaitingRoom() {
   const { roomId } = useParams<{ roomId: string }>()
@@ -15,18 +22,63 @@ export function WaitingRoom() {
   const { currentRoom, setCurrentRoom, removeRoom, upsertRoom } =
     useLobbyStore()
   const { currentUser, accessToken, fetchCurrentUser } = useAuthStore()
-  const [isReady, setIsReady] = useState(false)
+  const [isLoadingRoom, setIsLoadingRoom] = useState(true)
 
   const currentUserId = currentUser?.id
 
-  useLobbySocket()
+  useLobbySocket(roomId)
 
   useEffect(() => {
-    // ルーム情報がない場合はロビーへ戻る
-    if (!currentRoom || currentRoom.id !== roomId) {
-      navigate('/lobby')
+    if (!roomId) {
+      navigate('/home', { replace: true })
+      return
     }
-  }, [currentRoom, roomId, navigate])
+
+    let cancelled = false
+
+    const loadRoom = async () => {
+      if (currentRoom?.id === roomId) {
+        setIsLoadingRoom(false)
+        return
+      }
+
+      try {
+        const joinedRoom = await joinRoom(roomId)
+        if (cancelled) return
+        upsertRoom(joinedRoom)
+        setCurrentRoom(joinedRoom)
+      } catch (error) {
+        if (axios.isAxiosError(error) && error.response?.status === 409) {
+          try {
+            const room = await getRoom(roomId)
+            if (cancelled) return
+            upsertRoom(room)
+            setCurrentRoom(room)
+            if (room.status === 'playing') {
+              navigate(`/game/${room.id}`, { replace: true })
+            }
+          } catch (refreshError) {
+            console.error('Failed to refresh room:', refreshError)
+            if (!cancelled) navigate('/home', { replace: true })
+          }
+          return
+        }
+
+        console.error('Failed to join room:', error)
+        if (!cancelled) navigate('/home', { replace: true })
+      } finally {
+        if (!cancelled) {
+          setIsLoadingRoom(false)
+        }
+      }
+    }
+
+    void loadRoom()
+
+    return () => {
+      cancelled = true
+    }
+  }, [currentRoom?.id, navigate, roomId, setCurrentRoom, upsertRoom])
 
   useEffect(() => {
     if (!currentUser) {
@@ -34,7 +86,17 @@ export function WaitingRoom() {
     }
   }, [currentUser, fetchCurrentUser])
 
-  if (!currentRoom || !roomId) {
+  useEffect(() => {
+    if (
+      currentRoom &&
+      currentRoom.id === roomId &&
+      currentRoom.status === 'playing'
+    ) {
+      navigate(`/game/${currentRoom.id}`, { replace: true })
+    }
+  }, [currentRoom, navigate, roomId])
+
+  if (!currentRoom || !roomId || isLoadingRoom) {
     return null
   }
 
@@ -42,26 +104,35 @@ export function WaitingRoom() {
     (p) => p.userId === currentUserId
   )
   const isHost = currentPlayer?.isHost || false
+  const isReady = currentPlayer?.isReady || false
   const allReady = currentRoom.players.every((p) => p.isReady)
-  // TODO: バックエンド接続後は2人以上など正式な開始条件に戻す
-  const canStart = isHost && allReady && currentRoom.players.length >= 1
+  const isLocalCpu = currentRoom.mode === 'local_cpu'
+  const hasEnoughPlayers = isLocalCpu
+    ? currentRoom.players.length === 1
+    : currentRoom.players.length === currentRoom.maxPlayers
+  const canStart = isHost && allReady && hasEnoughPlayers
 
   // toggle ready/unready
-  const handleToggleReady = () => {
-    setIsReady(!isReady)
-    console.log('Ready状態を切り替え:', isReady)
-    // TODO: WebSocketでサーバーに送信
-    // socket.emit('room:ready', { roomId: currentRoom.id })
+  const handleToggleReady = async () => {
+    try {
+      const room = await setRoomReady(currentRoom.id, !isReady)
+      upsertRoom(room)
+      setCurrentRoom(room)
+    } catch (error) {
+      console.error('Failed to update ready state:', error)
+    }
   }
 
   // start game
-  const handleStartGame = () => {
-    console.log('ゲーム開始')
-    const playingRoom = { ...currentRoom, status: 'playing' as const }
-    setCurrentRoom(playingRoom)
-    navigate(`/game/${currentRoom.id}`)
-    // TODO: WebSocketでサーバーに送信
-    // socket.emit('room:start', { roomId: currentRoom.id })
+  const handleStartGame = async () => {
+    try {
+      const room = await startRoom(currentRoom.id)
+      upsertRoom(room)
+      setCurrentRoom(room)
+      navigate(`/game/${room.id}`)
+    } catch (error) {
+      console.error('Failed to start game:', error)
+    }
   }
 
   // leave room
@@ -78,7 +149,7 @@ export function WaitingRoom() {
       }
 
       setCurrentRoom(null)
-      navigate('/lobby')
+      navigate('/home')
     } catch (error) {
       const status =
         typeof error === 'object' &&
@@ -93,7 +164,7 @@ export function WaitingRoom() {
       if (status === 403 || status === 404) {
         removeRoom(currentRoom.id)
         setCurrentRoom(null)
-        navigate('/lobby')
+        navigate('/home')
         return
       }
 
@@ -176,9 +247,9 @@ export function WaitingRoom() {
             </div>
 
             {/* ヒント */}
-            {isHost && !allReady && (
+            {isHost && (!allReady || !hasEnoughPlayers) && (
               <p className="mt-4 text-center text-sm text-gray-500">
-                全員が Ready になるとゲームを開始できます
+                満員になり、全員が Ready になるとゲームを開始できます
               </p>
             )}
           </section>

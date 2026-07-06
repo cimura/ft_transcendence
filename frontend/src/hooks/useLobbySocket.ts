@@ -5,26 +5,28 @@ import { useLobbyStore } from '../stores/lobbyStore'
 
 const BACKEND_URL = import.meta.env.VITE_BACKEND_URL || window.location.origin
 
-export function useLobbySocket() {
+export function useLobbySocket(roomId?: string) {
   const socketRef = useRef<Socket | null>(null)
 
   useEffect(() => {
     const { upsertRoom, removeRoom, setRooms } = useLobbyStore.getState()
+    const accessToken = localStorage.getItem('accessToken')
 
     // connect socket
     const socket = io(BACKEND_URL, {
       autoConnect: false,
-      // if auth needs
-      // auth: {
-      //   token: localStorage.getItem('token')
-      // }
+      auth: accessToken ? { token: `Bearer ${accessToken}` } : undefined,
     })
     socketRef.current = socket
 
     // 接続成功
     socket.on('connect', () => {
       console.log('[Socket] 接続成功:', socket.id)
-      socket.emit('lobby:join') // ロビーに入室
+      if (roomId) {
+        socket.emit('room:join', { roomId })
+      } else {
+        socket.emit('lobby:join') // ロビーに入室
+      }
     })
 
     // 接続エラー
@@ -73,8 +75,10 @@ export function useLobbySocket() {
     // クリーンアップ
     return () => {
       console.log('[Socket] クリーンアップ:', socket.id)
-      socket.emit('lobby:leave')
+      if (!roomId) {
+        socket.emit('lobby:leave')
+      }
       socket.disconnect()
     }
-  }, [])
+  }, [roomId])
 }

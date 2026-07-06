@@ -174,27 +174,66 @@ export class RoomsService {
   }
 
   async leave(roomId: string, userId: string) {
-    const room = await this.getRoomOrThrow(roomId);
+    const result = await this.prisma.$transaction(async (tx) => {
+      await tx.$queryRaw`
+        SELECT id FROM "GameRoom" WHERE id = ${roomId} FOR UPDATE
+      `;
 
-    if (room.status !== RoomStatus.WAITING) {
-      throw new ConflictException('Only waiting rooms can be left');
-    }
+      const room = await tx.gameRoom.findUnique({
+        where: { id: roomId },
+        include: this.roomInclude(),
+      });
 
-    const participant = room.participants.find(
-      (item) => item.userId === userId,
-    );
-    if (!participant) {
-      throw new ForbiddenException('You are not a participant of this room');
-    }
+      if (!room) {
+        throw new NotFoundException('Room not found');
+      }
 
-    if (participant.isHost) {
-      await this.prisma.gameRoom.delete({ where: { id: roomId } });
+      if (room.status !== RoomStatus.WAITING) {
+        throw new ConflictException('Only waiting rooms can be left');
+      }
+
+      const participant = room.participants.find(
+        (item) => item.userId === userId,
+      );
+      if (!participant) {
+        throw new ForbiddenException('You are not a participant of this room');
+      }
+
+      const remainingParticipants = room.participants.filter(
+        (item) => item.userId !== userId,
+      );
+
+      if (participant.isHost && remainingParticipants.length === 0) {
+        await tx.gameRoom.delete({ where: { id: roomId } });
+        return { deleted: true as const, roomId };
+      }
+
+      await tx.roomParticipant.delete({
+        where: { roomId_userId: { roomId, userId } },
+      });
+
+      if (participant.isHost) {
+        const nextHost = remainingParticipants[0];
+        await tx.roomParticipant.updateMany({
+          where: { roomId },
+          data: { isHost: false },
+        });
+        await tx.roomParticipant.update({
+          where: { roomId_userId: { roomId, userId: nextHost.userId } },
+          data: { isHost: true, isReady: true },
+        });
+        await tx.gameRoom.update({
+          where: { id: roomId },
+          data: { hostId: nextHost.userId },
+        });
+      }
+
+      return { deleted: false as const, roomId };
+    });
+
+    if (result.deleted) {
       return { deleted: true, roomId };
     }
-
-    await this.prisma.roomParticipant.delete({
-      where: { roomId_userId: { roomId, userId } },
-    });
 
     return this.findOne(roomId);
   }
