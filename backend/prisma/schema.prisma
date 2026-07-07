@@ -9,20 +9,22 @@ datasource db {
 }
 
 model User {
-  id                     String             @id @default(uuid())
-  email                  String             @unique
-  username               String             @unique
-  passwordHash           String
-  displayName            String?
-  avatarUrl              String?
-  createdAt              DateTime           @default(now())
-  updatedAt              DateTime           @updatedAt
-  sentFriendRequests     Friendship[]       @relation("FriendRequester")
-  receivedFriendRequests Friendship[]       @relation("FriendReceiver")
-  matchParticipants      MatchParticipant[]
-  hostedRooms            GameRoom[]         @relation("RoomHost")
-  roomParticipants       RoomParticipant[]
-  roomMessages           RoomMessage[]
+  id                      String             @id @default(uuid())
+  email                   String             @unique
+  username                String             @unique
+  passwordHash            String
+  displayName             String?
+  avatarUrl               String?
+  createdAt               DateTime           @default(now())
+  updatedAt               DateTime           @updatedAt
+  sentFriendRequests      Friendship[]       @relation("FriendRequester")
+  receivedFriendRequests  Friendship[]       @relation("FriendReceiver")
+  matchParticipants       MatchParticipant[]
+  hostedRooms             GameRoom[]         @relation("RoomHost")
+  roomParticipants        RoomParticipant[]
+  roomMessages            RoomMessage[]
+  sentRoomInvitations     RoomInvitation[]   @relation("RoomInvitationInviter")
+  receivedRoomInvitations RoomInvitation[]   @relation("RoomInvitationInvitee")
 }
 
 enum FriendRequestStatus {
@@ -99,6 +101,13 @@ enum RoomMode {
   LOCAL_CPU
 }
 
+enum RoomInvitationStatus {
+  PENDING
+  ACCEPTED
+  DECLINED
+  EXPIRED
+}
+
 model GameRoom {
   id               String     @id @default(uuid())
   gameId           String
@@ -116,6 +125,7 @@ model GameRoom {
   host         User              @relation("RoomHost", fields: [hostId], references: [id], onDelete: Cascade)
   participants RoomParticipant[]
   messages     RoomMessage[]
+  invitations  RoomInvitation[]
 
   @@index([gameId])
   @@index([hostId])
@@ -149,4 +159,25 @@ model RoomMessage {
 
   @@index([roomId, createdAt])
   @@index([senderId])
+}
+
+model RoomInvitation {
+  id        String               @id @default(uuid())
+  roomId    String
+  inviterId String
+  inviteeId String
+  status    RoomInvitationStatus @default(PENDING)
+  createdAt DateTime             @default(now())
+  updatedAt DateTime             @updatedAt
+
+  room    GameRoom @relation(fields: [roomId], references: [id], onDelete: Cascade)
+  inviter User     @relation("RoomInvitationInviter", fields: [inviterId], references: [id], onDelete: Cascade)
+  invitee User     @relation("RoomInvitationInvitee", fields: [inviteeId], references: [id], onDelete: Cascade)
+
+  @@index([roomId])
+  @@index([inviterId])
+  @@index([inviteeId])
+  @@index([status])
+  @@index([inviteeId, status, createdAt])
+  @@unique([roomId, inviteeId, status])
 }

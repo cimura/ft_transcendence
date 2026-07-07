@@ -3,7 +3,7 @@ import { useNavigate, useParams } from 'react-router-dom'
 import { Button } from '../components/common/Button'
 import { GameCanvas } from '../components/game/GameCanvas'
 import { GameResultOverlay } from '../components/game/GameResultOverlay'
-import { useLobbyStore } from '../stores/lobbyStore'
+import { useRoomStore } from '../stores/roomStore'
 import { useGameStore } from '../stores/gameStore'
 import type { PlayerSnapshot } from '@ft_transcendence/shared/game-events.types'
 import { getRoom } from '../api/rooms'
@@ -11,7 +11,7 @@ import { getRoom } from '../api/rooms'
 export function GameRoomPage() {
   const { roomId } = useParams<{ roomId: string }>()
   const navigate = useNavigate()
-  const { currentRoom, rooms, setCurrentRoom } = useLobbyStore()
+  const { currentRoom, rooms, setCurrentRoom } = useRoomStore()
 
   const gameState = useGameStore((state) => state.gameState)
 
@@ -60,7 +60,14 @@ export function GameRoomPage() {
     return () => {
       cancelled = true
     }
-  }, [navigate, roomId, rooms, setCurrentRoom, currentRoom?.id])
+  }, [
+    navigate,
+    roomId,
+    rooms,
+    setCurrentRoom,
+    currentRoom?.id,
+    currentRoom?.status,
+  ])
 
   if (!currentRoom) {
     return null

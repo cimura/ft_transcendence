@@ -92,21 +92,6 @@ export class RoomsGateway implements OnGatewayConnection, OnGatewayDisconnect {
     }
   }
 
-  @SubscribeMessage('lobby:join')
-  async handleJoinLobby(@ConnectedSocket() client: RoomSocket) {
-    await client.join('lobby');
-    const rooms = await this.roomsService.findAll('waiting');
-    client.emit('lobby:rooms', rooms);
-    console.log(`[RoomsGateway] lobby:join ${client.id}`);
-    console.log(`[RoomsGateway] sent lobby:rooms count=${rooms.length}`);
-  }
-
-  @SubscribeMessage('lobby:leave')
-  async handleLeaveLobby(@ConnectedSocket() client: RoomSocket) {
-    await client.leave('lobby');
-    console.log(`[RoomsGateway] lobby:leave ${client.id}`);
-  }
-
   @SubscribeMessage('room:join')
   async handleJoinRoom(
     @ConnectedSocket() client: RoomSocket,
@@ -138,20 +123,13 @@ export class RoomsGateway implements OnGatewayConnection, OnGatewayDisconnect {
     console.log(`[RoomsGateway] room:leave ${client.id}`);
   }
 
-  emitRoomCreated(room: Awaited<ReturnType<RoomsService['create']>>) {
-    console.log(`[RoomsGateway] room:created ${room.id}`);
-    this.server.to('lobby').emit('room:created', room);
-  }
-
   emitRoomUpdated(room: Awaited<ReturnType<RoomsService['join']>>) {
     console.log(`[RoomsGateway] room:updated ${room.id}`);
-    this.server.to('lobby').emit('room:updated', room);
     this.server.to(room.id).emit('room:updated', room);
   }
 
   emitRoomDeleted(roomId: string) {
     console.log(`[RoomsGateway] room:deleted ${roomId}`);
-    this.server.to('lobby').emit('room:deleted', { roomId });
     this.server.to(roomId).emit('room:deleted', { roomId });
   }
 

@@ -37,7 +37,7 @@ export class GameService {
     const room = this.getOrCreateRoom(roomId);
     // TODO: playerIdを使ってusernameをデータベースから引っ張ってくる処理(一旦仮の'test-username'で統一)
     addPlayerToRoom(room, playerId, 'test-username');
-    // DEBUG: 2人での動作確認のための仮条件（本来はLobby側で管理）
+    // DEBUG: 2人での動作確認のための仮条件
     if (
       Object.keys(room.players).length >= MIN_PLAYERS_TO_START &&
       room.phase === 'waiting'
