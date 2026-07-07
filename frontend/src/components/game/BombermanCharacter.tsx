@@ -1,4 +1,4 @@
-import { forwardRef, useImperativeHandle, useRef } from 'react'
+import { forwardRef, useImperativeHandle, useRef, useEffect } from 'react'
 import { useFrame } from '@react-three/fiber'
 import { Box, Sphere } from '@react-three/drei'
 import type { Group, Mesh, Material } from 'three'
@@ -46,8 +46,22 @@ export const BombermanCharacter = forwardRef<Group, BombermanCharacterProps>(
     const leftLegRef = useRef<Group>(null)
     const rightLegRef = useRef<Group>(null)
     const lastPositionRef = useRef({ ...player.position })
+    const materialsRef = useRef<Material[]>([])
 
     useImperativeHandle(ref, () => groupRef.current as Group)
+
+    useEffect(() => {
+      if (groupRef.current) {
+        const materials: Material[] = []
+        groupRef.current.traverse((child) => {
+          const mesh = child as Mesh
+          if (mesh.isMesh && mesh.material) {
+            materials.push(mesh.material as Material)
+          }
+        })
+        materialsRef.current = materials
+      }
+    }, [])
 
     useFrame((state) => {
       const group = groupRef.current
@@ -95,22 +109,16 @@ export const BombermanCharacter = forwardRef<Group, BombermanCharacterProps>(
             (MAX_OPACITY - MIN_OPACITY)
 
         // Traverse the 3D group and update opacity directly for performance
-        group.traverse((child) => {
-          const mesh = child as Mesh
-          if (mesh.isMesh && mesh.material) {
-            const material = mesh.material as Material
-            material.opacity = blinkOpacity
-          }
-        })
+        for (let i = 0; i < materialsRef.current.length; i++) {
+          materialsRef.current[i].opacity = blinkOpacity
+        }
       } else {
         // Guarantee opacity is fully reset if the player reconnects mid-blink
-        group.traverse((child) => {
-          const mesh = child as Mesh
-          if (mesh.isMesh && mesh.material) {
-            const material = mesh.material as Material
-            material.opacity = 1
+        for (let i = 0; i < materialsRef.current.length; i++) {
+          if (materialsRef.current[i].opacity !== 1) {
+            materialsRef.current[i].opacity = 1
           }
-        })
+        }
       }
 
       lastPositionRef.current = { ...player.position }
