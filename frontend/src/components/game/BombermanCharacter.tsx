@@ -133,7 +133,7 @@ export const BombermanCharacter = forwardRef<Group, BombermanCharacterProps>(
             color={player.color}
             roughness={BODY_ROUGHNESS}
             metalness={BODY_METALNESS}
-            transparent={player.isDisconnected}
+            transparent={true}
           />
         </Box>
         <Sphere
@@ -144,7 +144,7 @@ export const BombermanCharacter = forwardRef<Group, BombermanCharacterProps>(
             color="#dddddd"
             roughness={HEAD_ROUGHNESS}
             metalness={HEAD_METALNESS}
-            transparent={player.isDisconnected}
+            transparent={true}
           />
         </Sphere>
         <Box args={VISOR_SIZE} position={VISOR_POSITION}>
@@ -153,29 +153,20 @@ export const BombermanCharacter = forwardRef<Group, BombermanCharacterProps>(
             emissive={player.visorColor}
             emissiveIntensity={VISOR_EMISSIVE_INTENSITY}
             toneMapped={false}
-            transparent={player.isDisconnected}
+            transparent={true}
           />
         </Box>
         <Box args={BACKPACK_SIZE} position={BACKPACK_POSITION}>
-          <meshStandardMaterial
-            color="#222222"
-            transparent={player.isDisconnected}
-          />
+          <meshStandardMaterial color="#222222" transparent={true} />
         </Box>
         <group position={LEFT_LEG_POSITION} ref={leftLegRef}>
           <Box args={LEG_SIZE} position={LEG_MESH_POSITION}>
-            <meshStandardMaterial
-              color="#333333"
-              transparent={player.isDisconnected}
-            />
+            <meshStandardMaterial color="#333333" transparent={true} />
           </Box>
         </group>
         <group position={RIGHT_LEG_POSITION} ref={rightLegRef}>
           <Box args={LEG_SIZE} position={LEG_MESH_POSITION}>
-            <meshStandardMaterial
-              color="#333333"
-              transparent={player.isDisconnected}
-            />
+            <meshStandardMaterial color="#333333" transparent={true} />
           </Box>
         </group>
       </group>
