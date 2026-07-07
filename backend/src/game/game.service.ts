@@ -19,6 +19,7 @@ import {
   addPlayerToRoom,
   removePlayerFromRoom,
 } from './logic/session/player.logic';
+import { processTimeouts } from './logic/session/timeout.logic';
 
 const MIN_PLAYERS_TO_START = 2;
 
@@ -94,7 +95,6 @@ export class GameService {
   }
 
   handleGameLeave(playerId: string, clientId: string) {
-    const now = Date.now();
     for (const room of this.rooms.values()) {
       if (room.players[playerId]) {
         if (room.playerConnections[playerId].clientId !== clientId) {
@@ -106,7 +106,7 @@ export class GameService {
         }
         if (room.phase === 'waiting' || room.phase === 'ended') {
           // room から削除
-          this.executeRemovePlayer(room, playerId, now);
+          this.executeRemovePlayer(room, playerId);
         } else if (room.phase === 'countdown' || room.phase === 'playing') {
           if (!room.players[playerId].isDisconnected) {
             // 切断時の時間を保存（タイムアウト判定のため）
@@ -185,9 +185,10 @@ export class GameService {
         return false;
       }
       // タイムアウトかどうか
+      const connection = room.playerConnections[playerId];
+      if (!connection) return false;
       const isTimedOut =
-        Date.now() - room.playerConnections[playerId].lastActiveTime >=
-        DISCONNECT_TIMEOUT_MS;
+        Date.now() - connection.lastActiveTime >= DISCONNECT_TIMEOUT_MS;
       if (isTimedOut) {
         return false;
       }
@@ -219,12 +220,8 @@ export class GameService {
     return room;
   }
 
-  private executeRemovePlayer(
-    room: GameSession,
-    playerId: string,
-    now: number,
-  ) {
-    const result = removePlayerFromRoom(room, playerId, now);
+  private executeRemovePlayer(room: GameSession, playerId: string) {
+    const result = removePlayerFromRoom(room, playerId);
     this.logger.log(
       `Player left { roomId: '${room.roomId}', playerId: '${playerId}' }`,
     );
@@ -298,25 +295,14 @@ export class GameService {
       });
     }
 
+    let isForceDraw = false;
+
     if (
       room.disconnectedPlayers > 0 &&
       room.serverTick % GAME_TICK_RATE === 0
     ) {
-      for (const playerId in room.players) {
-        const player = room.players[playerId];
-        const connection = room.playerConnections[playerId];
-
-        if (player.alive && player.isDisconnected) {
-          if (now - connection.lastActiveTime >= DISCONNECT_TIMEOUT_MS) {
-            // 30秒経過したら自爆（死亡）扱いにする
-            player.alive = false;
-            room.stats[playerId].survivalTime = now - (room.startedAt || now);
-            this.logger.debug(
-              `Player eliminated { roomId: '${room.roomId}', playerId: '${playerId}' }`,
-            );
-          }
-        }
-      }
+      const timeoutResult = processTimeouts(room, now);
+      isForceDraw = timeoutResult.isAllDisconnectedTimeout;
     }
 
     this.server.to(room.roomId).emit('game:state', {
@@ -324,11 +310,11 @@ export class GameService {
       bombs: room.bombs,
     });
 
-    this.checkGameEnd(room, now);
+    this.checkGameEnd(room, now, isForceDraw);
   }
 
-  private checkGameEnd(room: GameSession, now: number) {
-    const endResult = evaluateGameEnd(room, now);
+  private checkGameEnd(room: GameSession, now: number, isForceDraw: boolean) {
+    const endResult = evaluateGameEnd(room, now, isForceDraw);
     if (!endResult) return;
 
     room.phase = 'ended';

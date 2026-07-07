@@ -48,7 +48,6 @@ export interface RemovePlayerResult {
 export function removePlayerFromRoom(
   room: GameSession,
   playerId: string,
-  now: number,
 ): RemovePlayerResult {
   const result: RemovePlayerResult = { isEmpty: false };
 

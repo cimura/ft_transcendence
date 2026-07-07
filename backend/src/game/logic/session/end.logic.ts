@@ -14,6 +14,7 @@ import type {
 export function evaluateGameEnd(
   room: GameSession,
   now: number,
+  isForceDraw: boolean,
 ): Parameters<ServerToClientEvents['game:end']>[0] | null {
   if (room.phase !== 'playing') return null;
 
@@ -26,10 +27,8 @@ export function evaluateGameEnd(
   // 1人のみのテストプレイ等の場合は、その1人が死んだら終了。
   const isGameOver =
     totalPlayers >= 2 ? livingPlayers.length <= 1 : livingPlayers.length === 0;
-  // 終了条件: 全員が切断して DISCONNECT_TIMEOUT_MS 以上経過していたら終了。
-  const isAllDisconnected = checkAllDisconnected(room, now);
 
-  if (!isGameOver && !isAllDisconnected) return null;
+  if (!isGameOver && !isForceDraw) return null;
 
   let winnerId: string | null = null;
   let isDraw = false;
