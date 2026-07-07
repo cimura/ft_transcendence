@@ -15,7 +15,7 @@ export const GameCountdownOverlay = memo(function GameCountdownOverlay() {
     }
 
     let animationFrameId: number
-    let timeoutId: NodeJS.Timeout
+    let timeoutId: number
 
     const updateDisplay = () => {
       const now = Date.now()
@@ -29,7 +29,7 @@ export const GameCountdownOverlay = memo(function GameCountdownOverlay() {
         setDisplay(null)
         setShowGo(true)
 
-        timeoutId = setTimeout(() => {
+        timeoutId = window.setTimeout(() => {
           setShowGo(false)
         }, 1000)
       }

@@ -54,19 +54,6 @@ export function evaluateGameEnd(
   };
 }
 
-function checkAllDisconnected(room: GameSession, now: number): boolean {
-  const totalPlayers = Object.keys(room.players).length;
-  if (
-    totalPlayers > 0 &&
-    room.disconnectedPlayers === totalPlayers &&
-    room.disconnectedAt !== 0 &&
-    now - room.disconnectedAt >= DISCONNECT_TIMEOUT_MS
-  ) {
-    return true;
-  }
-  return false;
-}
-
 function getSortedRankings(
   playersRecord: Record<string, PlayerStats>,
 ): PlayerRanking[] {
