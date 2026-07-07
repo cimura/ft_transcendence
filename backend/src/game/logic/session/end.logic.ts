@@ -1,4 +1,3 @@
-import { DISCONNECT_TIMEOUT_MS } from '../../constants/game-constants';
 import { GameSession } from '../../game.types';
 import type {
   PlayerStats,
