@@ -9,13 +9,13 @@ import {
   OnGatewayDisconnect,
 } from '@nestjs/websockets';
 import { Server, Socket } from 'socket.io';
-import { JwtService } from '@nestjs/jwt';
 import { GameService } from './game.service';
+import { SocketAuthService } from '../websocket/socket-auth.service';
+import { SocketPresenceService } from '../websocket/socket-presence.service';
 import type {
   ClientToServerEvents,
   ServerToClientEvents,
 } from '@ft_transcendence/shared/game-events.types';
-import type { JwtPayload } from '../auth/interfaces/jwt-payload.interface';
 
 interface ConnectionData {
   user: {
@@ -43,7 +43,8 @@ export class GameGateway
 
   constructor(
     private readonly gameService: GameService,
-    private readonly jwtService: JwtService,
+    private readonly socketAuthService: SocketAuthService,
+    private readonly socketPresenceService: SocketPresenceService,
   ) {}
 
   afterInit(server: Server<ClientToServerEvents, ServerToClientEvents>) {
@@ -51,21 +52,15 @@ export class GameGateway
   }
 
   handleConnection(client: GameSocket) {
-    try {
-      const authHeader = client.handshake.auth.token as string | undefined;
-      if (!authHeader || !authHeader.startsWith('Bearer ')) {
-        throw new Error('No token or invalid format');
-      }
-      const token = authHeader.split(' ')[1];
-      const payload = this.jwtService.verify<JwtPayload>(token);
-      client.data.user = {
-        id: payload.sub,
-      };
-      console.log(`[接続成功] ユーザーId: ${client.data.user.id}`);
-    } catch {
+    const user = this.socketAuthService.authenticate(client);
+    if (!user) {
       client.disconnect();
       console.log(`[接続失敗] JWT未認証`);
+      return;
     }
+
+    client.data.user = user;
+    console.log(`[接続成功] ユーザーId: ${client.data.user.id}`);
   }
 
   @SubscribeMessage('game:join')
@@ -79,9 +74,24 @@ export class GameGateway
 
     const previousRoomId = client.data.roomId;
     if (previousRoomId && previousRoomId !== data.roomId) {
+      const remaining = this.socketPresenceService.unregister({
+        namespace: 'game',
+        roomId: previousRoomId,
+        userId: user.id,
+        socketId: client.id,
+      });
+      if (remaining === 0) {
+        this.gameService.handleGameLeave(user.id);
+      }
       await client.leave(previousRoomId);
     }
 
+    this.socketPresenceService.register({
+      namespace: 'game',
+      roomId: data.roomId,
+      userId: user.id,
+      socketId: client.id,
+    });
     await client.join(data.roomId);
     client.data.roomId = data.roomId;
 
@@ -99,13 +109,20 @@ export class GameGateway
     client: GameSocket,
   ) {
     const roomId = client.data.roomId;
-    if (roomId) {
-      await client.leave(roomId);
-      client.data.roomId = undefined;
-    }
+    const userId = client.data.user?.id;
+    if (!roomId || !userId) return;
 
-    if (client.data.user) {
-      this.gameService.handleGameLeave(client.data.user.id);
+    await client.leave(roomId);
+    client.data.roomId = undefined;
+
+    const remaining = this.socketPresenceService.unregister({
+      namespace: 'game',
+      roomId,
+      userId,
+      socketId: client.id,
+    });
+    if (remaining === 0) {
+      this.gameService.handleGameLeave(userId);
     }
   }
 
@@ -140,8 +157,20 @@ export class GameGateway
   }
 
   handleDisconnect(client: GameSocket) {
-    if (client.data.user) {
-      this.gameService.handleGameLeave(client.data.user.id);
-    }
+    const roomId = client.data.roomId;
+    const userId = client.data.user?.id;
+    if (!roomId || !userId) return;
+
+    this.socketPresenceService.unregister({
+      namespace: 'game',
+      roomId,
+      userId,
+      socketId: client.id,
+    });
+    this.socketPresenceService.scheduleIfInactive(
+      { namespace: 'game', roomId, userId },
+      2000,
+      () => this.gameService.handleGameLeave(userId),
+    );
   }
 }

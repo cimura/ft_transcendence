@@ -2,11 +2,19 @@ import { useEffect, useRef } from 'react'
 import { io, Socket } from 'socket.io-client'
 import type { GameRoom } from '../types'
 import { useRoomStore } from '../stores/roomStore'
+import type {
+  RoomClientToServerEvents,
+  RoomServerToClientEvents,
+} from '@ft_transcendence/shared/room-events.types'
 
 const BACKEND_URL = import.meta.env.VITE_BACKEND_URL || window.location.origin
+const ROOMS_NAMESPACE = `${BACKEND_URL.replace(/\/$/, '')}/rooms`
 
 export function useRoomSocket(roomId?: string) {
-  const socketRef = useRef<Socket | null>(null)
+  const socketRef = useRef<Socket<
+    RoomServerToClientEvents,
+    RoomClientToServerEvents
+  > | null>(null)
 
   useEffect(() => {
     if (!roomId) return
@@ -14,7 +22,7 @@ export function useRoomSocket(roomId?: string) {
     const { upsertRoom, removeRoom } = useRoomStore.getState()
     const accessToken = localStorage.getItem('accessToken')
 
-    const socket = io(BACKEND_URL, {
+    const socket = io(ROOMS_NAMESPACE, {
       autoConnect: false,
       auth: accessToken ? { token: `Bearer ${accessToken}` } : undefined,
     })

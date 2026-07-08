@@ -2,6 +2,8 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { JwtService } from '@nestjs/jwt';
 import { GameGateway } from './game.gateway';
 import { GameService } from './game.service';
+import { SocketAuthService } from '../websocket/socket-auth.service';
+import { SocketPresenceService } from '../websocket/socket-presence.service';
 
 describe('GameGateway', () => {
   let gateway: GameGateway;
@@ -26,6 +28,8 @@ describe('GameGateway', () => {
             verify: jest.fn(),
           },
         },
+        SocketAuthService,
+        SocketPresenceService,
       ],
     }).compile();
 

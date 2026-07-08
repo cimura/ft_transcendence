@@ -12,6 +12,10 @@
     "./game-events.types": {
       "types": "./game-events.types.ts",
       "default": "./game-events.types.ts"
+    },
+    "./room-events.types": {
+      "types": "./room-events.types.ts",
+      "default": "./room-events.types.ts"
     }
   }
 }

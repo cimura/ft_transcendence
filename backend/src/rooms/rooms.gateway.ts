@@ -17,9 +17,13 @@ import {
   WebSocketServer,
 } from '@nestjs/websockets';
 import { Socket, Server } from 'socket.io';
-import { JwtService } from '@nestjs/jwt';
 import { RoomsService } from './rooms.service';
-import type { JwtPayload } from '../auth/interfaces/jwt-payload.interface';
+import { SocketAuthService } from '../websocket/socket-auth.service';
+import { SocketPresenceService } from '../websocket/socket-presence.service';
+import type {
+  RoomClientToServerEvents,
+  RoomServerToClientEvents,
+} from '@ft_transcendence/shared/room-events.types';
 
 type RoomSocketData = {
   user?: {
@@ -28,31 +32,38 @@ type RoomSocketData = {
   roomId?: string;
 };
 
-type RoomSocket = Socket & { data: RoomSocketData };
+type RoomSocket = Socket<
+  RoomClientToServerEvents,
+  RoomServerToClientEvents,
+  Record<string, never>,
+  RoomSocketData
+>;
 
-@WebSocketGateway()
+@WebSocketGateway({
+  namespace: '/rooms',
+  cors: { origin: '*' },
+})
 export class RoomsGateway implements OnGatewayConnection, OnGatewayDisconnect {
   @WebSocketServer()
-  server: Server;
-
-  private readonly pendingDisconnects = new Map<string, NodeJS.Timeout>();
+  server: Server<RoomClientToServerEvents, RoomServerToClientEvents>;
 
   constructor(
     private readonly roomsService: RoomsService,
-    private readonly jwtService: JwtService,
+    private readonly socketAuthService: SocketAuthService,
+    private readonly socketPresenceService: SocketPresenceService,
   ) {}
 
   handleConnection(client: RoomSocket) {
-    const authHeader = client.handshake.auth.token as string | undefined;
-    if (authHeader?.startsWith('Bearer ')) {
-      try {
-        const token = authHeader.split(' ')[1];
-        const payload = this.jwtService.verify<JwtPayload>(token);
-        client.data.user = { id: payload.sub };
-      } catch {
-        console.log(`[RoomsGateway] invalid token: ${client.id}`);
-      }
+    const user = this.socketAuthService.authenticate(client);
+    if (!user) {
+      client.disconnect();
+      console.log(
+        `[RoomsGateway] rejected unauthenticated socket: ${client.id}`,
+      );
+      return;
     }
+
+    client.data.user = user;
     console.log(`[RoomsGateway] connected: ${client.id}`);
   }
 
@@ -62,14 +73,17 @@ export class RoomsGateway implements OnGatewayConnection, OnGatewayDisconnect {
     const userId = client.data.user?.id;
     if (!roomId || !userId) return;
 
-    const key = this.disconnectKey(roomId, userId);
-    if (this.pendingDisconnects.has(key)) return;
-
-    const timer = setTimeout(() => {
-      this.pendingDisconnects.delete(key);
-      void this.leaveRoomAfterDisconnect(roomId, userId);
-    }, 2000);
-    this.pendingDisconnects.set(key, timer);
+    this.socketPresenceService.unregister({
+      namespace: 'rooms',
+      roomId,
+      userId,
+      socketId: client.id,
+    });
+    this.socketPresenceService.scheduleIfInactive(
+      { namespace: 'rooms', roomId, userId },
+      2000,
+      () => this.leaveRoomAfterDisconnect(roomId, userId),
+    );
   }
 
   private async leaveRoomAfterDisconnect(roomId: string, userId: string) {
@@ -98,19 +112,30 @@ export class RoomsGateway implements OnGatewayConnection, OnGatewayDisconnect {
     @MessageBody() data: { roomId?: string },
   ) {
     if (!data.roomId) return;
+    const userId = client.data.user?.id;
+    if (!userId) {
+      client.emit('room:error', { message: 'Unauthenticated socket' });
+      client.disconnect();
+      return;
+    }
+
     if (client.data.roomId && client.data.roomId !== data.roomId) {
+      this.socketPresenceService.unregister({
+        namespace: 'rooms',
+        roomId: client.data.roomId,
+        userId,
+        socketId: client.id,
+      });
       await client.leave(client.data.roomId);
     }
+
     client.data.roomId = data.roomId;
-    const userId = client.data.user?.id;
-    if (userId) {
-      const key = this.disconnectKey(data.roomId, userId);
-      const timer = this.pendingDisconnects.get(key);
-      if (timer) {
-        clearTimeout(timer);
-        this.pendingDisconnects.delete(key);
-      }
-    }
+    this.socketPresenceService.register({
+      namespace: 'rooms',
+      roomId: data.roomId,
+      userId,
+      socketId: client.id,
+    });
     await client.join(data.roomId);
     console.log(`[RoomsGateway] room:join ${client.id} room=${data.roomId}`);
   }
@@ -118,6 +143,15 @@ export class RoomsGateway implements OnGatewayConnection, OnGatewayDisconnect {
   @SubscribeMessage('room:leave')
   async handleLeaveRoom(@ConnectedSocket() client: RoomSocket) {
     if (!client.data.roomId) return;
+    const userId = client.data.user?.id;
+    if (userId) {
+      this.socketPresenceService.unregister({
+        namespace: 'rooms',
+        roomId: client.data.roomId,
+        userId,
+        socketId: client.id,
+      });
+    }
     await client.leave(client.data.roomId);
     client.data.roomId = undefined;
     console.log(`[RoomsGateway] room:leave ${client.id}`);
@@ -131,9 +165,5 @@ export class RoomsGateway implements OnGatewayConnection, OnGatewayDisconnect {
   emitRoomDeleted(roomId: string) {
     console.log(`[RoomsGateway] room:deleted ${roomId}`);
     this.server.to(roomId).emit('room:deleted', { roomId });
-  }
-
-  private disconnectKey(roomId: string, userId: string) {
-    return `${roomId}:${userId}`;
   }
 }
