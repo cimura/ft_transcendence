@@ -7,19 +7,21 @@ import {
 } from '@ft_transcendence/shared/game-events.types';
 import {
   GAME_COUNTDOWN_SEC,
-  GAME_TICK_RATE,
   DISCONNECT_TIMEOUT_MS,
 } from './constants/game-constants';
 import { GameSession } from './game.types';
+import { advanceGameTick } from './logic/core/loop.logic';
 import { createInitialMap } from './logic/setup/map.logic';
-import { processExplosions, tryPlaceBomb } from './logic/mechanics/bomb.logic';
-import { updatePlayerMovements } from './logic/mechanics/movement.logic';
-import { evaluateGameEnd } from './logic/session/end.logic';
+import {
+  startCountdownLogic,
+  startGameLoopLogic,
+  stopGameLoopLogic,
+} from './logic/session/lifecycle.logic';
 import {
   addPlayerToRoom,
   removePlayerFromRoom,
 } from './logic/session/player.logic';
-import { processTimeouts } from './logic/session/timeout.logic';
+import { tryPlaceBomb } from './logic/mechanics/bomb.logic';
 
 const MIN_PLAYERS_TO_START = 2;
 
@@ -66,6 +68,10 @@ export class GameService {
           // 再接続時はクライアントが送るseqが初期値に戻るため、サーバー側も初期化する
           room.playerInputs[playerId].seq = 0;
         }
+        this.server.to(roomId).emit('game:state', {
+          players: room.players,
+          bombs: room.bombs,
+        });
         this.logger.debug(
           `Player reconnected { roomId: '${room.roomId}', playerId: '${playerId}' }`,
         );
@@ -83,14 +89,41 @@ export class GameService {
   }
 
   handleGameStart(roomId: string) {
-    // すでにRoomに参加したあとの処理なので、roomが存在する前提で扱う
     const room = this.getOrCreateRoom(roomId);
-    // DEBUG: 2人での動作確認のための仮条件（本来はLobby側で管理）
+
+    // DEBUG: 2人での動作確認のための仮条件
     if (
-      Object.keys(room.players).length >= MIN_PLAYERS_TO_START &&
-      room.phase === 'waiting'
+      Object.keys(room.players).length >= MIN_PLAYERS_TO_START ||
+      room.phase !== 'waiting'
     ) {
-      this.startCountdown(room.roomId);
+      return;
+    }
+
+    try {
+      startCountdownLogic(room, () => {
+        try {
+          if (!this.rooms.has(room.roomId)) return;
+
+          startGameLoopLogic(room, () => this.onGameTick(room));
+
+          this.server.to(room.roomId).emit('game:playing');
+          this.logger.log(`Game loop started { roomId: '${room.roomId}' }`);
+        } catch (error) {
+          this.handleGameError(
+            room.roomId,
+            error,
+            'Failed to start game loop.',
+          );
+        }
+      });
+
+      const startsAt = Date.now() + GAME_COUNTDOWN_SEC * 1000;
+      this.server
+        .to(roomId)
+        .emit('game:countdown', { seconds: GAME_COUNTDOWN_SEC, startsAt });
+      this.logger.log(`Countdown started { roomId: '${room.roomId}' }`);
+    } catch (error) {
+      this.handleGameError(roomId, error, 'Failed to start countdown.');
     }
   }
 
@@ -153,6 +186,20 @@ export class GameService {
     if (bomb) {
       this.server.to(roomId).emit('bomb:spawn', { bomb });
     }
+  }
+
+  private handleGameError(
+    roomId: string,
+    error: unknown,
+    defaultMessage: string,
+  ) {
+    const errorMessage =
+      error instanceof Error ? error.message : 'Unknown error';
+    this.logger.error(
+      `${defaultMessage} { roomId: '${roomId}', error: '${errorMessage}' }`,
+    );
+    this.server.to(roomId).emit('game:error', { message: defaultMessage });
+    this.rooms.delete(roomId);
   }
 
   private checkRoomEntryPermission(roomId: string, playerId: string): boolean {
@@ -220,89 +267,13 @@ export class GameService {
     return room;
   }
 
-  private executeRemovePlayer(room: GameSession, playerId: string) {
-    const result = removePlayerFromRoom(room, playerId);
-    this.logger.log(
-      `Player left { roomId: '${room.roomId}', playerId: '${playerId}' }`,
-    );
-
-    if (result.isEmpty) {
-      this.stopGameLoop(room.roomId);
-      if (room.countdownTimerId) {
-        clearTimeout(room.countdownTimerId);
-        room.countdownTimerId = undefined;
-      }
-      this.logger.log(`Room deleted { roomId: '${room.roomId}' }`);
-      this.rooms.delete(room.roomId);
-    }
-  }
-
-  private startCountdown(roomId: string) {
-    const room = this.rooms.get(roomId);
-    if (!room) return;
-
-    room.phase = 'countdown';
-
-    const startsAt = Date.now() + GAME_COUNTDOWN_SEC * 1000;
-
-    this.server.to(roomId).emit('game:countdown', {
-      seconds: GAME_COUNTDOWN_SEC,
-      startsAt: startsAt,
-    });
-    this.logger.debug(`Countdown started { roomId: '${room.roomId}' }`);
-
-    room.countdownTimerId = setTimeout(() => {
-      room.countdownTimerId = undefined;
-      this.startGameLoop(roomId);
-      this.server.to(roomId).emit('game:playing');
-    }, GAME_COUNTDOWN_SEC * 1000);
-  }
-
-  private startGameLoop(roomId: string) {
-    const room = this.rooms.get(roomId);
-    if (!room || room.timerId) return;
-
-    if (
-      room.phase !== 'countdown' ||
-      Object.keys(room.players).length < MIN_PLAYERS_TO_START
-    ) {
-      room.phase = 'waiting';
-      return;
-    }
-
-    room.phase = 'playing';
-    room.startedAt = Date.now();
-
-    room.timerId = setInterval(() => {
-      this.updateGame(room);
-    }, 1000 / GAME_TICK_RATE);
-    this.logger.log(`Game loop started { roomId: '${roomId}' }`);
-  }
-
-  private updateGame(room: GameSession) {
-    room.serverTick++;
+  private onGameTick(room: GameSession) {
     const now = Date.now();
 
-    updatePlayerMovements(room);
-    const explosionResults = processExplosions(room, now);
+    const result = advanceGameTick(room, now);
 
-    for (const res of explosionResults) {
-      this.server.to(room.roomId).emit('bomb:explode', {
-        bombId: res.bombId,
-        affectedTiles: res.affectedTiles,
-        destroyedBlocks: res.destroyedBlocks,
-        damagedPlayerIds: res.damagedPlayerIds,
-      });
-    }
-
-    let isForceDraw = false;
-
-    if (
-      room.disconnectedPlayers > 0 &&
-      room.serverTick % GAME_TICK_RATE === 0
-    ) {
-      const timeoutResult = processTimeouts(room, now);
-      isForceDraw = timeoutResult.isAllDisconnectedTimeout;
+    for (const exp of result.explosions) {
+      this.server.to(room.roomId).emit('bomb:explode', { ...exp });
     }
 
     this.server.to(room.roomId).emit('game:state', {
@@ -310,32 +281,28 @@ export class GameService {
       bombs: room.bombs,
     });
 
-    this.checkGameEnd(room, now, isForceDraw);
+    if (result.isGameEnded && result.endResult) {
+      stopGameLoopLogic(room);
+      this.server.to(room.roomId).emit('game:end', result.endResult);
+      this.rooms.delete(room.roomId);
+      this.logger.log(`Room deleted { roomId: '${room.roomId}' }`);
+    }
   }
 
-  private checkGameEnd(room: GameSession, now: number, isForceDraw: boolean) {
-    const endResult = evaluateGameEnd(room, now, isForceDraw);
-    if (!endResult) return;
+  private executeRemovePlayer(room: GameSession, playerId: string) {
+    const result = removePlayerFromRoom(room, playerId);
+    this.logger.log(
+      `Player left { roomId: '${room.roomId}', playerId: '${playerId}' }`,
+    );
 
-    room.phase = 'ended';
-    this.stopGameLoop(room.roomId);
-
-    this.server.to(room.roomId).emit('game:end', {
-      winnerId: endResult.winnerId,
-      isDraw: endResult.isDraw,
-      rankings: endResult.rankings,
-    });
-
-    this.logger.log(`Room deleted { roomId: '${room.roomId}' }`);
-    this.rooms.delete(room.roomId);
-  }
-
-  private stopGameLoop(roomId: string) {
-    const room = this.rooms.get(roomId);
-    if (room && room.timerId) {
-      clearInterval(room.timerId);
-      room.timerId = undefined;
-      this.logger.log(`Game loop stopped { roomId: '${roomId}' }`);
+    if (result.isEmpty) {
+      stopGameLoopLogic(room);
+      if (room.countdownTimerId) {
+        clearTimeout(room.countdownTimerId);
+        room.countdownTimerId = undefined;
+      }
+      this.rooms.delete(room.roomId);
+      this.logger.log(`Room deleted { roomId: '${room.roomId}' }`);
     }
   }
 }

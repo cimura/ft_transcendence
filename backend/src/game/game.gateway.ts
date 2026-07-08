@@ -7,7 +7,9 @@ import {
   OnGatewayInit,
   OnGatewayConnection,
   OnGatewayDisconnect,
+  WsException,
 } from '@nestjs/websockets';
+import { Logger } from '@nestjs/common';
 import { Server, Socket } from 'socket.io';
 import { JwtService } from '@nestjs/jwt';
 import { GameService } from './game.service';
@@ -38,6 +40,8 @@ type GameSocket = Socket<
 export class GameGateway
   implements OnGatewayInit, OnGatewayConnection, OnGatewayDisconnect
 {
+  private static readonly brand = 'GameService';
+  private readonly logger = new Logger(GameGateway.brand);
   @WebSocketServer()
   server: Server<ClientToServerEvents, ServerToClientEvents>;
 
@@ -96,9 +100,13 @@ export class GameGateway
       // ゲーム開始条件が満たされた場合のみゲームループを開始させる
       this.gameService.handleGameStart(data.roomId);
     } catch (error) {
+      this.logger.warn(
+        `Failed to join room { roomId: '${data.roomId}', userId: ${user.id} }`,
+        error instanceof Error ? error.stack : undefined,
+      );
       client.emit('game:error', {
         message:
-          error instanceof Error ? error.message : 'Cannot join the room',
+          error instanceof WsException ? error.message : 'Cannot join the room',
       });
     }
   }
