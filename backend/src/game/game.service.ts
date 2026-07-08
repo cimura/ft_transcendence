@@ -20,6 +20,8 @@ import {
 import {
   addPlayerToRoom,
   removePlayerFromRoom,
+  reconnectPlayerToRoom,
+  disconnectPlayerFromRoom,
 } from './logic/session/player.logic';
 import { tryPlaceBomb } from './logic/mechanics/bomb.logic';
 
@@ -46,28 +48,24 @@ export class GameService {
       throw new WsException('Cannot join the room');
     }
     const room = this.getOrCreateRoom(roomId);
-    const player = room.players[playerId];
     if (room.phase === 'waiting') {
+      // 新規プレイヤーの参加
       // TODO: playerIdを使ってusernameをデータベースから引っ張ってくる処理(一旦仮の'test-username'で統一)
-      addPlayerToRoom(room, playerId, clientId, 'test-username');
-      this.server.to(room.roomId).emit('game:state', {
-        players: room.players,
-        bombs: room.bombs,
-      });
-      this.logger.log(
-        `Player joined { roomId: '${room.roomId}', playerId: '${playerId}' }`,
-      );
+      const result = addPlayerToRoom(room, playerId, clientId, 'test-username');
+      if (result.success) {
+        this.server.to(room.roomId).emit('game:state', {
+          players: room.players,
+          bombs: room.bombs,
+        });
+        this.logger.log(
+          `Player joined { roomId: '${room.roomId}', playerId: '${playerId}' }`,
+        );
+      }
     } else if (room.phase === 'countdown' || room.phase === 'playing') {
-      if (player && player.isDisconnected) {
-        player.isDisconnected = false;
-        room.playerConnections[playerId].clientId = clientId;
-        room.playerConnections[playerId].lastActiveTime = 0;
-        room.disconnectedPlayers -= 1;
-        room.disconnectedAt = 0; // 誰か一人でも戻ってきたらルームタイマーをリセット
-        if (room.playerInputs[playerId]) {
-          // 再接続時はクライアントが送るseqが初期値に戻るため、サーバー側も初期化する
-          room.playerInputs[playerId].seq = 0;
-        }
+      // 既存プレイヤーの再接続
+      const result = reconnectPlayerToRoom(room, playerId, clientId);
+
+      if (result.success) {
         this.server.to(roomId).emit('game:state', {
           players: room.players,
           bombs: room.bombs,
@@ -93,7 +91,7 @@ export class GameService {
 
     // DEBUG: 2人での動作確認のための仮条件
     if (
-      Object.keys(room.players).length >= MIN_PLAYERS_TO_START ||
+      Object.keys(room.players).length < MIN_PLAYERS_TO_START ||
       room.phase !== 'waiting'
     ) {
       return;
@@ -137,23 +135,28 @@ export class GameService {
           );
           continue;
         }
+
         if (room.phase === 'waiting' || room.phase === 'ended') {
-          // room から削除
-          this.executeRemovePlayer(room, playerId);
+          // 完全に room から削除
+          const result = removePlayerFromRoom(room, playerId);
+
+          if (result.success) {
+            this.logger.log(
+              `Player left { roomId: '${room.roomId}', playerId: '${playerId}' }`,
+            );
+            if (result.isEmpty) {
+              this.cleanupRoom(room.roomId);
+            }
+          }
         } else if (room.phase === 'countdown' || room.phase === 'playing') {
-          if (!room.players[playerId].isDisconnected) {
-            // 切断時の時間を保存（タイムアウト判定のため）
-            room.players[playerId].isDisconnected = true;
-            room.playerConnections[playerId].clientId = '';
-            room.playerConnections[playerId].lastActiveTime = Date.now();
+          // 一時的な切断状態への移行
+          const result = disconnectPlayerFromRoom(room, playerId, Date.now());
+
+          if (result.success) {
             this.logger.debug(
               `Player disconnected { roomId: '${room.roomId}', playerId: '${playerId}' }`,
             );
-            room.disconnectedPlayers += 1;
-            // room 自体の寿命を図るため、現在の時間を保存
-            const totalPlayers = Object.keys(room.players).length;
-            if (room.disconnectedPlayers === totalPlayers) {
-              room.disconnectedAt = Date.now();
+            if (result.isAllDisconnected) {
               this.logger.log(
                 `All players disconnected { roomId: '${room.roomId}' }`,
               );
@@ -179,7 +182,7 @@ export class GameService {
 
   handleBombPlace(roomId: string, playerId: string) {
     const room = this.rooms.get(roomId);
-    if (!room) return;
+    if (!room || room.phase !== 'playing') return;
 
     const bomb = tryPlaceBomb(room, playerId, Date.now());
 
@@ -199,7 +202,7 @@ export class GameService {
       `${defaultMessage} { roomId: '${roomId}', error: '${errorMessage}' }`,
     );
     this.server.to(roomId).emit('game:error', { message: defaultMessage });
-    this.rooms.delete(roomId);
+    this.cleanupRoom(roomId);
   }
 
   private checkRoomEntryPermission(roomId: string, playerId: string): boolean {
@@ -282,27 +285,23 @@ export class GameService {
     });
 
     if (result.isGameEnded && result.endResult) {
-      stopGameLoopLogic(room);
       this.server.to(room.roomId).emit('game:end', result.endResult);
-      this.rooms.delete(room.roomId);
-      this.logger.log(`Room deleted { roomId: '${room.roomId}' }`);
+      this.cleanupRoom(room.roomId);
     }
   }
 
-  private executeRemovePlayer(room: GameSession, playerId: string) {
-    const result = removePlayerFromRoom(room, playerId);
-    this.logger.log(
-      `Player left { roomId: '${room.roomId}', playerId: '${playerId}' }`,
-    );
+  private cleanupRoom(roomId: string) {
+    const room = this.rooms.get(roomId);
+    if (!room) return;
 
-    if (result.isEmpty) {
-      stopGameLoopLogic(room);
-      if (room.countdownTimerId) {
-        clearTimeout(room.countdownTimerId);
-        room.countdownTimerId = undefined;
-      }
-      this.rooms.delete(room.roomId);
-      this.logger.log(`Room deleted { roomId: '${room.roomId}' }`);
+    stopGameLoopLogic(room);
+
+    if (room.countdownTimerId) {
+      clearTimeout(room.countdownTimerId);
+      room.countdownTimerId = undefined;
     }
+
+    this.rooms.delete(roomId);
+    this.logger.log(`Room deleted { roomId: '${roomId}' }`);
   }
 }

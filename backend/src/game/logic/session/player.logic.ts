@@ -8,12 +8,20 @@ export const PLAYER_COLORS = [
   { color: '#16a34a', visorColor: '#ff00ff' },
 ];
 
+export interface AddPlayerResult {
+  success: boolean;
+}
+
 export function addPlayerToRoom(
   room: GameSession,
   playerId: string,
   clientId: string,
   username: string,
-): void {
+): AddPlayerResult {
+  if (room.players[playerId]) {
+    return { success: false };
+  }
+
   const playerIndex = Object.keys(room.players).length % 4;
   const position = START_POSITIONS[playerIndex];
   const colors = PLAYER_COLORS[playerIndex];
@@ -39,9 +47,12 @@ export function addPlayerToRoom(
     clientId: clientId,
     lastActiveTime: 0,
   };
+
+  return { success: true };
 }
 
 export interface RemovePlayerResult {
+  success: boolean;
   isEmpty: boolean; // 部屋が空になったかどうか
 }
 
@@ -49,9 +60,9 @@ export function removePlayerFromRoom(
   room: GameSession,
   playerId: string,
 ): RemovePlayerResult {
-  const result: RemovePlayerResult = { isEmpty: false };
-
-  if (!room.players[playerId]) return result;
+  if (!room.players[playerId]) {
+    return { success: false, isEmpty: false };
+  }
 
   delete room.players[playerId];
   delete room.stats[playerId];
@@ -68,9 +79,65 @@ export function removePlayerFromRoom(
     }
   }
 
-  if (Object.keys(room.players).length === 0) {
-    result.isEmpty = true;
+  const isEmpty = Object.keys(room.players).length === 0;
+
+  return { success: true, isEmpty };
+}
+
+export interface ReconnectResult {
+  success: boolean;
+}
+
+export function reconnectPlayerToRoom(
+  room: GameSession,
+  playerId: string,
+  clientId: string,
+): ReconnectResult {
+  const player = room.players[playerId];
+  if (!player || !player.isDisconnected) return { success: false };
+
+  player.isDisconnected = false;
+  room.playerConnections[playerId].clientId = clientId;
+  room.playerConnections[playerId].lastActiveTime = 0;
+  room.disconnectedPlayers -= 1;
+  room.disconnectedAt = 0; // 誰か一人でも戻ってきたらルームタイマーをリセット
+
+  if (room.playerInputs && room.playerInputs[playerId]) {
+    // 再接続時はクライアントが送るseqが初期値に戻るため、サーバー側も初期化する
+    room.playerInputs[playerId].seq = 0;
   }
 
-  return result;
+  return { success: true };
+}
+
+export interface DisconnectResult {
+  success: boolean;
+  isAllDisconnected: boolean;
+}
+
+export function disconnectPlayerFromRoom(
+  room: GameSession,
+  playerId: string,
+  now: number,
+): DisconnectResult {
+  const player = room.players[playerId];
+  if (!player || player.isDisconnected) {
+    return { success: false, isAllDisconnected: false };
+  }
+
+  // 切断時の時間を保存（タイムアウト判定のため）
+  player.isDisconnected = true;
+  room.playerConnections[playerId].clientId = '';
+  room.playerConnections[playerId].lastActiveTime = now;
+  room.disconnectedPlayers += 1;
+
+  // room 自体の寿命を図るための判定
+  const totalPlayers = Object.keys(room.players).length;
+  const isAllDisconnected = room.disconnectedPlayers === totalPlayers;
+
+  if (isAllDisconnected) {
+    room.disconnectedAt = now;
+  }
+
+  return { success: true, isAllDisconnected };
 }
