@@ -2,7 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { io, Socket } from 'socket.io-client'
 import type { ChatConnectionStatus, ChatMessage } from '../types/chat'
 
-const BACKEND_URL = import.meta.env.VITE_BACKEND_URL || 'http://localhost:4000'
+const BACKEND_URL = import.meta.env.VITE_BACKEND_URL || window.location.origin
 
 type ChatAck = {
   ok?: boolean
@@ -76,6 +76,7 @@ export function useRoomChat(roomId: string, accessToken: string | null) {
   const [connectionStatus, setConnectionStatus] =
     useState<ChatConnectionStatus>('connecting')
   const [error, setError] = useState<string | null>(null)
+  const disabledMessage = 'ログインするとチャットを利用できます'
 
   const appendMessage = useCallback((message: ChatMessage) => {
     setMessages((currentMessages) => {
@@ -88,13 +89,18 @@ export function useRoomChat(roomId: string, accessToken: string | null) {
   }, [])
 
   useEffect(() => {
+    if (!accessToken) {
+      return
+    }
+
     const socket = io(BACKEND_URL, {
       autoConnect: false,
-      auth: accessToken ? { token: accessToken } : undefined,
+      auth: { token: accessToken },
     })
     socketRef.current = socket
 
     socket.on('connect', () => {
+      setMessages([])
       setConnectionStatus('connected')
       setError(null)
       socket.emit('chat:join', { roomId })
@@ -117,6 +123,19 @@ export function useRoomChat(roomId: string, accessToken: string | null) {
       appendMessage(message)
     })
 
+    socket.on('chat:history', (payload: unknown) => {
+      if (!Array.isArray(payload)) return
+
+      const history = payload
+        .map((item) => normalizeChatMessage(item, roomId))
+        .filter(
+          (message): message is ChatMessage =>
+            message !== null && message.roomId === roomId
+        )
+
+      setMessages(history)
+    })
+
     socket.on('chat:error', (payload: unknown) => {
       if (isRecord(payload)) {
         setError(getString(payload, 'message') ?? 'メッセージを送信できません')
@@ -134,6 +153,7 @@ export function useRoomChat(roomId: string, accessToken: string | null) {
       socket.off('connect_error')
       socket.off('disconnect')
       socket.off('chat:message')
+      socket.off('chat:history')
       socket.off('chat:error')
       socket.disconnect()
       socketRef.current = null
@@ -146,6 +166,12 @@ export function useRoomChat(roomId: string, accessToken: string | null) {
       const trimmedText = text.trim()
 
       if (!trimmedText) return false
+
+      if (!accessToken) {
+        setConnectionStatus('disconnected')
+        setError(disabledMessage)
+        return false
+      }
 
       if (!socket?.connected) {
         setConnectionStatus('disconnected')
@@ -167,13 +193,13 @@ export function useRoomChat(roomId: string, accessToken: string | null) {
       setError(null)
       return true
     },
-    [roomId]
+    [accessToken, disabledMessage, roomId]
   )
 
   return {
-    messages,
-    connectionStatus,
-    error,
+    messages: accessToken ? messages : [],
+    connectionStatus: accessToken ? connectionStatus : 'disconnected',
+    error: accessToken ? error : disabledMessage,
     sendMessage,
   }
 }
