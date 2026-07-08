@@ -6,6 +6,9 @@ npm-debug.log*
 
 # Prisma
 backend/src/generated/prisma
+backend/prisma.config.d.ts
+backend/prisma.config.js
+backend/prisma.config.js.map
 
 # Build outputs
 dist/
