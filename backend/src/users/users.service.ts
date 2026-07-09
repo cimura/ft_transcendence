@@ -222,13 +222,22 @@ export class UsersService {
 
   async updateAvatar(userId: string, file: Express.Multer.File) {
     const uploadedImage = await this.uploadsService.saveImage(file);
-    const updatedUser = await this.updateUserAvatar(userId, uploadedImage.url);
 
-    return {
-      message: 'Avatar updated successfully',
-      avatarUrl: uploadedImage.url,
-      user: updatedUser,
-    };
+    try {
+      const updatedUser = await this.updateUserAvatar(
+        userId,
+        uploadedImage.url,
+      );
+
+      return {
+        message: 'Avatar updated successfully',
+        avatarUrl: uploadedImage.url,
+        user: updatedUser,
+      };
+    } catch (error) {
+      await this.uploadsService.deleteImage(uploadedImage);
+      throw error;
+    }
   }
 
   async deleteMe(userId: string) {

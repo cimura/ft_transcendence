@@ -43,6 +43,17 @@ export class UploadsService {
     }
   }
 
+  async deleteImage(image: { id: string; filename: string }) {
+    await this.prisma.uploadedImage
+      .delete({
+        where: { id: image.id },
+      })
+      .catch(() => undefined);
+
+    const imagePath = resolve(process.cwd(), IMAGE_UPLOAD_DIR, image.filename);
+    await unlink(imagePath).catch(() => undefined);
+  }
+
   private validateImage(file: Express.Multer.File) {
     if (!ALLOWED_IMAGE_EXTENSIONS[file.mimetype]) {
       throw new BadRequestException('file must be a jpeg, png, or webp image');
