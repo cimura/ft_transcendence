@@ -1,4 +1,5 @@
 import { Test, TestingModule } from '@nestjs/testing';
+import { Prisma } from '../generated/prisma/client';
 import { PrismaService } from '../prisma.service';
 import { UploadsService } from '../uploads/uploads.service';
 import { UsersService } from './users.service';
@@ -67,7 +68,12 @@ describe('UsersService', () => {
     } as Express.Multer.File;
 
     uploadsService.saveImage.mockResolvedValue(uploadedImage);
-    prisma.user.update.mockRejectedValue(new Error('missing user'));
+    prisma.user.update.mockRejectedValue(
+      new Prisma.PrismaClientKnownRequestError('Record not found', {
+        code: 'P2025',
+        clientVersion: 'test',
+      }),
+    );
 
     await expect(service.updateAvatar('user-id', file)).rejects.toThrow(
       'User not found',

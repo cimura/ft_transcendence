@@ -202,7 +202,11 @@ export class UsersService {
         message: 'User information updated successfully',
         user: updatedUser,
       };
-    } catch {
+    } catch (error: unknown) {
+      if (!this.isRecordNotFoundError(error)) {
+        throw error;
+      }
+
       throw new NotFoundException({
         code: 'USER_NOT_FOUND',
         message: 'User not found',
@@ -250,7 +254,11 @@ export class UsersService {
       return {
         message: 'Your account has been permanently deleted.',
       };
-    } catch {
+    } catch (error: unknown) {
+      if (!this.isRecordNotFoundError(error)) {
+        throw error;
+      }
+
       throw new NotFoundException({
         code: 'USER_NOT_FOUND',
         message: 'User not found or already deleted',
@@ -273,11 +281,22 @@ export class UsersService {
           updatedAt: true,
         },
       });
-    } catch {
+    } catch (error: unknown) {
+      if (!this.isRecordNotFoundError(error)) {
+        throw error;
+      }
+
       throw new NotFoundException({
         code: 'USER_NOT_FOUND',
         message: 'User not found',
       });
     }
+  }
+
+  private isRecordNotFoundError(error: unknown) {
+    return (
+      error instanceof Prisma.PrismaClientKnownRequestError &&
+      error.code === 'P2025'
+    );
   }
 }
