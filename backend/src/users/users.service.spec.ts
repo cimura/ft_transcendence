@@ -1,5 +1,6 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { PrismaService } from '../prisma.service';
+import { UploadsService } from '../uploads/uploads.service';
 import { UsersService } from './users.service';
 
 describe('UsersService', () => {
@@ -18,6 +19,12 @@ describe('UsersService', () => {
               update: jest.fn(),
               delete: jest.fn(),
             },
+          },
+        },
+        {
+          provide: UploadsService,
+          useValue: {
+            saveImage: jest.fn(),
           },
         },
       ],

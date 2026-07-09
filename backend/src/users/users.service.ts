@@ -12,10 +12,14 @@ import { UserSearchResponseDto } from './dto/users-response.dto';
 import { Prisma } from '../generated/prisma/client';
 import * as bcrypt from 'bcrypt';
 import { FriendRequestStatus } from '../generated/prisma/enums';
+import { UploadsService } from '../uploads/uploads.service';
 
 @Injectable()
 export class UsersService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly uploadsService: UploadsService,
+  ) {}
 
   async profile(userId: string): Promise<ProfileUserDto> {
     const user = await this.prisma.user.findUnique({
@@ -206,6 +210,27 @@ export class UsersService {
     }
   }
 
+  async selectDefaultAvatar(userId: string, avatarUrl: string) {
+    const updatedUser = await this.updateUserAvatar(userId, avatarUrl);
+
+    return {
+      message: 'Avatar updated successfully',
+      avatarUrl,
+      user: updatedUser,
+    };
+  }
+
+  async updateAvatar(userId: string, file: Express.Multer.File) {
+    const uploadedImage = await this.uploadsService.saveImage(file);
+    const updatedUser = await this.updateUserAvatar(userId, uploadedImage.url);
+
+    return {
+      message: 'Avatar updated successfully',
+      avatarUrl: uploadedImage.url,
+      user: updatedUser,
+    };
+  }
+
   async deleteMe(userId: string) {
     try {
       // TODO: schema.prisma の User に "onDelete: Cascade" を設定する
@@ -220,6 +245,29 @@ export class UsersService {
       throw new NotFoundException({
         code: 'USER_NOT_FOUND',
         message: 'User not found or already deleted',
+      });
+    }
+  }
+
+  private async updateUserAvatar(userId: string, avatarUrl: string) {
+    try {
+      return await this.prisma.user.update({
+        where: { id: userId },
+        data: { avatarUrl },
+        select: {
+          id: true,
+          email: true,
+          username: true,
+          displayName: true,
+          avatarUrl: true,
+          createdAt: true,
+          updatedAt: true,
+        },
+      });
+    } catch {
+      throw new NotFoundException({
+        code: 'USER_NOT_FOUND',
+        message: 'User not found',
       });
     }
   }
