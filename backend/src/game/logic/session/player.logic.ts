@@ -22,7 +22,18 @@ export function addPlayerToRoom(
     return { success: false };
   }
 
-  const playerIndex = Object.keys(room.players).length % 4;
+  const availableIndices: number[] = [];
+  room.startPositionSlots.forEach((id, index) => {
+    if (id === null) availableIndices.push(index);
+  });
+
+  if (availableIndices.length === 0) return { success: false }; // 満員
+
+  const randomIndex = Math.floor(Math.random() * availableIndices.length);
+  const playerIndex = availableIndices[randomIndex];
+
+  room.startPositionSlots[playerIndex] = playerId;
+
   const position = START_POSITIONS[playerIndex];
   const colors = PLAYER_COLORS[playerIndex];
 
@@ -53,7 +64,7 @@ export function addPlayerToRoom(
 
 export interface RemovePlayerResult {
   success: boolean;
-  isEmpty: boolean; // 部屋が空になったかどうか
+  isEmpty: boolean;
 }
 
 export function removePlayerFromRoom(
@@ -64,10 +75,19 @@ export function removePlayerFromRoom(
     return { success: false, isEmpty: false };
   }
 
+  const slotIndex = room.startPositionSlots.indexOf(playerId);
+  if (slotIndex !== -1) {
+    room.startPositionSlots[slotIndex] = null;
+  }
+
   delete room.players[playerId];
   delete room.stats[playerId];
   if (room.playerInputs) {
     delete room.playerInputs[playerId];
+  }
+
+  if (room.playerConnections[playerId]) {
+    delete room.playerConnections[playerId];
   }
 
   // 爆弾すり抜けリストからの除外
