@@ -137,45 +137,41 @@ export function Lobby() {
     }
   }
   return (
-    <div className="min-h-screen bg-gray-100">
-      {/* ヘッダー */}
-      <header className="bg-white shadow">
+    <div className="space-page">
+      <header className="console-header">
         <div className="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-4">
-              {/* 戻るボタン追加 */}
               <Button
                 variant="secondary"
                 size="sm"
                 onClick={() => navigate('/home')}
               >
-                ← 戻る
+                BACK
               </Button>
-              <h1 className="text-3xl font-bold text-gray-900">ゲームロビー</h1>
+              <div>
+                <p className="console-kicker">MATCHMAKING CONSOLE</p>
+                <h1 className="console-title">GAME LOBBY</h1>
+              </div>
             </div>
             <Button
               variant="primary"
               size="md"
               onClick={() => setIsModalOpen(true)}
             >
-              + 新しい部屋を作成
+              CREATE ROOM
             </Button>
           </div>
         </div>
       </header>
 
-      {/* メインコンテンツ */}
       <main className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
-        {/* フィルター */}
-        <div className="mb-6">
+        <div className="console-panel mb-6 p-4 sm:p-5">
+          <p className="mb-3 text-xs font-bold tracking-widest text-emerald-100/60">SIGNAL FILTER</p>
           <RoomFilter currentFilter={filter} onFilterChange={setFilter} />
         </div>
-
-        {/* 部屋一覧 */}
         <RoomList rooms={filteredRooms} onJoin={handleJoinRoom} />
       </main>
-
-      {/* 部屋作成モーダル */}
       <CreateRoomModal
         isOpen={isModalOpen}
         onSubmit={handleCreateRoom}

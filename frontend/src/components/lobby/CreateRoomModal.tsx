@@ -28,11 +28,10 @@ export function CreateRoomModal({ isOpen, onSubmit, onClose }: Props) {
   return (
     <Modal isOpen={isOpen} onClose={handleClose} title="新しい部屋を作成">
       <form onSubmit={handleSubmit} className="space-y-4">
-        {/* 部屋名入力 */}
         <div>
           <label
             htmlFor="roomName"
-            className="mb-1 block text-sm font-medium text-gray-700"
+            className="mb-1 block text-sm font-bold tracking-wide text-emerald-50/80"
           >
             部屋名
           </label>
@@ -43,18 +42,16 @@ export function CreateRoomModal({ isOpen, onSubmit, onClose }: Props) {
             onChange={(e) => setName(e.target.value)}
             placeholder="部屋名を入力"
             maxLength={30}
-            className="w-full rounded-md border border-gray-300 px-3 py-2 focus:border-blue-500 focus:outline-none focus:ring-1
-  focus:ring-blue-500"
+            className="console-input"
             required
           />
-          <p className="mt-1 text-xs text-gray-500">{name.length} / 30文字</p>
+          <p className="mt-1 text-xs text-emerald-50/45">{name.length} / 30文字</p>
         </div>
 
-        {/* 最大プレイヤー数選択 */}
         <div>
           <label
             htmlFor="maxPlayers"
-            className="mb-1 block text-sm font-medium text-gray-700"
+            className="mb-1 block text-sm font-bold tracking-wide text-emerald-50/80"
           >
             最大プレイヤー数
           </label>
@@ -62,8 +59,7 @@ export function CreateRoomModal({ isOpen, onSubmit, onClose }: Props) {
             id="maxPlayers"
             value={maxPlayers}
             onChange={(e) => setMaxPlayers(Number(e.target.value) as 2 | 3 | 4)}
-            className="w-full rounded-md border border-gray-300 px-3 py-2 focus:border-blue-500 focus:outline-none focus:ring-1
-  focus:ring-blue-500"
+            className="console-select"
           >
             <option value={2}>2人</option>
             <option value={3}>3人</option>
@@ -71,7 +67,6 @@ export function CreateRoomModal({ isOpen, onSubmit, onClose }: Props) {
           </select>
         </div>
 
-        {/* ボタン */}
         <div className="flex gap-3">
           <Button type="submit" variant="primary" className="flex-1">
             作成

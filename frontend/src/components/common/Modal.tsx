@@ -27,22 +27,22 @@ export function Modal({ isOpen, onClose, title, children }: ModalProps) {
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50"
+      className="fixed inset-0 z-50 flex items-center justify-center bg-[#010807]/80 p-4 backdrop-blur-sm"
       onClick={onClose}
     >
       <div
-        className="relative w-full max-w-md rounded-lg bg-white p-6 shadow-xl"
+        className="console-panel relative w-full max-w-md p-6 shadow-2xl"
         onClick={(e) => e.stopPropagation()}
       >
         {title && (
           <div className="mb-4 flex items-center justify-between">
-            <h2 className="text-xl font-bold text-gray-900">{title}</h2>
+            <h2 className="text-xl font-bold tracking-wide text-white">{title}</h2>
             <button
               onClick={onClose}
-              className="text-gray-400 hover:text-gray-600"
+              className="border border-emerald-100/25 px-2 text-emerald-50/60 hover:border-[#b8ff64] hover:text-[#b8ff64]"
               aria-label="モーダルを閉じる"
             >
-              ✕
+              X
             </button>
           </div>
         )}

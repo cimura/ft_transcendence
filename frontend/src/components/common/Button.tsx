@@ -15,14 +15,11 @@ export function Button({
   ...props
 }: ButtonProps) {
   const baseStyles =
-    'rounded-md font-semibold transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 disabled:cursor-not-allowed'
+    'console-button focus:outline-none focus:ring-2 focus:ring-lime-200/60 disabled:cursor-not-allowed'
   const variantStyles = {
-    primary:
-      'bg-blue-600 hover:bg-blue-700 text-white focus:ring-blue-500 disabled:bg-blue-300 disabled:hover:bg-blue-300',
-    secondary:
-      'bg-gray-600 hover:bg-gray-700 text-white focus:ring-gray-500 disabled:bg-gray-300 disabled:hover:bg-gray-300',
-    danger:
-      'bg-red-600 hover:bg-red-700 text-white focus:ring-red-500 disabled:bg-red-300 disabled:hover:bg-red-300',
+    primary: '',
+    secondary: 'console-button--muted',
+    danger: 'console-button--danger',
   }
 
   const sizeStyles = {

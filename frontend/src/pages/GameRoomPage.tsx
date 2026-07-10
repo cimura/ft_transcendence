@@ -59,15 +59,15 @@ export function GameRoomPage() {
   ).length
 
   return (
-    <div className="min-h-screen bg-gray-950 text-white">
-      <header className="border-b border-gray-800 bg-gray-900">
+    <div className="space-page">
+      <header className="console-header">
         <div className="mx-auto flex max-w-7xl flex-wrap items-center justify-between gap-4 px-4 py-4 sm:px-6 lg:px-8">
           <div>
-            <p className="text-sm font-semibold text-cyan-300">ボンバーマン</p>
-            <h1 className="text-2xl font-bold">{currentRoom.name}</h1>
+            <p className="console-kicker">BOMBERMAN / LIVE SESSION</p>
+            <h1 className="console-title">{currentRoom.name}</h1>
           </div>
           <div className="flex items-center gap-3">
-            <div className="flex h-10 w-20 items-center justify-center whitespace-nowrap rounded-md bg-gray-800 px-3 text-sm font-semibold text-gray-100">
+            <div className="flex h-10 w-20 items-center justify-center whitespace-nowrap border border-emerald-100/25 bg-[#0a2822] px-3 text-sm font-semibold text-emerald-50/85">
               生存 {livingPlayers}
             </div>
             <Button
@@ -75,7 +75,7 @@ export function GameRoomPage() {
               size="sm"
               onClick={() => navigate('/lobby')}
             >
-              ロビーへ戻る
+              EXIT TO LOBBY
             </Button>
           </div>
         </div>

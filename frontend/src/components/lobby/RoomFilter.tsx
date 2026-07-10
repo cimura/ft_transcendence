@@ -13,16 +13,16 @@ export function RoomFilter({ currentFilter, onFilterChange }: Props) {
     { value: 'finished', label: '終了済み' },
   ]
   return (
-    <div className="flex gap-2" role="group" aria-label="部屋フィルター">
+    <div className="flex flex-wrap gap-2" role="group" aria-label="部屋フィルター">
       {filters.map((filter) => (
         <button
           key={filter.value}
           onClick={() => onFilterChange(filter.value)}
           aria-pressed={currentFilter === filter.value}
-          className={`rounded-md px-4 py-2 text-sm font-medium transition-colors ${
+          className={`border px-4 py-2 text-sm font-bold tracking-wide transition-colors ${
             currentFilter === filter.value
-              ? 'bg-blue-600 text-white'
-              : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+              ? 'border-[#b8ff64] bg-[#b8ff64] text-[#102315]'
+              : 'border-emerald-200/30 bg-[#0a2822] text-emerald-50/75 hover:border-emerald-200/60 hover:bg-[#123a31]'
           }`}
         >
           {filter.label}
