@@ -1,4 +1,4 @@
-import { BadRequestException, Injectable } from '@nestjs/common';
+import { BadRequestException, Injectable, Logger } from '@nestjs/common';
 import { randomUUID } from 'crypto';
 import { mkdir, unlink, writeFile } from 'fs/promises';
 import { join, resolve } from 'path';
@@ -12,6 +12,8 @@ import {
 
 @Injectable()
 export class UploadsService {
+  private readonly logger = new Logger(UploadsService.name);
+
   constructor(private readonly prisma: PrismaService) {}
 
   async saveImage(file: Express.Multer.File) {
@@ -48,10 +50,18 @@ export class UploadsService {
       .delete({
         where: { id: image.id },
       })
-      .catch(() => undefined);
+      .catch((error: unknown) => {
+        this.logger.warn(
+          `Failed to delete uploaded image record ${image.id}: ${this.formatCleanupError(error)}`,
+        );
+      });
 
     const imagePath = resolve(process.cwd(), IMAGE_UPLOAD_DIR, image.filename);
-    await unlink(imagePath).catch(() => undefined);
+    await unlink(imagePath).catch((error: unknown) => {
+      this.logger.warn(
+        `Failed to unlink uploaded image file ${image.filename}: ${this.formatCleanupError(error)}`,
+      );
+    });
   }
 
   private validateImage(file: Express.Multer.File) {
@@ -62,5 +72,9 @@ export class UploadsService {
     if (file.size > MAX_IMAGE_SIZE_BYTES) {
       throw new BadRequestException('file must be 5MB or smaller');
     }
+  }
+
+  private formatCleanupError(error: unknown) {
+    return error instanceof Error ? error.message : String(error);
   }
 }
