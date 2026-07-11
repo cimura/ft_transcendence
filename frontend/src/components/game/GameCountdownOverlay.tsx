@@ -3,6 +3,7 @@ import { useGameStore } from '../../stores/gameStore'
 
 export const GameCountdownOverlay = memo(function GameCountdownOverlay() {
   const countdown = useGameStore((state) => state.countdown)
+  const serverTimeOffset = useGameStore((state) => state.serverTimeOffset)
 
   const [display, setDisplay] = useState<string | null>(null)
   const [showGo, setShowGo] = useState(false)
@@ -18,8 +19,8 @@ export const GameCountdownOverlay = memo(function GameCountdownOverlay() {
     let timeoutId: number
 
     const updateDisplay = () => {
-      const now = Date.now()
-      const remainingMs = countdown.startsAt - now
+      const currentServerTime = performance.now() + serverTimeOffset
+      const remainingMs = countdown.startsAt - currentServerTime
 
       if (remainingMs > 0) {
         const remainingSec = Math.ceil(remainingMs / 1000).toString()
@@ -40,7 +41,7 @@ export const GameCountdownOverlay = memo(function GameCountdownOverlay() {
       cancelAnimationFrame(animationFrameId)
       clearTimeout(timeoutId)
     }
-  }, [countdown])
+  }, [countdown, serverTimeOffset])
 
   if (display) {
     return (
