@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 
 type PresenceKeyInput = {
   namespace: string;
@@ -12,6 +12,7 @@ type PresenceInput = PresenceKeyInput & {
 
 @Injectable()
 export class SocketPresenceService {
+  private readonly logger = new Logger(SocketPresenceService.name);
   private readonly activeSockets = new Map<string, Set<string>>();
   private readonly pendingDisconnects = new Map<
     string,
@@ -56,7 +57,11 @@ export class SocketPresenceService {
     const timer = setTimeout(() => {
       this.pendingDisconnects.delete(key);
       if (this.activeSockets.has(key)) return;
-      void onInactive();
+      Promise.resolve()
+        .then(onInactive)
+        .catch((error) => {
+          this.logger.error('Error in onInactive callback', error);
+        });
     }, delayMs);
 
     this.pendingDisconnects.set(key, timer);

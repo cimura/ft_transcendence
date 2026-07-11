@@ -56,11 +56,18 @@ export class GameService {
     };
   }
 
-  handleGameLeave(playerId: string) {
+  handleGameLeave(playerId: string, roomId?: string) {
     const now = Date.now();
-    for (const room of this.rooms.values()) {
-      if (room.players[playerId]) {
+    if (roomId) {
+      const room = this.rooms.get(roomId);
+      if (room && room.players[playerId]) {
         this.executeRemovePlayer(room, playerId, now);
+      }
+    } else {
+      for (const room of this.rooms.values()) {
+        if (room.players[playerId]) {
+          this.executeRemovePlayer(room, playerId, now);
+        }
       }
     }
   }

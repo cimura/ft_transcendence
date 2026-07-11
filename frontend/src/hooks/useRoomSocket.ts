@@ -5,6 +5,7 @@ import { useRoomStore } from '../stores/roomStore'
 import type {
   RoomClientToServerEvents,
   RoomServerToClientEvents,
+  RoomSnapshot,
 } from '@ft_transcendence/shared/room-events.types'
 
 const BACKEND_URL = import.meta.env.VITE_BACKEND_URL || window.location.origin
@@ -40,7 +41,28 @@ export function useRoomSocket(roomId?: string) {
       console.log('[RoomSocket] disconnected:', reason)
     })
 
-    socket.on('room:updated', (room: GameRoom) => {
+    socket.on('room:updated', (snapshot: RoomSnapshot) => {
+      const room: GameRoom = {
+        id: snapshot.id,
+        name: snapshot.name,
+        hostId: snapshot.hostId,
+        hostName: snapshot.hostName,
+        players: snapshot.players.map((p) => ({
+          userId: p.userId,
+          username: p.username,
+          avatarUrl: p.avatarUrl ?? undefined,
+          isReady: p.isReady,
+          isHost: p.isHost,
+        })),
+        maxPlayers: snapshot.maxPlayers as 2 | 3 | 4,
+        status: snapshot.status,
+        mode: snapshot.mode,
+        mapId: snapshot.mapId,
+        createdAt: snapshot.createdAt,
+        updatedAt: snapshot.updatedAt,
+        startedAt: snapshot.startedAt,
+        finishedAt: snapshot.finishedAt,
+      }
       upsertRoom(room)
     })
 

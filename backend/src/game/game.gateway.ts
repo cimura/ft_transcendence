@@ -86,13 +86,13 @@ export class GameGateway
       await client.leave(previousRoomId);
     }
 
+    await client.join(data.roomId);
     this.socketPresenceService.register({
       namespace: 'game',
       roomId: data.roomId,
       userId: user.id,
       socketId: client.id,
     });
-    await client.join(data.roomId);
     client.data.roomId = data.roomId;
 
     const initData = this.gameService.handleGameJoin(data.roomId, user.id);
@@ -170,7 +170,7 @@ export class GameGateway
     this.socketPresenceService.scheduleIfInactive(
       { namespace: 'game', roomId, userId },
       2000,
-      () => this.gameService.handleGameLeave(userId),
+      () => this.gameService.handleGameLeave(userId, roomId),
     );
   }
 }

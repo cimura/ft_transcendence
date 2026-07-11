@@ -5,6 +5,7 @@
 import {
   ConflictException,
   ForbiddenException,
+  Logger,
   NotFoundException,
 } from '@nestjs/common';
 import {
@@ -44,6 +45,8 @@ type RoomSocket = Socket<
   cors: { origin: '*' },
 })
 export class RoomsGateway implements OnGatewayConnection, OnGatewayDisconnect {
+  private readonly logger = new Logger(RoomsGateway.name);
+
   @WebSocketServer()
   server: Server<RoomClientToServerEvents, RoomServerToClientEvents>;
 
@@ -57,18 +60,16 @@ export class RoomsGateway implements OnGatewayConnection, OnGatewayDisconnect {
     const user = this.socketAuthService.authenticate(client);
     if (!user) {
       client.disconnect();
-      console.log(
-        `[RoomsGateway] rejected unauthenticated socket: ${client.id}`,
-      );
+      this.logger.log(`rejected unauthenticated socket: ${client.id}`);
       return;
     }
 
     client.data.user = user;
-    console.log(`[RoomsGateway] connected: ${client.id}`);
+    this.logger.log(`connected: ${client.id}`);
   }
 
   handleDisconnect(client: RoomSocket) {
-    console.log(`[RoomsGateway] disconnected: ${client.id}`);
+    this.logger.log(`disconnected: ${client.id}`);
     const roomId = client.data.roomId;
     const userId = client.data.user?.id;
     if (!roomId || !userId) return;
@@ -102,7 +103,7 @@ export class RoomsGateway implements OnGatewayConnection, OnGatewayDisconnect {
       ) {
         return;
       }
-      console.error('[RoomsGateway] failed to leave room on disconnect', error);
+      this.logger.error('failed to leave room on disconnect', error);
     }
   }
 
@@ -137,7 +138,7 @@ export class RoomsGateway implements OnGatewayConnection, OnGatewayDisconnect {
       socketId: client.id,
     });
     await client.join(data.roomId);
-    console.log(`[RoomsGateway] room:join ${client.id} room=${data.roomId}`);
+    this.logger.log(`room:join ${client.id} room=${data.roomId}`);
   }
 
   @SubscribeMessage('room:leave')
@@ -154,16 +155,16 @@ export class RoomsGateway implements OnGatewayConnection, OnGatewayDisconnect {
     }
     await client.leave(client.data.roomId);
     client.data.roomId = undefined;
-    console.log(`[RoomsGateway] room:leave ${client.id}`);
+    this.logger.log(`room:leave ${client.id}`);
   }
 
   emitRoomUpdated(room: Awaited<ReturnType<RoomsService['join']>>) {
-    console.log(`[RoomsGateway] room:updated ${room.id}`);
+    this.logger.log(`room:updated ${room.id}`);
     this.server.to(room.id).emit('room:updated', room);
   }
 
   emitRoomDeleted(roomId: string) {
-    console.log(`[RoomsGateway] room:deleted ${roomId}`);
+    this.logger.log(`room:deleted ${roomId}`);
     this.server.to(roomId).emit('room:deleted', { roomId });
   }
 }

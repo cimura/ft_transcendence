@@ -327,7 +327,7 @@ export class RoomsService {
   }
 
   async leave(roomId: string, userId: string) {
-    const result = await this.prisma.$transaction(async (tx) => {
+    const result = await this.prisma.$transaction(async (tx: Prisma.TransactionClient) => {
       await tx.$queryRaw`
         SELECT id FROM "GameRoom" WHERE id = ${roomId} FOR UPDATE
       `;
