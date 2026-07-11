@@ -260,7 +260,9 @@ export class GameService {
         serverTick: 0,
         playerInputs: {},
         bombPassingPlayers: {},
-        startPositionSlots: Array(START_POSITIONS.length).fill(null),
+        startPositionSlots: Array<string | null>(START_POSITIONS.length).fill(
+          null,
+        ),
         playerConnections: {},
         disconnectedPlayers: 0,
         disconnectedAt: 0,
