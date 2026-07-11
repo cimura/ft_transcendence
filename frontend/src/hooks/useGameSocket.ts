@@ -8,6 +8,7 @@ export function useGameSocket(roomId: string) {
   const setGameState = useGameStore((state) => state.setGameState)
   const setGamePhase = useGameStore((state) => state.setGamePhase)
   const setCountdown = useGameStore((state) => state.setCountdown)
+  const setServerTimeOffset = useGameStore((state) => state.setServerTimeOffset)
   const setMyPlayerId = useGameStore((state) => state.setMyPlayerId)
   const setResultStats = useGameStore((state) => state.setResultStats)
   const setErrorMessage = useGameStore((state) => state.setErrorMessage)
@@ -29,6 +30,8 @@ export function useGameSocket(roomId: string) {
     socket.on(
       'game:init',
       (data: Parameters<ServerToClientEvents['game:init']>[0]) => {
+        const offset = data.serverTime - performance.now()
+        setServerTimeOffset(offset)
         setMyPlayerId(data.yourId)
         setGameState({
           map: data.map,
@@ -131,6 +134,7 @@ export function useGameSocket(roomId: string) {
     roomId,
     setGameState,
     setCountdown,
+    setServerTimeOffset,
     setGamePhase,
     setMyPlayerId,
     setResultStats,
