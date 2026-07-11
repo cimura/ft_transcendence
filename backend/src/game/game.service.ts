@@ -24,6 +24,7 @@ import {
   disconnectPlayerFromRoom,
 } from './logic/session/player.logic';
 import { tryPlaceBomb } from './logic/mechanics/bomb.logic';
+import { START_POSITIONS } from './logic/setup/map.logic';
 
 const MIN_PLAYERS_TO_START = 2;
 
@@ -259,6 +260,9 @@ export class GameService {
         serverTick: 0,
         playerInputs: {},
         bombPassingPlayers: {},
+        startPositionSlots: Array<string | null>(START_POSITIONS.length).fill(
+          null,
+        ),
         playerConnections: {},
         disconnectedPlayers: 0,
         disconnectedAt: 0,

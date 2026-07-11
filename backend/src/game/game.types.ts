@@ -23,6 +23,7 @@ export interface GameSession {
   countdownTimerId?: NodeJS.Timeout;
   playerInputs: Record<string, { direction: Direction | null; seq: number }>;
   bombPassingPlayers: Record<string, string[]>;
+  startPositionSlots: (string | null)[];
   stats: Record<string, PlayerStats>;
   playerConnections: Record<string, PlayerConnection>;
   disconnectedPlayers: number;
