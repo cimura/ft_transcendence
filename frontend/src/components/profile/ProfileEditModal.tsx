@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { Modal } from '../common/Modal'
 import { AvatarUpload } from './AvatarUpload'
 import { DefaultAvatarSelector } from './DefaultAvatarSelector'
-import { useUpdateProfile, useUploadAvatar } from '../../hooks/useProfile'
+import { useUploadAvatar } from '../../hooks/useProfile'
 import type { UserProfile } from '../../types/user'
 
 interface ProfileEditModalProps {
@@ -25,11 +25,6 @@ export const ProfileEditModal = ({
   const [uploadedFile, setUploadedFile] = useState<File | null>(null)
 
   const {
-    updateProfile,
-    loading: updateLoading,
-    error: updateError,
-  } = useUpdateProfile()
-  const {
     uploadAvatar,
     setDefaultAvatar,
     loading: avatarLoading,
@@ -38,12 +33,6 @@ export const ProfileEditModal = ({
 
   const handleSave = async () => {
     try {
-      // displayNameの更新
-      if (displayName !== profile.displayName) {
-        const updated = await updateProfile(profile.id, { displayName })
-        if (!updated) return
-      }
-
       // アバターの更新
       let newAvatarUrl: string | null = null
       if (uploadedFile) {
@@ -76,8 +65,8 @@ export const ProfileEditModal = ({
     onClose()
   }
 
-  const isLoading = updateLoading || avatarLoading
-  const error = updateError || avatarError
+  const isLoading = avatarLoading
+  const error = avatarError
 
   return (
     <Modal isOpen={isOpen} onClose={handleClose}>

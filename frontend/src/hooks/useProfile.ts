@@ -76,9 +76,7 @@ export const useUploadAvatar = () => {
   const [loading, setLoading] = useState<boolean>(false)
   const [error, setError] = useState<string | null>(null)
 
-  const uploadAvatar = async (
-    file: File
-  ): Promise<UserProfile | null> => {
+  const uploadAvatar = async (file: File): Promise<UserProfile | null> => {
     try {
       setLoading(true)
       setError(null)
@@ -98,9 +96,8 @@ export const useUploadAvatar = () => {
     try {
       setLoading(true)
       setError(null)
-      const { avatarUrl: newAvatarUrl } = await profileApi.setDefaultAvatar(
-        avatarUrl
-      )
+      const { avatarUrl: newAvatarUrl } =
+        await profileApi.setDefaultAvatar(avatarUrl)
       return newAvatarUrl
     } catch (err) {
       setError(
