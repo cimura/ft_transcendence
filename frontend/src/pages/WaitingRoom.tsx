@@ -23,8 +23,7 @@ import type { GameRoom } from '../types/room'
 export function WaitingRoom() {
   const { roomId } = useParams<{ roomId: string }>()
   const navigate = useNavigate()
-  const { currentRoom, setCurrentRoom, removeRoom, upsertRoom } =
-    useRoomStore()
+  const { currentRoom, setCurrentRoom, removeRoom, upsertRoom } = useRoomStore()
   const { currentUser, accessToken, fetchCurrentUser } = useAuthStore()
   const [isLoadingRoom, setIsLoadingRoom] = useState(true)
   const currentUserId = currentUser?.id

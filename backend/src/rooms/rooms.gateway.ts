@@ -67,7 +67,7 @@ export class RoomsGateway implements OnGatewayConnection, OnGatewayDisconnect {
     console.log(`[RoomsGateway] connected: ${client.id}`);
   }
 
-  async handleDisconnect(client: RoomSocket) {
+  handleDisconnect(client: RoomSocket) {
     console.log(`[RoomsGateway] disconnected: ${client.id}`);
     const roomId = client.data.roomId;
     const userId = client.data.user?.id;
