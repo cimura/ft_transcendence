@@ -48,10 +48,12 @@ export const ProfileEditModal = ({
       let newAvatarUrl: string | null = null
       if (uploadedFile) {
         // カスタム画像のアップロード
-        newAvatarUrl = await uploadAvatar(profile.id, uploadedFile)
+        const updatedProfile = await uploadAvatar(uploadedFile)
+        if (!updatedProfile) return
+        newAvatarUrl = updatedProfile.avatarUrl || null
       } else if (selectedDefaultAvatar) {
         // デフォルトアバターの設定
-        newAvatarUrl = await setDefaultAvatar(profile.id, selectedDefaultAvatar)
+        newAvatarUrl = await setDefaultAvatar(selectedDefaultAvatar)
       }
 
       // 成功時のコールバック
