@@ -37,4 +37,23 @@ logs:
 migrate:
 	docker compose -f $(COMPOSE_FILE) exec -w /app/backend backend npx prisma migrate dev
 
-.PHONY: all up build down clean fclean re logs rebuild rebuild-clean
+
+# === format check and test ===
+frontend-build:
+	npm run build -w frontend
+
+frontend-format-check:
+	npm run format:check -w frontend
+
+backend-format-check:
+	docker compose -f $(COMPOSE_FILE) exec -w /app/backend backend npm run format:check
+
+backend-test:
+	docker compose -f $(COMPOSE_FILE) exec -w /app/backend backend npm test
+
+format-check: frontend-format-check backend-format-check
+
+.PHONY: all up build down clean fclean re logs rebuild rebuild-clean migrate \
+	frontend-build frontend-format-check \
+	backend-format-check backend-test \
+	format-check
