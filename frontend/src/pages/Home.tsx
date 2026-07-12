@@ -56,8 +56,14 @@ export function Home() {
             待機場
           </button>
 
-          {/* 下段: 設定 */}
-          <div className="flex justify-center">
+          {/* 下段: ランキング・設定 */}
+          <div className="grid grid-cols-2 gap-8">
+            <button
+              onClick={() => navigate('/rankings')}
+              className="rounded-full bg-black bg-opacity-70 px-12 py-6 text-2xl font-bold text-white transition-all hover:bg-opacity-90"
+            >
+              ランキング
+            </button>
             <button
               onClick={() => navigate('/settings')}
               className="rounded-full bg-black bg-opacity-70 px-12 py-6 text-2xl font-bold text-white transition-all hover:bg-opacity-90"

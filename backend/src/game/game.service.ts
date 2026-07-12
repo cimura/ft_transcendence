@@ -14,6 +14,8 @@ import {
   addPlayerToRoom,
   removePlayerFromRoom,
 } from './logic/session/player.logic';
+import { ScoresService } from '../scores/scores.service';
+import { bombermanGame } from '../games/games.constants';
 
 const MIN_PLAYERS_TO_START = 2;
 
@@ -24,6 +26,8 @@ export class GameService {
 
   private rooms = new Map<string, GameSession>();
   private server: Server;
+
+  constructor(private readonly scoresService: ScoresService) {}
 
   setServer(server: Server) {
     this.server = server;
@@ -131,7 +135,7 @@ export class GameService {
         bombs: room.bombs,
         phase: room.phase,
       });
-      this.checkGameEnd(room, now);
+      void this.checkGameEnd(room, now);
     } else {
       this.logger.log(`Player ${playerId} removed from room ${room.roomId}`);
     }
@@ -221,10 +225,10 @@ export class GameService {
       phase: room.phase,
     });
 
-    this.checkGameEnd(room, now);
+    void this.checkGameEnd(room, now);
   }
 
-  private checkGameEnd(room: GameSession, now: number) {
+  private async checkGameEnd(room: GameSession, now: number) {
     const endResult = evaluateGameEnd(room, now);
     if (!endResult) return;
 
@@ -236,6 +240,21 @@ export class GameService {
       isDraw: endResult.isDraw,
       rankings: endResult.rankings,
     });
+
+    try {
+      await this.scoresService.recordMatchResult({
+        gameType: bombermanGame.name,
+        finishedAt: new Date(now),
+        winnerId: endResult.winnerId,
+        isDraw: endResult.isDraw,
+        rankings: endResult.rankings,
+      });
+    } catch (error) {
+      this.logger.error(
+        `Failed to record match result for room ${room.roomId}`,
+        error instanceof Error ? error.stack : String(error),
+      );
+    }
 
     this.rooms.delete(room.roomId);
     this.logger.log(`Room ${room.roomId} deleted after game end`);

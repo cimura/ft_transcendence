@@ -12,6 +12,7 @@ import {
   MatchHistoryQueryDto,
   MatchHistoryResponseDto,
 } from './dto/match-history.dto';
+import { RankingQueryDto, RankingsResponseDto } from './dto/ranking.dto';
 
 @Controller('scores')
 @ApiTags('scores')
@@ -20,6 +21,16 @@ import {
 @UseGuards(JwtAuthGuard)
 export class ScoresController {
   constructor(private readonly scoresService: ScoresService) {}
+
+  @Get('rankings')
+  @ApiOperation({ summary: 'ランキングを取得' })
+  @ApiOkResponse({
+    description: '成功時',
+    type: RankingsResponseDto,
+  })
+  getRankings(@Query() query: RankingQueryDto): Promise<RankingsResponseDto> {
+    return this.scoresService.getRankings(query.limit ?? 20);
+  }
 
   @Get('user/:userId')
   @ApiOperation({ summary: 'ユーザーの対戦履歴を取得' })
