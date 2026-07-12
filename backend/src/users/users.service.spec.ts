@@ -17,6 +17,7 @@ describe('UsersService', () => {
   let uploadsService: {
     saveImage: jest.Mock;
     deleteImage: jest.Mock;
+    findImageByUrl: jest.Mock;
   };
 
   beforeEach(async () => {
@@ -31,6 +32,7 @@ describe('UsersService', () => {
     uploadsService = {
       saveImage: jest.fn(),
       deleteImage: jest.fn(),
+      findImageByUrl: jest.fn(),
     };
 
     const module: TestingModule = await Test.createTestingModule({
@@ -68,6 +70,7 @@ describe('UsersService', () => {
     } as Express.Multer.File;
 
     uploadsService.saveImage.mockResolvedValue(uploadedImage);
+    prisma.user.findUnique.mockResolvedValue({ avatarUrl: null });
     prisma.user.update.mockRejectedValue(
       new Prisma.PrismaClientKnownRequestError('Record not found', {
         code: 'P2025',
@@ -78,6 +81,90 @@ describe('UsersService', () => {
     await expect(service.updateAvatar('user-id', file)).rejects.toThrow(
       'User not found',
     );
+    expect(uploadsService.saveImage).toHaveBeenCalledWith(file);
     expect(uploadsService.deleteImage).toHaveBeenCalledWith(uploadedImage);
+  });
+
+  it('deletes the previous managed avatar image after a successful update', async () => {
+    const uploadedImage = {
+      id: 'new-image-id',
+      filename: 'new-avatar.png',
+      url: '/uploads/images/new-avatar.png',
+    };
+    const previousImage = {
+      id: 'old-image-id',
+      filename: 'old-avatar.png',
+      url: '/uploads/images/old-avatar.png',
+    };
+    const updatedUser = {
+      id: 'user-id',
+      email: 'user@example.com',
+      username: 'user',
+      displayName: null,
+      avatarUrl: uploadedImage.url,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    };
+    const file = {
+      originalname: 'avatar.png',
+      mimetype: 'image/png',
+      size: 1024,
+      buffer: Buffer.from('avatar'),
+    } as Express.Multer.File;
+
+    prisma.user.findUnique.mockResolvedValue({ avatarUrl: previousImage.url });
+    uploadsService.saveImage.mockResolvedValue(uploadedImage);
+    uploadsService.findImageByUrl.mockResolvedValue(previousImage);
+    prisma.user.update.mockResolvedValue(updatedUser);
+
+    await expect(service.updateAvatar('user-id', file)).resolves.toEqual({
+      message: 'Avatar updated successfully',
+      avatarUrl: uploadedImage.url,
+      user: updatedUser,
+    });
+
+    expect(uploadsService.saveImage).toHaveBeenCalledWith(file);
+    expect(uploadsService.findImageByUrl).toHaveBeenCalledWith(
+      previousImage.url,
+    );
+    expect(uploadsService.deleteImage).toHaveBeenCalledWith(previousImage);
+  });
+
+  it('does not delete a default avatar after uploading a custom avatar', async () => {
+    const uploadedImage = {
+      id: 'image-id',
+      filename: 'avatar.png',
+      url: '/uploads/images/avatar.png',
+    };
+    const updatedUser = {
+      id: 'user-id',
+      email: 'user@example.com',
+      username: 'user',
+      displayName: null,
+      avatarUrl: uploadedImage.url,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    };
+    const file = {
+      originalname: 'avatar.png',
+      mimetype: 'image/png',
+      size: 1024,
+      buffer: Buffer.from('avatar'),
+    } as Express.Multer.File;
+
+    prisma.user.findUnique.mockResolvedValue({
+      avatarUrl: '/avatars/default-1.svg',
+    });
+    uploadsService.saveImage.mockResolvedValue(uploadedImage);
+    prisma.user.update.mockResolvedValue(updatedUser);
+
+    await expect(service.updateAvatar('user-id', file)).resolves.toEqual({
+      message: 'Avatar updated successfully',
+      avatarUrl: uploadedImage.url,
+      user: updatedUser,
+    });
+
+    expect(uploadsService.findImageByUrl).not.toHaveBeenCalled();
+    expect(uploadsService.deleteImage).not.toHaveBeenCalled();
   });
 });

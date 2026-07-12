@@ -15,6 +15,7 @@ describe('UploadsService', () => {
     uploadedImage: {
       create: jest.Mock;
       delete: jest.Mock;
+      findFirst: jest.Mock;
     };
   };
 
@@ -35,6 +36,7 @@ describe('UploadsService', () => {
       uploadedImage: {
         create: jest.fn().mockResolvedValue({ id: 'image-id' }),
         delete: jest.fn(),
+        findFirst: jest.fn(),
       },
     };
 
@@ -79,5 +81,20 @@ describe('UploadsService', () => {
       BadRequestException,
     );
     expect(prisma.uploadedImage.create).not.toHaveBeenCalled();
+  });
+
+  it('finds an uploaded image by URL', async () => {
+    const image = {
+      id: 'image-id',
+      filename: 'avatar.png',
+      url: '/uploads/images/avatar.png',
+    };
+
+    prisma.uploadedImage.findFirst.mockResolvedValue(image);
+
+    await expect(service.findImageByUrl(image.url)).resolves.toBe(image);
+    expect(prisma.uploadedImage.findFirst).toHaveBeenCalledWith({
+      where: { url: image.url },
+    });
   });
 });

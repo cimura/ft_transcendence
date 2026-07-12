@@ -13,6 +13,7 @@ import { Prisma } from '../generated/prisma/client';
 import * as bcrypt from 'bcrypt';
 import { FriendRequestStatus } from '../generated/prisma/enums';
 import { UploadsService } from '../uploads/uploads.service';
+import { UPLOAD_URL_PREFIX } from '../uploads/uploads.constants';
 
 @Injectable()
 export class UsersService {
@@ -215,7 +216,9 @@ export class UsersService {
   }
 
   async selectDefaultAvatar(userId: string, avatarUrl: string) {
+    const previousAvatarUrl = await this.getCurrentAvatarUrl(userId);
     const updatedUser = await this.updateUserAvatar(userId, avatarUrl);
+    await this.deletePreviousManagedAvatar(previousAvatarUrl, avatarUrl);
 
     return {
       message: 'Avatar updated successfully',
@@ -225,11 +228,17 @@ export class UsersService {
   }
 
   async updateAvatar(userId: string, file: Express.Multer.File) {
+    const previousAvatarUrl = await this.getCurrentAvatarUrl(userId);
     const uploadedImage = await this.uploadsService.saveImage(file);
 
     try {
       const updatedUser = await this.updateUserAvatar(
         userId,
+        uploadedImage.url,
+      );
+
+      await this.deletePreviousManagedAvatar(
+        previousAvatarUrl,
         uploadedImage.url,
       );
 
@@ -266,7 +275,43 @@ export class UsersService {
     }
   }
 
-  private async updateUserAvatar(userId: string, avatarUrl: string) {
+  private async getCurrentAvatarUrl(userId: string) {
+    const user = await this.prisma.user.findUnique({
+      where: { id: userId },
+      select: { avatarUrl: true },
+    });
+
+    if (!user) {
+      throw new NotFoundException({
+        code: 'USER_NOT_FOUND',
+        message: 'User not found',
+      });
+    }
+
+    return user.avatarUrl;
+  }
+
+  private async deletePreviousManagedAvatar(
+    previousAvatarUrl: string | null,
+    nextAvatarUrl: string,
+  ) {
+    if (
+      !previousAvatarUrl ||
+      previousAvatarUrl === nextAvatarUrl ||
+      !previousAvatarUrl.startsWith(`${UPLOAD_URL_PREFIX}/`)
+    ) {
+      return;
+    }
+
+    const previousImage =
+      await this.uploadsService.findImageByUrl(previousAvatarUrl);
+
+    if (previousImage) {
+      await this.uploadsService.deleteImage(previousImage);
+    }
+  }
+
+  private async updateUserAvatar(userId: string, avatarUrl: string | null) {
     try {
       return await this.prisma.user.update({
         where: { id: userId },

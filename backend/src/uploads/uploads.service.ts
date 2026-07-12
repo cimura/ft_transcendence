@@ -65,6 +65,12 @@ export class UploadsService {
     });
   }
 
+  async findImageByUrl(url: string) {
+    return this.prisma.uploadedImage.findFirst({
+      where: { url },
+    });
+  }
+
   private validateImage(file: Express.Multer.File) {
     if (!ALLOWED_IMAGE_EXTENSIONS[file.mimetype]) {
       throw new BadRequestException('file must be a jpeg, png, or webp image');
