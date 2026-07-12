@@ -27,6 +27,8 @@ const formatMessageTime = (createdAt: string) =>
     minute: '2-digit',
   }).format(new Date(createdAt))
 
+const MAX_CHAT_MESSAGE_LENGTH = 200
+
 export function ChatPanel({
   roomId,
   currentUser,
@@ -146,12 +148,13 @@ export function ChatPanel({
             value={draft}
             onChange={(event) => setDraft(event.target.value)}
             placeholder="メッセージを入力"
+            disabled={!accessToken}
             className="min-w-0 flex-1 rounded-md border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-200"
-            maxLength={500}
+            maxLength={MAX_CHAT_MESSAGE_LENGTH}
           />
           <button
             type="submit"
-            disabled={!draft.trim()}
+            disabled={!accessToken || !draft.trim()}
             className="h-10 rounded-md bg-blue-600 px-4 text-sm font-semibold text-white transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:bg-gray-300"
           >
             送信
