@@ -19,7 +19,6 @@ import type {
   ClientToServerEvents,
   ServerToClientEvents,
 } from '@ft_transcendence/shared/game-events.types';
-import type { JwtPayload } from '../auth/interfaces/jwt-payload.interface';
 
 interface ConnectionData {
   user: {
