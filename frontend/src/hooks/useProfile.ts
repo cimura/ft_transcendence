@@ -76,15 +76,12 @@ export const useUploadAvatar = () => {
   const [loading, setLoading] = useState<boolean>(false)
   const [error, setError] = useState<string | null>(null)
 
-  const uploadAvatar = async (
-    userId: string,
-    file: File
-  ): Promise<string | null> => {
+  const uploadAvatar = async (file: File): Promise<UserProfile | null> => {
     try {
       setLoading(true)
       setError(null)
-      const { avatarUrl } = await profileApi.uploadAvatar(userId, file)
-      return avatarUrl
+      const userProfile = await profileApi.uploadAvatar(file)
+      return userProfile
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to upload avatar')
       return null
@@ -94,16 +91,13 @@ export const useUploadAvatar = () => {
   }
 
   const setDefaultAvatar = async (
-    userId: string,
     avatarUrl: string
   ): Promise<string | null> => {
     try {
       setLoading(true)
       setError(null)
-      const { avatarUrl: newAvatarUrl } = await profileApi.setDefaultAvatar(
-        userId,
-        avatarUrl
-      )
+      const { avatarUrl: newAvatarUrl } =
+        await profileApi.setDefaultAvatar(avatarUrl)
       return newAvatarUrl
     } catch (err) {
       setError(

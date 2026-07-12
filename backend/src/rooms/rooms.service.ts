@@ -482,6 +482,19 @@ export class RoomsService {
     }));
   }
 
+  async findSocketMessages(roomId: string, userId: string) {
+    const messages = await this.findMessages(roomId, userId);
+    return messages.map((message) => this.toSocketMessage(message));
+  }
+
+  async createSocketMessage(roomId: string, userId: string, text: string) {
+    const message = await this.createMessage(roomId, userId, {
+      content: text,
+    });
+
+    return this.toSocketMessage(message);
+  }
+
   async createMessage(
     roomId: string,
     userId: string,
@@ -826,6 +839,26 @@ export class RoomsService {
 
   private userName(user: { email: string; displayName: string | null }) {
     return user.displayName ?? user.email;
+  }
+
+  private toSocketMessage(message: {
+    id: string;
+    roomId: string;
+    senderId: string;
+    senderName: string;
+    senderAvatarUrl: string | null;
+    content: string;
+    createdAt: Date;
+  }) {
+    return {
+      id: message.id,
+      roomId: message.roomId,
+      userId: message.senderId,
+      username: message.senderName,
+      avatarUrl: message.senderAvatarUrl,
+      text: message.content,
+      createdAt: message.createdAt.toISOString(),
+    };
   }
 
   private escapeHtml(value: string) {

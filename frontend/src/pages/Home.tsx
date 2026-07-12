@@ -5,6 +5,9 @@ import { useRoomStore } from '../stores/roomStore'
 import { createRoom } from '../api/rooms'
 import { useNotifications } from '../hooks/useNotifications'
 
+/**
+ * Renders the home dashboard with navigation to profile, friends, lobby, notifications, rankings, and settings.
+ */
 export function Home() {
   const navigate = useNavigate()
   const { currentUser, fetchCurrentUser, loading } = useAuthStore()
@@ -89,9 +92,8 @@ export function Home() {
           >
             {isCreatingRoom ? '準備中...' : '対戦開始'}
           </button>
-
-          {/* 下段: 通知・設定 */}
-          <div className="grid grid-cols-2 gap-8">
+          {/* 下段: 通知・ランキング・設定 */}
+          <div className="grid grid-cols-3 gap-8">
             <button
               onClick={() => navigate('/notifications')}
               className="relative rounded-full bg-black bg-opacity-70 px-12 py-6 text-2xl font-bold text-white transition-all hover:bg-opacity-90"
@@ -102,6 +104,12 @@ export function Home() {
                   {notifications.length}
                 </span>
               )}
+            </button>
+            <button
+              onClick={() => navigate('/rankings')}
+              className="rounded-full bg-black bg-opacity-70 px-12 py-6 text-2xl font-bold text-white transition-all hover:bg-opacity-90"
+            >
+              ランキング
             </button>
             <button
               onClick={() => navigate('/settings')}

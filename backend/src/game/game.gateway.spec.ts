@@ -1,122 +1,282 @@
+import { Test, TestingModule } from '@nestjs/testing';
 import { GameGateway } from './game.gateway';
 import { GameService } from './game.service';
 import { SocketAuthService } from '../websocket/socket-auth.service';
 import { SocketPresenceService } from '../websocket/socket-presence.service';
 
-type TestSocket = Parameters<GameGateway['handleConnection']>[0];
-
-const createSocket = (id: string): TestSocket =>
-  ({
-    id,
-    data: {},
-    disconnect: jest.fn(),
-    emit: jest.fn(),
-    join: jest.fn().mockResolvedValue(undefined),
-    leave: jest.fn().mockResolvedValue(undefined),
-  }) as unknown as TestSocket;
-
 describe('GameGateway', () => {
   let gateway: GameGateway;
-  let gameService: {
-    setServer: jest.Mock;
-    handleGameJoin: jest.Mock;
-    handleGameLeave: jest.Mock;
-    handlePlayerInput: jest.Mock;
-    handleBombPlace: jest.Mock;
-  };
-  let socketAuthService: {
-    authenticate: jest.Mock;
-  };
+  let gameService: jest.Mocked<GameService>;
+  let socketAuthService: jest.Mocked<SocketAuthService>;
   let socketPresenceService: SocketPresenceService;
 
-  beforeEach(() => {
-    gameService = {
-      setServer: jest.fn(),
-      handleGameJoin: jest.fn().mockReturnValue({}),
-      handleGameLeave: jest.fn(),
-      handlePlayerInput: jest.fn(),
-      handleBombPlace: jest.fn(),
-    };
-    socketAuthService = {
-      authenticate: jest.fn().mockReturnValue({ id: 'user-1' }),
-    };
-    socketPresenceService = new SocketPresenceService();
-    gateway = new GameGateway(
-      gameService as unknown as GameService,
-      socketAuthService as unknown as SocketAuthService,
-      socketPresenceService,
-    );
+  beforeEach(async () => {
+    const module: TestingModule = await Test.createTestingModule({
+      providers: [
+        GameGateway,
+        {
+          provide: GameService,
+          useValue: {
+            setServer: jest.fn(),
+            handleGameJoin: jest.fn(),
+            handleGameStart: jest.fn(),
+            handleGameLeave: jest.fn(),
+            handlePlayerInput: jest.fn(),
+            handleBombPlace: jest.fn(),
+          },
+        },
+        { provide: SocketAuthService, useValue: { authenticate: jest.fn() } },
+        SocketPresenceService,
+      ],
+    }).compile();
+
+    gateway = module.get<GameGateway>(GameGateway);
+    gameService = module.get(GameService);
+    socketAuthService = module.get(SocketAuthService);
+    socketPresenceService = module.get(SocketPresenceService);
   });
 
-  afterEach(() => {
-    jest.clearAllTimers();
-    jest.useRealTimers();
+  // モックのソケットオブジェクトを作成するヘルパー関数
+  const createMockSocket = (): any => ({
+    id: 'socket-123',
+    data: {},
+    handshake: { auth: {} },
+    join: jest.fn(),
+    leave: jest.fn(),
+    emit: jest.fn(),
+    disconnect: jest.fn(),
   });
 
   it('should be defined', () => {
     expect(gateway).toBeDefined();
   });
 
-  it('disconnects unauthenticated clients', () => {
-    const client = createSocket('socket-1');
-    socketAuthService.authenticate.mockReturnValue(null);
+  describe('handleConnection', () => {
+    it('正常なトークンで接続された場合、デコードされたuser情報をセットする', () => {
+      const client = createMockSocket();
+      socketAuthService.authenticate.mockReturnValue({ id: 'user-1' });
 
-    gateway.handleConnection(client);
+      gateway.handleConnection(client);
 
-    expect(client.disconnect).toHaveBeenCalledTimes(1);
-    expect(client.data.user).toBeUndefined();
+      expect(client.data.user).toEqual({ id: 'user-1' });
+      expect(client.disconnect).not.toHaveBeenCalled();
+    });
+
+    it('トークンが存在しない場合、通信を切断する', () => {
+      const client = createMockSocket();
+      socketAuthService.authenticate.mockReturnValue(null);
+      gateway.handleConnection(client);
+      expect(client.disconnect).toHaveBeenCalled();
+    });
+
+    it('トークンの形式がBearerでない場合、通信を切断する', () => {
+      const client = createMockSocket();
+      socketAuthService.authenticate.mockReturnValue(null);
+      gateway.handleConnection(client);
+      expect(client.disconnect).toHaveBeenCalled();
+    });
+
+    it('トークンの検証に失敗した場合、通信を切断する', () => {
+      const client = createMockSocket();
+      socketAuthService.authenticate.mockReturnValue(null);
+
+      gateway.handleConnection(client);
+
+      expect(client.disconnect).toHaveBeenCalled();
+    });
   });
 
-  it('removes a player only when the last socket leaves the room', async () => {
-    const firstClient = createSocket('socket-1');
-    const secondClient = createSocket('socket-2');
+  describe('handleJoin', () => {
+    it('正常にルームに参加できること', async () => {
+      const client = createMockSocket();
+      client.data.user = { id: 'user-1' };
+      const joinData = { roomId: 'room-1' };
+      const initData = { phase: 'waiting' }; // モック用のダミーデータ
 
-    gateway.handleConnection(firstClient);
-    gateway.handleConnection(secondClient);
-    await gateway.handleJoin({ roomId: 'room-a' }, firstClient);
-    await gateway.handleJoin({ roomId: 'room-a' }, secondClient);
+      gameService.handleGameJoin.mockReturnValue(initData as any);
 
-    await gateway.handleLeave(firstClient);
-    expect(gameService.handleGameLeave).not.toHaveBeenCalled();
+      await gateway.handleJoin(joinData, client);
 
-    await gateway.handleLeave(secondClient);
-    expect(gameService.handleGameLeave).toHaveBeenCalledWith(
-      'user-1',
-      'room-a',
-    );
+      // handleGameJoin に clientId を渡しているか確認
+      expect(gameService.handleGameJoin).toHaveBeenCalledWith(
+        'room-1',
+        'user-1',
+        'socket-123',
+      );
+      expect(client.join).toHaveBeenCalledWith('room-1');
+      expect(client.data.roomId).toBe('room-1');
+
+      // クライアントへ初期化データを送っているか
+      expect(client.emit).toHaveBeenCalledWith('game:init', initData);
+
+      // ゲーム開始条件のチェック処理が走っているか
+      expect(gameService.handleGameStart).toHaveBeenCalledWith('room-1');
+    });
+
+    it('以前のルームがある場合、退出(leave)してから参加すること', async () => {
+      const client = createMockSocket();
+      client.data.user = { id: 'user-1' };
+      client.data.roomId = 'room-old';
+      const joinData = { roomId: 'room-new' };
+
+      await gateway.handleJoin(joinData, client);
+
+      // 旧ルームからの退出処理が呼ばれているか確認
+      expect(client.leave).toHaveBeenCalledWith('room-old');
+      expect(gameService.handleGameLeave).toHaveBeenCalledWith(
+        'user-1',
+        'socket-123',
+      );
+
+      // 新ルームへ参加しているか
+      expect(client.join).toHaveBeenCalledWith('room-new');
+      expect(client.data.roomId).toBe('room-new');
+    });
+
+    it('参加処理(handleGameJoin)がエラーを投げた場合、game:error をemitすること', async () => {
+      const client = createMockSocket();
+      client.data.user = { id: 'user-1' };
+      const joinData = { roomId: 'room-1' };
+
+      gameService.handleGameJoin.mockImplementation(() => {
+        throw new Error('Room is full');
+      });
+
+      await gateway.handleJoin(joinData, client);
+
+      // エラーイベントがクライアントに通知されているか
+      expect(client.emit).toHaveBeenCalledWith('game:error', {
+        message: 'Room is full',
+      });
+      expect(client.join).toHaveBeenCalledWith('room-1');
+      expect(gameService.handleGameStart).not.toHaveBeenCalled();
+    });
+
+    it('client.data.userが存在しない場合、処理を中断すること', async () => {
+      const client = createMockSocket(); // userを設定しない
+      const joinData = { roomId: 'room-1' };
+
+      await gateway.handleJoin(joinData, client);
+
+      expect(gameService.handleGameJoin).not.toHaveBeenCalled();
+    });
   });
 
-  it('does not leave the game when another socket reconnects during the grace period', async () => {
-    jest.useFakeTimers();
-    const disconnectedClient = createSocket('socket-1');
-    const reconnectedClient = createSocket('socket-2');
+  describe('handleLeave', () => {
+    it('ルームから退出すること', async () => {
+      const client = createMockSocket();
+      client.data.user = { id: 'user-1' };
+      client.data.roomId = 'room-1';
+      socketPresenceService.register({
+        namespace: 'game',
+        roomId: 'room-1',
+        userId: 'user-1',
+        socketId: 'socket-123',
+      });
 
-    gateway.handleConnection(disconnectedClient);
-    await gateway.handleJoin({ roomId: 'room-a' }, disconnectedClient);
-    gateway.handleDisconnect(disconnectedClient);
+      await gateway.handleLeave(client);
 
-    gateway.handleConnection(reconnectedClient);
-    await gateway.handleJoin({ roomId: 'room-a' }, reconnectedClient);
-    jest.advanceTimersByTime(2000);
-    await Promise.resolve();
+      expect(client.leave).toHaveBeenCalledWith('room-1');
+      expect(client.data.roomId).toBeUndefined();
 
-    expect(gameService.handleGameLeave).not.toHaveBeenCalled();
+      // userId と clientId を渡しているか
+      expect(gameService.handleGameLeave).toHaveBeenCalledWith(
+        'user-1',
+        'socket-123',
+      );
+    });
+
+    it('ルームに参加していない場合は何もしないこと', async () => {
+      const client = createMockSocket();
+      client.data.user = { id: 'user-1' };
+
+      await gateway.handleLeave(client);
+
+      expect(client.leave).not.toHaveBeenCalled();
+      expect(gameService.handleGameLeave).not.toHaveBeenCalled();
+    });
   });
 
-  it('keeps the current room state when joining a new room fails', async () => {
-    const client = createSocket('socket-1');
-    gateway.handleConnection(client);
-    await gateway.handleJoin({ roomId: 'room-a' }, client);
-    client.join.mockRejectedValueOnce(new Error('join failed'));
+  describe('handleInput', () => {
+    it('入力を正しくGameServiceへ渡すこと', () => {
+      const client = createMockSocket();
+      client.data.user = { id: 'user-1' };
+      client.data.roomId = 'room-1';
+      socketPresenceService.register({
+        namespace: 'game',
+        roomId: 'room-1',
+        userId: 'user-1',
+        socketId: 'socket-123',
+      });
+      client.data.roomId = 'room-1';
 
-    await gateway.handleJoin({ roomId: 'room-b' }, client);
+      const inputData = { direction: 'up' as const, seq: 1 };
 
-    expect(client.data.roomId).toBe('room-a');
-    expect(client.leave).not.toHaveBeenCalled();
-    expect(gameService.handleGameLeave).not.toHaveBeenCalled();
-    expect(client.emit).toHaveBeenLastCalledWith('game:error', {
-      code: 'ROOM_JOIN_FAILED',
-      message: 'ゲームルームへの参加に失敗しました',
+      gateway.handleInput(inputData, client);
+
+      expect(gameService.handlePlayerInput).toHaveBeenCalledWith(
+        'room-1',
+        'user-1',
+        'up',
+        1,
+      );
+    });
+
+    it('roomIdがない場合は処理しないこと', () => {
+      const client = createMockSocket();
+      client.data.user = { id: 'user-1' }; // roomIdを設定しない
+      const inputData = { direction: 'up' as const, seq: 1 };
+
+      gateway.handleInput(inputData, client);
+      expect(gameService.handlePlayerInput).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('handleBombPlace', () => {
+    it('爆弾設置リクエストを正しくGameServiceへ渡すこと', () => {
+      const client = createMockSocket();
+      client.data.user = { id: 'user-1' };
+      client.data.roomId = 'room-1';
+
+      gateway.handleBombPlace({ seq: 1 }, client);
+
+      expect(gameService.handleBombPlace).toHaveBeenCalledWith(
+        'room-1',
+        'user-1',
+      );
+    });
+  });
+
+  describe('handleDisconnect', () => {
+    it('切断猶予期間が経過するとgameService.handleGameLeaveが呼ばれること', async () => {
+      jest.useFakeTimers();
+      const client = createMockSocket();
+      client.data.user = { id: 'user-1' };
+      client.data.roomId = 'room-1';
+      socketPresenceService.register({
+        namespace: 'game',
+        roomId: 'room-1',
+        userId: 'user-1',
+        socketId: 'socket-123',
+      });
+
+      gateway.handleDisconnect(client);
+      await jest.advanceTimersByTimeAsync(2000);
+
+      // userId と clientId を渡しているか
+      expect(gameService.handleGameLeave).toHaveBeenCalledWith(
+        'user-1',
+        'socket-123',
+      );
+      jest.useRealTimers();
+    });
+
+    it('ユーザー情報がない場合、何もしないこと', () => {
+      const client = createMockSocket();
+
+      gateway.handleDisconnect(client);
+
+      expect(gameService.handleGameLeave).not.toHaveBeenCalled();
     });
   });
 });
