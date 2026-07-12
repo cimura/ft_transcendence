@@ -43,6 +43,7 @@ export const ProfileEditModal = ({
       } else if (selectedDefaultAvatar) {
         // デフォルトアバターの設定
         newAvatarUrl = await setDefaultAvatar(selectedDefaultAvatar)
+        if (!newAvatarUrl) return
       }
 
       // 成功時のコールバック
