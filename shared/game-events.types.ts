@@ -20,9 +20,9 @@ export type PlayerSnapshot = {
   position: WorldPosition;
   direction: Direction;
   alive: boolean;
-  score: number;
   color: string;
   visorColor: string;
+  isDisconnected: boolean;
 };
 
 export type BombSnapshot = {
@@ -50,20 +50,15 @@ export interface ClientToServerEvents {
 
   "game:leave": () => void;
 
-  "player:input": (data: {
-    direction: Direction | null;
-    seq: number;
-    clientTime: number;
-  }) => void;
+  "player:input": (data: { direction: Direction | null; seq: number }) => void;
 
-  "bomb:place": (data: { seq: number; clientTime: number }) => void;
+  "bomb:place": (data: { seq: number }) => void;
 }
 
 export interface ServerToClientEvents {
   "game:init": (data: {
     yourId: string;
     serverTime: number;
-    mapRevision: number;
     map: TileType[][];
     players: Record<string, PlayerSnapshot>;
     bombs: Record<string, BombSnapshot>;
@@ -72,13 +67,11 @@ export interface ServerToClientEvents {
 
   "game:countdown": (data: { seconds: number; startsAt: number }) => void;
 
+  "game:playing": () => void;
+
   "game:state": (data: {
-    serverTick: number;
-    serverTime: number;
-    mapRevision: number;
     players: Record<string, PlayerSnapshot>;
     bombs: Record<string, BombSnapshot>;
-    phase: GamePhase;
   }) => void;
 
   "bomb:spawn": (data: { bomb: BombSnapshot }) => void;
@@ -88,7 +81,6 @@ export interface ServerToClientEvents {
     affectedTiles: GridPosition[];
     destroyedBlocks: GridPosition[];
     damagedPlayerIds: string[];
-    mapRevision: number;
   }) => void;
 
   "game:end": (data: {
@@ -97,5 +89,5 @@ export interface ServerToClientEvents {
     rankings: PlayerRanking[];
   }) => void;
 
-  "game:error": (data: { code: string; message: string }) => void;
+  "game:error": (data: { message: string }) => void;
 }

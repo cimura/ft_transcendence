@@ -46,9 +46,7 @@ export class RoomsController {
   @ApiOperation({ summary: 'ルームを作成' })
   @ApiResponse({ status: 201, description: '成功時' })
   async create(@Request() req: UserRequest, @Body() dto: CreateRoomDto) {
-    const room = await this.roomsService.create(req.user.userId, dto);
-    this.roomsGateway.emitRoomCreated(room);
-    return room;
+    return this.roomsService.create(req.user.userId, dto);
   }
 
   @Get(':roomId')
@@ -121,19 +119,27 @@ export class RoomsController {
   @Post(':roomId/ready')
   @ApiOperation({ summary: 'Ready状態を変更' })
   @ApiResponse({ status: 201, description: '成功時' })
-  setReady(
+  async setReady(
     @Request() req: UserRequest,
     @Param('roomId') roomId: string,
     @Body() dto: ReadyRoomDto,
   ) {
-    return this.roomsService.setReady(roomId, req.user.userId, dto.isReady);
+    const room = await this.roomsService.setReady(
+      roomId,
+      req.user.userId,
+      dto.isReady,
+    );
+    this.roomsGateway.emitRoomUpdated(room);
+    return room;
   }
 
   @Post(':roomId/start')
   @ApiOperation({ summary: '試合を開始' })
   @ApiResponse({ status: 201, description: '成功時' })
-  start(@Request() req: UserRequest, @Param('roomId') roomId: string) {
-    return this.roomsService.start(roomId, req.user.userId);
+  async start(@Request() req: UserRequest, @Param('roomId') roomId: string) {
+    const room = await this.roomsService.start(roomId, req.user.userId);
+    this.roomsGateway.emitRoomUpdated(room);
+    return room;
   }
 
   @Get(':roomId/messages')

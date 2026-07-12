@@ -36,7 +36,9 @@ export function Modal({ isOpen, onClose, title, children }: ModalProps) {
       >
         {title && (
           <div className="mb-4 flex items-center justify-between">
-            <h2 className="text-xl font-bold tracking-wide text-white">{title}</h2>
+            <h2 className="text-xl font-bold tracking-wide text-white">
+              {title}
+            </h2>
             <button
               onClick={onClose}
               className="border border-emerald-100/25 px-2 text-emerald-50/60 hover:border-[#b8ff64] hover:text-[#b8ff64]"

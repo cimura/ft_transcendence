@@ -76,90 +76,83 @@ export default function Signup({
 
   return (
     <AuthShell eyebrow="NEW TRAVELER PROTOCOL" title="CREATE IDENTITY">
-        <form action={handleSignup} className="terminal-form">
-          {error && (
-            <div className="terminal-alert" role="alert">
-              {error}
-            </div>
+      <form action={handleSignup} className="terminal-form">
+        {error && (
+          <div className="terminal-alert" role="alert">
+            {error}
+          </div>
+        )}
+        <div>
+          <label htmlFor="email" className="terminal-label">
+            Email
+          </label>
+          <input
+            type="email"
+            id="email"
+            name="email"
+            required
+            autoComplete="email"
+            className={`terminal-input ${fieldErrors.email ? 'terminal-input--error' : ''}`}
+          />
+          {fieldErrors.email && (
+            <p className="terminal-field-error">{fieldErrors.email}</p>
           )}
-          <div>
-            <label htmlFor="email" className="terminal-label">
-              Email
-            </label>
-            <input
-              type="email"
-              id="email"
-              name="email"
-              required
-              autoComplete="email"
-              className={`terminal-input ${fieldErrors.email ? 'terminal-input--error' : ''}`}
-            />
-            {fieldErrors.email && (
-              <p className="terminal-field-error">{fieldErrors.email}</p>
-            )}
-          </div>
-          <div>
-            <label htmlFor="username" className="terminal-label">
-              Username
-            </label>
-            <input
-              type="text"
-              id="username"
-              name="username"
-              required
-              minLength={3}
-              autoComplete="username"
-              className={`terminal-input ${fieldErrors.username ? 'terminal-input--error' : ''}`}
-            />
-            {fieldErrors.username && (
-              <p className="terminal-field-error">{fieldErrors.username}</p>
-            )}
-          </div>
-          <div>
-            <label htmlFor="password" className="terminal-label">
-              Password
-            </label>
-            <input
-              type="password"
-              id="password"
-              name="password"
-              required
-              minLength={8}
-              autoComplete="new-password"
-              className="terminal-input"
-            />
-          </div>
-          <div>
-            <label htmlFor="confirmPassword" className="terminal-label">
-              Confirm Password
-            </label>
-            <input
-              type="password"
-              id="confirmPassword"
-              name="confirmPassword"
-              required
-              minLength={8}
-              autoComplete="new-password"
-              className="terminal-input"
-            />
-          </div>
-          <button
-            type="submit"
-            disabled={loading}
-            className="terminal-submit"
-          >
-            {loading ? 'REGISTERING...' : 'REQUEST PASSPORT'}
-          </button>
-        </form>
-        <div className="terminal-switch">
-          Identity already registered?{' '}
-          <button
-            onClick={onSwitchToSignIn}
-            className="terminal-link"
-          >
-            Sign in
-          </button>
         </div>
+        <div>
+          <label htmlFor="username" className="terminal-label">
+            Username
+          </label>
+          <input
+            type="text"
+            id="username"
+            name="username"
+            required
+            minLength={3}
+            autoComplete="username"
+            className={`terminal-input ${fieldErrors.username ? 'terminal-input--error' : ''}`}
+          />
+          {fieldErrors.username && (
+            <p className="terminal-field-error">{fieldErrors.username}</p>
+          )}
+        </div>
+        <div>
+          <label htmlFor="password" className="terminal-label">
+            Password
+          </label>
+          <input
+            type="password"
+            id="password"
+            name="password"
+            required
+            minLength={8}
+            autoComplete="new-password"
+            className="terminal-input"
+          />
+        </div>
+        <div>
+          <label htmlFor="confirmPassword" className="terminal-label">
+            Confirm Password
+          </label>
+          <input
+            type="password"
+            id="confirmPassword"
+            name="confirmPassword"
+            required
+            minLength={8}
+            autoComplete="new-password"
+            className="terminal-input"
+          />
+        </div>
+        <button type="submit" disabled={loading} className="terminal-submit">
+          {loading ? 'REGISTERING...' : 'REQUEST PASSPORT'}
+        </button>
+      </form>
+      <div className="terminal-switch">
+        Identity already registered?{' '}
+        <button onClick={onSwitchToSignIn} className="terminal-link">
+          Sign in
+        </button>
+      </div>
     </AuthShell>
   )
 }

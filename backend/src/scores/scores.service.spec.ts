@@ -7,6 +7,10 @@ describe('ScoresService', () => {
   let service: ScoresService;
   let prisma: {
     $transaction: jest.Mock;
+    $queryRaw: jest.Mock;
+    match: {
+      create: jest.Mock;
+    };
     matchParticipant: {
       findMany: jest.Mock;
       count: jest.Mock;
@@ -16,6 +20,10 @@ describe('ScoresService', () => {
   beforeEach(async () => {
     prisma = {
       $transaction: jest.fn(),
+      $queryRaw: jest.fn(),
+      match: {
+        create: jest.fn(),
+      },
       matchParticipant: {
         findMany: jest.fn(),
         count: jest.fn(),
@@ -207,6 +215,122 @@ describe('ScoresService', () => {
       hasMore: false,
       total: 21,
       page: 2,
+    });
+  });
+
+  it('records game end rankings as match participants', async () => {
+    const finishedAt = new Date('2026-06-25T09:12:20.525Z');
+
+    await service.recordMatchResult({
+      gameType: 'Bomberman',
+      finishedAt,
+      winnerId: 'user-1',
+      isDraw: false,
+      rankings: [
+        {
+          playerId: 'user-1',
+          alive: true,
+          blocksDestroyed: 3,
+          bombsPlaced: 2,
+          kills: 1,
+          survivalTime: 12000,
+        },
+        {
+          playerId: 'user-2',
+          alive: false,
+          blocksDestroyed: 1,
+          bombsPlaced: 1,
+          kills: 0,
+          survivalTime: 8000,
+        },
+      ],
+    });
+
+    expect(prisma.match.create).toHaveBeenCalledWith({
+      data: {
+        gameType: 'Bomberman',
+        finishedAt,
+        participants: {
+          create: [
+            {
+              userId: 'user-1',
+              result: MatchResult.WIN,
+              kills: 1,
+              score: null,
+              rank: 1,
+            },
+            {
+              userId: 'user-2',
+              result: MatchResult.LOSS,
+              kills: 0,
+              score: null,
+              rank: 2,
+            },
+          ],
+        },
+      },
+    });
+  });
+
+  it('aggregates rankings from stored match participants', async () => {
+    prisma.$queryRaw.mockResolvedValue([
+      {
+        userId: 'user-1',
+        username: 'alice',
+        displayName: 'Alice',
+        avatarUrl: '/avatars/default-1.svg',
+        totalGames: 2,
+        wins: 1,
+        losses: 0,
+        draws: 1,
+        kills: 2,
+        points: 4,
+      },
+      {
+        userId: 'user-2',
+        username: 'bob',
+        displayName: null,
+        avatarUrl: null,
+        totalGames: 1,
+        wins: 1,
+        losses: 0,
+        draws: 0,
+        kills: 1,
+        points: 3,
+      },
+    ]);
+
+    await expect(service.getRankings(10)).resolves.toEqual({
+      data: [
+        {
+          userId: 'user-1',
+          username: 'alice',
+          displayName: 'Alice',
+          avatarUrl: '/avatars/default-1.svg',
+          totalGames: 2,
+          wins: 1,
+          losses: 0,
+          draws: 1,
+          kills: 2,
+          points: 4,
+          rank: 1,
+          winRate: 50,
+        },
+        {
+          userId: 'user-2',
+          username: 'bob',
+          displayName: null,
+          avatarUrl: null,
+          totalGames: 1,
+          wins: 1,
+          losses: 0,
+          draws: 0,
+          kills: 1,
+          points: 3,
+          rank: 2,
+          winRate: 100,
+        },
+      ],
     });
   });
 });

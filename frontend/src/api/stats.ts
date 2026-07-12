@@ -1,6 +1,10 @@
 import api from './client'
 
-import type { UserStats, MatchHistoryResponse } from '../types/profile'
+import type {
+  UserStats,
+  MatchHistoryResponse,
+  RankingsResponse,
+} from '../types/profile'
 
 /**
  * モック統計データ
@@ -94,5 +98,14 @@ export const getMatchHistory = async (
       params: { page, limit },
     }
   )
+  return response.data
+}
+
+export const getRankings = async (
+  limit: number = 20
+): Promise<RankingsResponse> => {
+  const response = await api.get<RankingsResponse>('/scores/rankings', {
+    params: { limit },
+  })
   return response.data
 }

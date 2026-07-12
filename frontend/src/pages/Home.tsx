@@ -1,11 +1,18 @@
 import { useNavigate } from 'react-router-dom'
-import { useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import { useAuthStore } from '../stores/authStore'
+import { useRoomStore } from '../stores/roomStore'
+import { createRoom } from '../api/rooms'
 import { useNotifications } from '../hooks/useNotifications'
 
+/**
+ * Renders the home dashboard with navigation to profile, friends, lobby, notifications, rankings, and settings.
+ */
 export function Home() {
   const navigate = useNavigate()
   const { currentUser, fetchCurrentUser, loading } = useAuthStore()
+  const { setCurrentRoom, upsertRoom } = useRoomStore()
+  const [isCreatingRoom, setIsCreatingRoom] = useState(false)
   const { notifications } = useNotifications()
 
   useEffect(() => {
@@ -28,12 +35,41 @@ export function Home() {
     }
   }
 
+  const handleStartMatchClick = async () => {
+    if (isCreatingRoom) return
+
+    setIsCreatingRoom(true)
+    try {
+      let user = currentUser
+      if (!user) {
+        await fetchCurrentUser()
+        user = useAuthStore.getState().currentUser
+      }
+
+      const username = user?.displayName || user?.username || 'Player'
+      const room = await createRoom({
+        name: `${username} の部屋`,
+        maxPlayers: 2,
+      })
+
+      upsertRoom(room)
+      setCurrentRoom(room)
+      navigate(`/room/${room.id}`)
+    } catch (error) {
+      console.error('Failed to create match room:', error)
+    } finally {
+      setIsCreatingRoom(false)
+    }
+  }
+
   return (
     <div className="space-page">
       <header className="console-header">
         <div className="mx-auto flex max-w-6xl items-center justify-between px-5 py-5 sm:px-8">
           <div>
-            <p className="console-kicker">GALACTIC GAME NETWORK / LOCAL TERMINAL</p>
+            <p className="console-kicker">
+              GALACTIC GAME NETWORK / LOCAL TERMINAL
+            </p>
             <h1 className="console-title">PAN-GALACTIC ARCADE</h1>
           </div>
           <div className="hidden text-right text-xs font-bold tracking-wider text-emerald-100/60 sm:block">
@@ -53,16 +89,51 @@ export function Home() {
               Match with nearby life forms, create a room, and keep an eye on
               your towel.
             </p>
-            <button onClick={() => navigate('/lobby')} className="nav-action mt-7 px-5 py-3 text-sm">
-              OPEN LOBBY
-            </button>
+            <div className="mt-7 flex flex-wrap gap-3">
+              <button
+                onClick={handleStartMatchClick}
+                disabled={isCreatingRoom}
+                className="nav-action px-5 py-3 text-sm"
+              >
+                {isCreatingRoom ? 'PREPARING...' : 'START MATCH'}
+              </button>
+              <button
+                onClick={() => navigate('/lobby')}
+                className="nav-action px-5 py-3 text-sm"
+              >
+                OPEN LOBBY
+              </button>
+            </div>
           </section>
 
           <section className="console-panel console-panel--subtle grid grid-cols-2 gap-px overflow-hidden bg-emerald-300/20">
-            <HomeAction label="MY PROFILE" code="ID" onClick={handleMyProfileClick} disabled={loading} />
-            <HomeAction label="FRIENDS" code="FR" onClick={() => navigate('/friends')} />
-            <HomeAction label="NOTICES" code="NT" count={notifications.length} onClick={() => navigate('/notifications')} />
-            <HomeAction label="SETTINGS" code="CFG" onClick={() => navigate('/settings')} />
+            <HomeAction
+              label="MY PROFILE"
+              code="ID"
+              onClick={handleMyProfileClick}
+              disabled={loading}
+            />
+            <HomeAction
+              label="FRIENDS"
+              code="FR"
+              onClick={() => navigate('/friends')}
+            />
+            <HomeAction
+              label="NOTICES"
+              code="NT"
+              count={notifications.length}
+              onClick={() => navigate('/notifications')}
+            />
+            <HomeAction
+              label="RANKINGS"
+              code="RK"
+              onClick={() => navigate('/rankings')}
+            />
+            <HomeAction
+              label="SETTINGS"
+              code="CFG"
+              onClick={() => navigate('/settings')}
+            />
           </section>
         </div>
       </main>
@@ -89,8 +160,12 @@ function HomeAction({
       disabled={disabled}
       className="relative min-h-36 bg-[#08231e] p-5 text-left transition-colors hover:bg-[#123a31] disabled:opacity-50"
     >
-      <span className="block text-xs font-bold tracking-widest text-[#b8ff64]">{code}</span>
-      <span className="mt-9 block text-lg font-bold tracking-wide text-white">{label}</span>
+      <span className="block text-xs font-bold tracking-widest text-[#b8ff64]">
+        {code}
+      </span>
+      <span className="mt-9 block text-lg font-bold tracking-wide text-white">
+        {label}
+      </span>
       {count ? (
         <span className="absolute right-4 top-4 border border-[#ff7669] bg-[#4d2422] px-2 py-1 text-xs font-bold text-[#ffd6d2]">
           {count}

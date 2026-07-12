@@ -4,7 +4,7 @@ import { acceptFriendRequest, rejectFriendRequest } from '../api/friend'
 import { acceptRoomInvitation, declineRoomInvitation } from '../api/rooms'
 import { getApiErrorMessage } from '../api/errors'
 import { useNotifications } from '../hooks/useNotifications'
-import { useLobbyStore } from '../stores/lobbyStore'
+import { useRoomStore } from '../stores/roomStore'
 import type { NotificationItem } from '../types/notification'
 
 const formatDate = (value: string) =>
@@ -19,7 +19,7 @@ export function NotificationsPage() {
   const navigate = useNavigate()
   const { notifications, loading, error, refetch, removeNotification } =
     useNotifications()
-  const { setCurrentRoom, upsertRoom } = useLobbyStore()
+  const { setCurrentRoom, upsertRoom } = useRoomStore()
   const [processingId, setProcessingId] = useState<string | null>(null)
   const [actionError, setActionError] = useState<string | null>(null)
 

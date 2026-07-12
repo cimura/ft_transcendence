@@ -9,7 +9,6 @@ import {
   useNavigate,
   useLocation,
 } from 'react-router-dom'
-import { Lobby } from './pages/Lobby'
 import { WaitingRoom } from './pages/WaitingRoom'
 import { GameRoomPage } from './pages/GameRoomPage'
 import { FriendsMenuPage } from './pages/friends/FriendsMenuPage'
@@ -17,6 +16,7 @@ import { FriendsListPage } from './pages/friends/FriendsListPage'
 import { FriendRequestsPage } from './pages/friends/FriendRequestsPage'
 import { UserSearchPage } from './pages/friends/UserSearchPage'
 import { ProfilePage } from './pages/ProfilePage'
+import { RankingsPage } from './pages/RankingsPage'
 import { Home } from './pages/Home'
 import { Settings } from './pages/settings/Settings'
 import { SettingsMenu } from './pages/settings/SettingsMenu'
@@ -34,6 +34,9 @@ function App() {
   )
 }
 
+/**
+ * Renders application routes according to the user's authentication state.
+ */
 function AppRoutes() {
   const navigate = useNavigate()
   const location = useLocation()
@@ -95,9 +98,9 @@ function AppRoutes() {
     <Routes>
       <Route path="/" element={<Navigate to="/home" replace />} />
       <Route path="/home" element={<Home />} />
-      <Route path="/lobby" element={<Lobby />} />
       <Route path="/room/:roomId" element={<WaitingRoom />} />
       <Route path="/game/:roomId" element={<GameRoomPage />} />
+      <Route path="/rankings" element={<RankingsPage />} />
       <Route path="/notifications" element={<NotificationsPage />} />
 
       {/* フレンド機能 */}
