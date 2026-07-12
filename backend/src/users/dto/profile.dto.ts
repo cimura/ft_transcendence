@@ -59,3 +59,23 @@ export class ProfileResponseDto {
   })
   user: ProfileUserDto;
 }
+
+export class AvatarUpdateResponseDto {
+  @ApiProperty({
+    example: 'Avatar updated successfully',
+    description: 'アバター画像が更新されたことを示す通知文',
+  })
+  message: string;
+
+  @ApiProperty({
+    example: '/uploads/images/avatar.png',
+    description: '更新後のプロフィール画像URL',
+  })
+  avatarUrl: string;
+
+  @ApiProperty({
+    description: '更新後のユーザー情報',
+    type: ProfileUserDto,
+  })
+  user: ProfileUserDto;
+}

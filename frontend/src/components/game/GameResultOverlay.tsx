@@ -107,8 +107,8 @@ export function GameResultOverlay() {
           </div>
         )}
         <div className="mt-6 flex justify-center">
-          <Button variant="primary" onClick={() => navigate('/lobby')}>
-            ロビーへ戻る
+          <Button variant="primary" onClick={() => navigate('/home')}>
+            ホームへ戻る
           </Button>
         </div>
       </div>

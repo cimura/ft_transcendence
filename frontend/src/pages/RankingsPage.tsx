@@ -6,6 +6,9 @@ import type { RankingItem } from '../types/profile'
 /**
  * Displays the rankings list and provides navigation to the home and player profile pages.
  */
+
+const RANKING_GRID_COLS =
+  'grid-cols-[52px_minmax(0,1fr)_76px] sm:grid-cols-[64px_minmax(0,1fr)_88px_88px_88px]'
 export function RankingsPage() {
   const navigate = useNavigate()
   const [rankings, setRankings] = useState<RankingItem[]>([])
@@ -56,7 +59,9 @@ export function RankingsPage() {
         </div>
 
         <div className="overflow-hidden rounded-2xl border-2 border-white/20 bg-black/80">
-          <div className="grid grid-cols-[52px_minmax(0,1fr)_76px] gap-3 border-b border-white/10 px-4 py-4 text-sm font-semibold text-white/60 sm:grid-cols-[64px_minmax(0,1fr)_88px_88px_88px] sm:px-5">
+          <div
+            className={`grid ${RANKING_GRID_COLS} gap-3 border-b border-white/10 px-4 py-4 text-sm font-semibold text-white/60 sm:px-5`}
+          >
             <span>順位</span>
             <span>プレイヤー</span>
             <span className="text-right">ポイント</span>
@@ -86,7 +91,7 @@ export function RankingsPage() {
               <button
                 key={item.userId}
                 onClick={() => navigate(`/profile/${item.userId}`)}
-                className="grid w-full grid-cols-[52px_minmax(0,1fr)_76px] items-center gap-3 border-b border-white/10 px-4 py-4 text-left transition-all last:border-b-0 hover:bg-white/5 sm:grid-cols-[64px_minmax(0,1fr)_88px_88px_88px] sm:px-5"
+                className={`grid w-full ${RANKING_GRID_COLS} items-center gap-3 border-b border-white/10 px-4 py-4 text-left transition-all last:border-b-0 hover:bg-white/5 sm:px-5`}
               >
                 <span className="text-xl font-bold">#{item.rank}</span>
                 <span className="min-w-0">

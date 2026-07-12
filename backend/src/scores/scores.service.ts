@@ -3,7 +3,21 @@ import { MatchHistoryResponseDto } from './dto/match-history.dto';
 import { RankingsResponseDto } from './dto/ranking.dto';
 import { PrismaService } from '../prisma.service';
 import { MatchResult } from '../generated/prisma/enums';
+import { Prisma } from '../generated/prisma/client.js';
 import type { PlayerRanking } from '@ft_transcendence/shared/game-events.types';
+
+type RankingAggregateRow = {
+  userId: string;
+  username: string;
+  displayName: string | null;
+  avatarUrl: string | null;
+  totalGames: number;
+  wins: number;
+  losses: number;
+  draws: number;
+  kills: number;
+  points: number;
+};
 
 @Injectable()
 export class ScoresService {
@@ -111,84 +125,45 @@ export class ScoresService {
   }
 
   async getRankings(limit = 20): Promise<RankingsResponseDto> {
-    const participants = await this.prisma.matchParticipant.findMany({
-      select: {
-        userId: true,
-        result: true,
-        kills: true,
-        user: {
-          select: {
-            username: true,
-            displayName: true,
-            avatarUrl: true,
-          },
-        },
-      },
-    });
+    const rankingLimit = Math.min(Math.max(limit, 1), 100);
 
-    const rows = new Map<
-      string,
-      {
-        userId: string;
-        username: string;
-        displayName: string | null;
-        avatarUrl: string | null;
-        totalGames: number;
-        wins: number;
-        losses: number;
-        draws: number;
-        kills: number;
-        points: number;
-      }
-    >();
+    const rows = await this.prisma.$queryRaw<RankingAggregateRow[]>(
+      Prisma.sql`
+        SELECT
+          mp."userId",
+          u."username",
+          u."displayName",
+          u."avatarUrl",
+          COUNT(*)::int AS "totalGames",
+          COUNT(*) FILTER (WHERE mp."result" = 'WIN')::int AS "wins",
+          COUNT(*) FILTER (WHERE mp."result" = 'LOSS')::int AS "losses",
+          COUNT(*) FILTER (WHERE mp."result" = 'DRAW')::int AS "draws",
+          COALESCE(SUM(mp."kills"), 0)::int AS "kills",
+          (
+            COUNT(*) FILTER (WHERE mp."result" = 'WIN') * 3
+            + COUNT(*) FILTER (WHERE mp."result" = 'DRAW')
+          )::int AS "points"
+        FROM "MatchParticipant" mp
+        INNER JOIN "User" u ON u."id" = mp."userId"
+        GROUP BY mp."userId", u."username", u."displayName", u."avatarUrl"
+        ORDER BY
+          "points" DESC,
+          "wins" DESC,
+          "kills" DESC,
+          "totalGames" DESC,
+          u."username" ASC
+        LIMIT ${rankingLimit}
+      `,
+    );
 
-    for (const participant of participants) {
-      const row = rows.get(participant.userId) ?? {
-        userId: participant.userId,
-        username: participant.user.username,
-        displayName: participant.user.displayName,
-        avatarUrl: participant.user.avatarUrl,
-        totalGames: 0,
-        wins: 0,
-        losses: 0,
-        draws: 0,
-        kills: 0,
-        points: 0,
-      };
-
-      row.totalGames += 1;
-      row.kills += participant.kills ?? 0;
-
-      if (participant.result === MatchResult.WIN) {
-        row.wins += 1;
-        row.points += 3;
-      } else if (participant.result === MatchResult.DRAW) {
-        row.draws += 1;
-        row.points += 1;
-      } else {
-        row.losses += 1;
-      }
-
-      rows.set(participant.userId, row);
-    }
-
-    const data = [...rows.values()]
-      .sort((a, b) => {
-        if (b.points !== a.points) return b.points - a.points;
-        if (b.wins !== a.wins) return b.wins - a.wins;
-        if (b.kills !== a.kills) return b.kills - a.kills;
-        if (b.totalGames !== a.totalGames) return b.totalGames - a.totalGames;
-        return a.username.localeCompare(b.username);
-      })
-      .slice(0, limit)
-      .map((row, index) => ({
-        ...row,
-        rank: index + 1,
-        winRate:
-          row.totalGames === 0
-            ? 0
-            : Number(((row.wins / row.totalGames) * 100).toFixed(1)),
-      }));
+    const data = rows.map((row, index) => ({
+      ...row,
+      rank: index + 1,
+      winRate:
+        row.totalGames === 0
+          ? 0
+          : Number(((row.wins / row.totalGames) * 100).toFixed(1)),
+    }));
 
     return { data };
   }

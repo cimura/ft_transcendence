@@ -7,6 +7,7 @@ describe('ScoresService', () => {
   let service: ScoresService;
   let prisma: {
     $transaction: jest.Mock;
+    $queryRaw: jest.Mock;
     match: {
       create: jest.Mock;
     };
@@ -19,6 +20,7 @@ describe('ScoresService', () => {
   beforeEach(async () => {
     prisma = {
       $transaction: jest.fn(),
+      $queryRaw: jest.fn(),
       match: {
         create: jest.fn(),
       },
@@ -271,36 +273,30 @@ describe('ScoresService', () => {
   });
 
   it('aggregates rankings from stored match participants', async () => {
-    prisma.matchParticipant.findMany.mockResolvedValue([
+    prisma.$queryRaw.mockResolvedValue([
       {
         userId: 'user-1',
-        result: MatchResult.WIN,
+        username: 'alice',
+        displayName: 'Alice',
+        avatarUrl: '/avatars/default-1.svg',
+        totalGames: 2,
+        wins: 1,
+        losses: 0,
+        draws: 1,
         kills: 2,
-        user: {
-          username: 'alice',
-          displayName: 'Alice',
-          avatarUrl: '/avatars/default-1.svg',
-        },
-      },
-      {
-        userId: 'user-1',
-        result: MatchResult.DRAW,
-        kills: null,
-        user: {
-          username: 'alice',
-          displayName: 'Alice',
-          avatarUrl: '/avatars/default-1.svg',
-        },
+        points: 4,
       },
       {
         userId: 'user-2',
-        result: MatchResult.WIN,
+        username: 'bob',
+        displayName: null,
+        avatarUrl: null,
+        totalGames: 1,
+        wins: 1,
+        losses: 0,
+        draws: 0,
         kills: 1,
-        user: {
-          username: 'bob',
-          displayName: null,
-          avatarUrl: null,
-        },
+        points: 3,
       },
     ]);
 

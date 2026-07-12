@@ -7,10 +7,14 @@ import type {
   PlayerStats,
 } from '@ft_transcendence/shared/game-events.types';
 
+export interface PlayerConnection {
+  clientId: string; // 現在プレイヤーが使用しているWebSocketのID
+  lastActiveTime: number;
+}
+
 export interface GameSession {
   roomId: string;
   phase: GamePhase;
-  mapRevision: number;
   map: TileType[][];
   players: Record<string, PlayerSnapshot>;
   bombs: Record<string, BombSnapshot>;
@@ -19,6 +23,10 @@ export interface GameSession {
   countdownTimerId?: NodeJS.Timeout;
   playerInputs: Record<string, { direction: Direction | null; seq: number }>;
   bombPassingPlayers: Record<string, string[]>;
+  startPositionSlots: (string | null)[];
   stats: Record<string, PlayerStats>;
+  playerConnections: Record<string, PlayerConnection>;
+  disconnectedPlayers: number;
+  disconnectedAt: number;
   startedAt?: number;
 }
