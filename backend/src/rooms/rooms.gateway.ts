@@ -167,6 +167,11 @@ export class RoomsGateway implements OnGatewayConnection, OnGatewayDisconnect {
         userId,
         socketId: client.id,
       });
+      this.socketPresenceService.scheduleIfInactive(
+        { namespace: 'rooms', roomId: previousRoomId, userId },
+        2000,
+        () => this.leaveRoomAfterDisconnect(previousRoomId, userId),
+      );
       await client.leave(previousRoomId);
     }
 
