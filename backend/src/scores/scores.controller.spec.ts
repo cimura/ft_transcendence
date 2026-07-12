@@ -6,6 +6,7 @@ describe('ScoresController', () => {
   let controller: ScoresController;
   let scoresService: {
     getMatchHistory: jest.Mock;
+    getRankings: jest.Mock;
   };
 
   beforeEach(async () => {
@@ -16,6 +17,7 @@ describe('ScoresController', () => {
         total: 0,
         page: 1,
       }),
+      getRankings: jest.fn().mockResolvedValue({ data: [] }),
     };
 
     const module: TestingModule = await Test.createTestingModule({
@@ -41,5 +43,17 @@ describe('ScoresController', () => {
     await controller.getMatchHistory('user-1', { page: 2, limit: 50 });
 
     expect(scoresService.getMatchHistory).toHaveBeenCalledWith('user-1', 2, 50);
+  });
+
+  it('uses default ranking limit when query params are omitted', async () => {
+    await controller.getRankings({});
+
+    expect(scoresService.getRankings).toHaveBeenCalledWith(20);
+  });
+
+  it('passes ranking limit query params to the service', async () => {
+    await controller.getRankings({ limit: 50 });
+
+    expect(scoresService.getRankings).toHaveBeenCalledWith(50);
   });
 });

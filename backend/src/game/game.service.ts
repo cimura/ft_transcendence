@@ -25,6 +25,8 @@ import {
 } from './logic/session/player.logic';
 import { tryPlaceBomb } from './logic/mechanics/bomb.logic';
 import { START_POSITIONS } from './logic/setup/map.logic';
+import { ScoresService } from '../scores/scores.service';
+import { bombermanGame } from '../games/games.constants';
 
 const MIN_PLAYERS_TO_START = 2;
 
@@ -35,6 +37,8 @@ export class GameService {
 
   private rooms = new Map<string, GameSession>();
   private server: Server;
+
+  constructor(private readonly scoresService: ScoresService) {}
 
   setServer(server: Server) {
     this.server = server;
@@ -290,7 +294,29 @@ export class GameService {
 
     if (result.isGameEnded && result.endResult) {
       this.server.to(room.roomId).emit('game:end', result.endResult);
+      void this.recordMatchResult(room, now, result.endResult);
       this.cleanupRoom(room.roomId);
+    }
+  }
+
+  private async recordMatchResult(
+    room: GameSession,
+    finishedAtMs: number,
+    endResult: NonNullable<ReturnType<typeof advanceGameTick>['endResult']>,
+  ) {
+    try {
+      await this.scoresService.recordMatchResult({
+        gameType: bombermanGame.name,
+        finishedAt: new Date(finishedAtMs),
+        winnerId: endResult.winnerId,
+        isDraw: endResult.isDraw,
+        rankings: endResult.rankings,
+      });
+    } catch (error) {
+      this.logger.error(
+        `Failed to record match result for room ${room.roomId}`,
+        error instanceof Error ? error.stack : String(error),
+      );
     }
   }
 
