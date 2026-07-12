@@ -14,6 +14,7 @@ import { ScoresModule } from './scores/scores.module';
 import { GamesModule } from './games/games.module';
 import { RoomsModule } from './rooms/rooms.module';
 import { NotificationsModule } from './notifications/notifications.module';
+import { AppWebsocketModule } from './websocket/websocket.module';
 
 @Module({
   imports: [
@@ -31,6 +32,7 @@ import { NotificationsModule } from './notifications/notifications.module';
     GamesModule,
     RoomsModule,
     NotificationsModule,
+    AppWebsocketModule,
   ],
   controllers: [AppController],
   providers: [AppService, GameGateway],

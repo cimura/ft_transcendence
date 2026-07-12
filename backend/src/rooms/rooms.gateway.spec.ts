@@ -1,6 +1,7 @@
-import { JwtService } from '@nestjs/jwt';
 import { RoomsService } from './rooms.service';
 import { RoomsGateway } from './rooms.gateway';
+import { SocketAuthService } from '../websocket/socket-auth.service';
+import { SocketPresenceService } from '../websocket/socket-presence.service';
 
 const userId = 'user-1';
 const roomId = 'room-1';
@@ -35,12 +36,16 @@ describe('RoomsGateway', () => {
     findSocketMessages: jest.Mock;
     createSocketMessage: jest.Mock;
   };
-  let jwtService: {
-    verify: jest.Mock;
+  let socketAuthService: {
+    authenticate: jest.Mock;
+  };
+  let socketPresenceService: {
+    register: jest.Mock;
+    unregister: jest.Mock;
+    scheduleIfInactive: jest.Mock;
   };
   let serverEmit: jest.Mock;
   let serverTo: jest.Mock;
-  let consoleLogSpy: jest.SpyInstance;
 
   const createClient = (
     options: {
@@ -65,22 +70,25 @@ describe('RoomsGateway', () => {
       findSocketMessages: jest.fn(),
       createSocketMessage: jest.fn(),
     };
-    jwtService = {
-      verify: jest.fn().mockReturnValue({ sub: userId }),
+    socketAuthService = {
+      authenticate: jest.fn((client) =>
+        client.handshake.auth.token ? { id: userId } : null,
+      ),
+    };
+    socketPresenceService = {
+      register: jest.fn(),
+      unregister: jest.fn().mockReturnValue(0),
+      scheduleIfInactive: jest.fn(),
     };
     serverEmit = jest.fn();
     serverTo = jest.fn().mockReturnValue({ emit: serverEmit });
 
     gateway = new RoomsGateway(
       roomsService as unknown as RoomsService,
-      jwtService as unknown as JwtService,
+      socketAuthService as unknown as SocketAuthService,
+      socketPresenceService as unknown as SocketPresenceService,
     );
     gateway.server = { to: serverTo } as any;
-    consoleLogSpy = jest.spyOn(console, 'log').mockImplementation(() => {});
-  });
-
-  afterEach(() => {
-    consoleLogSpy.mockRestore();
   });
 
   it('joins a room chat and sends existing history to the client', async () => {
@@ -89,7 +97,7 @@ describe('RoomsGateway', () => {
 
     await gateway.handleJoinChat({ roomId }, client);
 
-    expect(jwtService.verify).toHaveBeenCalledWith('token-1');
+    expect(socketAuthService.authenticate).toHaveBeenCalledWith(client);
     expect(roomsService.findSocketMessages).toHaveBeenCalledWith(
       roomId,
       userId,

@@ -1,12 +1,14 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { JwtService } from '@nestjs/jwt';
 import { GameGateway } from './game.gateway';
 import { GameService } from './game.service';
+import { SocketAuthService } from '../websocket/socket-auth.service';
+import { SocketPresenceService } from '../websocket/socket-presence.service';
 
 describe('GameGateway', () => {
   let gateway: GameGateway;
   let gameService: jest.Mocked<GameService>;
-  let jwtService: jest.Mocked<JwtService>;
+  let socketAuthService: jest.Mocked<SocketAuthService>;
+  let socketPresenceService: SocketPresenceService;
 
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
@@ -23,18 +25,15 @@ describe('GameGateway', () => {
             handleBombPlace: jest.fn(),
           },
         },
-        {
-          provide: JwtService,
-          useValue: {
-            verify: jest.fn(),
-          },
-        },
+        { provide: SocketAuthService, useValue: { authenticate: jest.fn() } },
+        SocketPresenceService,
       ],
     }).compile();
 
     gateway = module.get<GameGateway>(GameGateway);
     gameService = module.get(GameService);
-    jwtService = module.get(JwtService);
+    socketAuthService = module.get(SocketAuthService);
+    socketPresenceService = module.get(SocketPresenceService);
   });
 
   // モックのソケットオブジェクトを作成するヘルパー関数
@@ -55,35 +54,31 @@ describe('GameGateway', () => {
   describe('handleConnection', () => {
     it('正常なトークンで接続された場合、デコードされたuser情報をセットする', () => {
       const client = createMockSocket();
-      client.handshake.auth.token = 'Bearer valid-token';
-      jwtService.verify.mockReturnValue({ sub: 'user-1' });
+      socketAuthService.authenticate.mockReturnValue({ id: 'user-1' });
 
       gateway.handleConnection(client);
 
-      expect(jwtService.verify).toHaveBeenCalledWith('valid-token');
       expect(client.data.user).toEqual({ id: 'user-1' });
       expect(client.disconnect).not.toHaveBeenCalled();
     });
 
     it('トークンが存在しない場合、通信を切断する', () => {
       const client = createMockSocket();
+      socketAuthService.authenticate.mockReturnValue(null);
       gateway.handleConnection(client);
       expect(client.disconnect).toHaveBeenCalled();
     });
 
     it('トークンの形式がBearerでない場合、通信を切断する', () => {
       const client = createMockSocket();
-      client.handshake.auth.token = 'Invalid format token';
+      socketAuthService.authenticate.mockReturnValue(null);
       gateway.handleConnection(client);
       expect(client.disconnect).toHaveBeenCalled();
     });
 
     it('トークンの検証に失敗した場合、通信を切断する', () => {
       const client = createMockSocket();
-      client.handshake.auth.token = 'Bearer invalid-token';
-      jwtService.verify.mockImplementation(() => {
-        throw new Error('JWT verify error');
-      });
+      socketAuthService.authenticate.mockReturnValue(null);
 
       gateway.handleConnection(client);
 
@@ -153,7 +148,7 @@ describe('GameGateway', () => {
       expect(client.emit).toHaveBeenCalledWith('game:error', {
         message: 'Room is full',
       });
-      expect(client.join).not.toHaveBeenCalled();
+      expect(client.join).toHaveBeenCalledWith('room-1');
       expect(gameService.handleGameStart).not.toHaveBeenCalled();
     });
 
@@ -172,6 +167,12 @@ describe('GameGateway', () => {
       const client = createMockSocket();
       client.data.user = { id: 'user-1' };
       client.data.roomId = 'room-1';
+      socketPresenceService.register({
+        namespace: 'game',
+        roomId: 'room-1',
+        userId: 'user-1',
+        socketId: 'socket-123',
+      });
 
       await gateway.handleLeave(client);
 
@@ -185,18 +186,14 @@ describe('GameGateway', () => {
       );
     });
 
-    it('ルームに参加していなくても、gameService.handleGameLeaveが呼ばれること', async () => {
+    it('ルームに参加していない場合は何もしないこと', async () => {
       const client = createMockSocket();
       client.data.user = { id: 'user-1' };
-      // client.data.roomId は設定しない
 
       await gateway.handleLeave(client);
 
       expect(client.leave).not.toHaveBeenCalled();
-      expect(gameService.handleGameLeave).toHaveBeenCalledWith(
-        'user-1',
-        'socket-123',
-      );
+      expect(gameService.handleGameLeave).not.toHaveBeenCalled();
     });
   });
 
@@ -204,6 +201,13 @@ describe('GameGateway', () => {
     it('入力を正しくGameServiceへ渡すこと', () => {
       const client = createMockSocket();
       client.data.user = { id: 'user-1' };
+      client.data.roomId = 'room-1';
+      socketPresenceService.register({
+        namespace: 'game',
+        roomId: 'room-1',
+        userId: 'user-1',
+        socketId: 'socket-123',
+      });
       client.data.roomId = 'room-1';
 
       const inputData = { direction: 'up' as const, seq: 1 };
@@ -244,17 +248,27 @@ describe('GameGateway', () => {
   });
 
   describe('handleDisconnect', () => {
-    it('切断時にgameService.handleGameLeaveが呼ばれること', () => {
+    it('切断猶予期間が経過するとgameService.handleGameLeaveが呼ばれること', async () => {
+      jest.useFakeTimers();
       const client = createMockSocket();
       client.data.user = { id: 'user-1' };
+      client.data.roomId = 'room-1';
+      socketPresenceService.register({
+        namespace: 'game',
+        roomId: 'room-1',
+        userId: 'user-1',
+        socketId: 'socket-123',
+      });
 
       gateway.handleDisconnect(client);
+      await jest.advanceTimersByTimeAsync(2000);
 
       // userId と clientId を渡しているか
       expect(gameService.handleGameLeave).toHaveBeenCalledWith(
         'user-1',
         'socket-123',
       );
+      jest.useRealTimers();
     });
 
     it('ユーザー情報がない場合、何もしないこと', () => {
