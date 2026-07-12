@@ -1,5 +1,6 @@
 import {
   Injectable,
+  Logger,
   UnauthorizedException,
   ConflictException,
   NotFoundException,
@@ -17,6 +18,8 @@ import { UPLOAD_URL_PREFIX } from '../uploads/uploads.constants';
 
 @Injectable()
 export class UsersService {
+  private readonly logger = new Logger(UsersService.name);
+
   constructor(
     private readonly prisma: PrismaService,
     private readonly uploadsService: UploadsService,
@@ -303,11 +306,17 @@ export class UsersService {
       return;
     }
 
-    const previousImage =
-      await this.uploadsService.findImageByUrl(previousAvatarUrl);
+    try {
+      const previousImage =
+        await this.uploadsService.findImageByUrl(previousAvatarUrl);
 
-    if (previousImage) {
-      await this.uploadsService.deleteImage(previousImage);
+      if (previousImage) {
+        await this.uploadsService.deleteImage(previousImage);
+      }
+    } catch (error: unknown) {
+      this.logger.warn(
+        `Failed to delete previous avatar ${previousAvatarUrl}: ${this.formatCleanupError(error)}`,
+      );
     }
   }
 
@@ -343,5 +352,9 @@ export class UsersService {
       error instanceof Prisma.PrismaClientKnownRequestError &&
       error.code === 'P2025'
     );
+  }
+
+  private formatCleanupError(error: unknown) {
+    return error instanceof Error ? error.message : String(error);
   }
 }

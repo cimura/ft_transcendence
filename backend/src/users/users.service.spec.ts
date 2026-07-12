@@ -167,4 +167,44 @@ describe('UsersService', () => {
     expect(uploadsService.findImageByUrl).not.toHaveBeenCalled();
     expect(uploadsService.deleteImage).not.toHaveBeenCalled();
   });
+
+  it('does not delete the newly uploaded image when previous avatar cleanup fails', async () => {
+    const uploadedImage = {
+      id: 'new-image-id',
+      filename: 'new-avatar.png',
+      url: '/uploads/images/new-avatar.png',
+    };
+    const previousAvatarUrl = '/uploads/images/old-avatar.png';
+    const updatedUser = {
+      id: 'user-id',
+      email: 'user@example.com',
+      username: 'user',
+      displayName: null,
+      avatarUrl: uploadedImage.url,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    };
+    const file = {
+      originalname: 'avatar.png',
+      mimetype: 'image/png',
+      size: 1024,
+      buffer: Buffer.from('avatar'),
+    } as Express.Multer.File;
+
+    prisma.user.findUnique.mockResolvedValue({ avatarUrl: previousAvatarUrl });
+    uploadsService.saveImage.mockResolvedValue(uploadedImage);
+    uploadsService.findImageByUrl.mockRejectedValue(new Error('DB error'));
+    prisma.user.update.mockResolvedValue(updatedUser);
+
+    await expect(service.updateAvatar('user-id', file)).resolves.toEqual({
+      message: 'Avatar updated successfully',
+      avatarUrl: uploadedImage.url,
+      user: updatedUser,
+    });
+
+    expect(uploadsService.findImageByUrl).toHaveBeenCalledWith(
+      previousAvatarUrl,
+    );
+    expect(uploadsService.deleteImage).not.toHaveBeenCalled();
+  });
 });
