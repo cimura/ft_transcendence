@@ -8,12 +8,32 @@ export const PLAYER_COLORS = [
   { color: '#16a34a', visorColor: '#ff00ff' },
 ];
 
+export interface AddPlayerResult {
+  success: boolean;
+}
+
 export function addPlayerToRoom(
   room: GameSession,
   playerId: string,
+  clientId: string,
   username: string,
-): void {
-  const playerIndex = Object.keys(room.players).length % 4;
+): AddPlayerResult {
+  if (room.players[playerId]) {
+    return { success: false };
+  }
+
+  const availableIndices: number[] = [];
+  room.startPositionSlots.forEach((id, index) => {
+    if (id === null) availableIndices.push(index);
+  });
+
+  if (availableIndices.length === 0) return { success: false }; // 満員
+
+  const randomIndex = Math.floor(Math.random() * availableIndices.length);
+  const playerIndex = availableIndices[randomIndex];
+
+  room.startPositionSlots[playerIndex] = playerId;
+
   const position = START_POSITIONS[playerIndex];
   const colors = PLAYER_COLORS[playerIndex];
 
@@ -23,9 +43,9 @@ export function addPlayerToRoom(
     position: { x: position.x, z: position.z },
     direction: 'down',
     alive: true,
-    score: 0,
     color: colors.color,
     visorColor: colors.visorColor,
+    isDisconnected: false,
   };
   room.stats[playerId] = {
     alive: true,
@@ -34,41 +54,43 @@ export function addPlayerToRoom(
     kills: 0,
     survivalTime: 0,
   };
+  room.playerConnections[playerId] = {
+    clientId: clientId,
+    lastActiveTime: 0,
+  };
+
+  return { success: true };
 }
 
 export interface RemovePlayerResult {
-  isEmpty: boolean; // 部屋が空になったかどうか
-  surrendered: boolean; // 試合中に降参した扱いかどうか
+  success: boolean;
+  isEmpty: boolean;
 }
 
 export function removePlayerFromRoom(
   room: GameSession,
   playerId: string,
-  now: number,
 ): RemovePlayerResult {
-  const result: RemovePlayerResult = { isEmpty: false, surrendered: false };
-
-  if (!room.players[playerId]) return result;
-
-  if (room.phase === 'playing') {
-    // 試合中の切断：自爆（死亡）扱いにする
-    room.players[playerId].alive = false;
-    room.stats[playerId].survivalTime = now - (room.startedAt || now);
-    result.surrendered = true;
-
-    if (room.playerInputs) {
-      delete room.playerInputs[playerId];
-    }
-  } else {
-    // 待機中の切断：単に部屋から退室させる
-    delete room.players[playerId];
-    delete room.stats[playerId];
-    if (room.playerInputs) {
-      delete room.playerInputs[playerId];
-    }
+  if (!room.players[playerId]) {
+    return { success: false, isEmpty: false };
   }
 
-  // 爆弾すり抜けリストからの除外（共通処理）
+  const slotIndex = room.startPositionSlots.indexOf(playerId);
+  if (slotIndex !== -1) {
+    room.startPositionSlots[slotIndex] = null;
+  }
+
+  delete room.players[playerId];
+  delete room.stats[playerId];
+  if (room.playerInputs) {
+    delete room.playerInputs[playerId];
+  }
+
+  if (room.playerConnections[playerId]) {
+    delete room.playerConnections[playerId];
+  }
+
+  // 爆弾すり抜けリストからの除外
   if (room.bombPassingPlayers) {
     for (const bombId in room.bombPassingPlayers) {
       room.bombPassingPlayers[bombId] = room.bombPassingPlayers[bombId].filter(
@@ -77,9 +99,65 @@ export function removePlayerFromRoom(
     }
   }
 
-  if (Object.keys(room.players).length === 0) {
-    result.isEmpty = true;
+  const isEmpty = Object.keys(room.players).length === 0;
+
+  return { success: true, isEmpty };
+}
+
+export interface ReconnectResult {
+  success: boolean;
+}
+
+export function reconnectPlayerToRoom(
+  room: GameSession,
+  playerId: string,
+  clientId: string,
+): ReconnectResult {
+  const player = room.players[playerId];
+  if (!player || !player.isDisconnected) return { success: false };
+
+  player.isDisconnected = false;
+  room.playerConnections[playerId].clientId = clientId;
+  room.playerConnections[playerId].lastActiveTime = 0;
+  room.disconnectedPlayers -= 1;
+  room.disconnectedAt = 0; // 誰か一人でも戻ってきたらルームタイマーをリセット
+
+  if (room.playerInputs && room.playerInputs[playerId]) {
+    // 再接続時はクライアントが送るseqが初期値に戻るため、サーバー側も初期化する
+    room.playerInputs[playerId].seq = 0;
   }
 
-  return result;
+  return { success: true };
+}
+
+export interface DisconnectResult {
+  success: boolean;
+  isAllDisconnected: boolean;
+}
+
+export function disconnectPlayerFromRoom(
+  room: GameSession,
+  playerId: string,
+  now: number,
+): DisconnectResult {
+  const player = room.players[playerId];
+  if (!player || player.isDisconnected) {
+    return { success: false, isAllDisconnected: false };
+  }
+
+  // 切断時の時間を保存（タイムアウト判定のため）
+  player.isDisconnected = true;
+  room.playerConnections[playerId].clientId = '';
+  room.playerConnections[playerId].lastActiveTime = now;
+  room.disconnectedPlayers += 1;
+
+  // room 自体の寿命を図るための判定
+  const totalPlayers = Object.keys(room.players).length;
+  const isAllDisconnected = room.disconnectedPlayers === totalPlayers;
+
+  if (isAllDisconnected) {
+    room.disconnectedAt = now;
+  }
+
+  return { success: true, isAllDisconnected };
 }

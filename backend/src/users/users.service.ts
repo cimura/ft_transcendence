@@ -1,5 +1,6 @@
 import {
   Injectable,
+  Logger,
   UnauthorizedException,
   ConflictException,
   NotFoundException,
@@ -12,10 +13,17 @@ import { UserSearchResponseDto } from './dto/users-response.dto';
 import { Prisma } from '../generated/prisma/client';
 import * as bcrypt from 'bcrypt';
 import { FriendRequestStatus } from '../generated/prisma/enums';
+import { UploadsService } from '../uploads/uploads.service';
+import { UPLOAD_URL_PREFIX } from '../uploads/uploads.constants';
 
 @Injectable()
 export class UsersService {
-  constructor(private readonly prisma: PrismaService) {}
+  private readonly logger = new Logger(UsersService.name);
+
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly uploadsService: UploadsService,
+  ) {}
 
   async profile(userId: string): Promise<ProfileUserDto> {
     const user = await this.prisma.user.findUnique({
@@ -198,11 +206,53 @@ export class UsersService {
         message: 'User information updated successfully',
         user: updatedUser,
       };
-    } catch {
+    } catch (error: unknown) {
+      if (!this.isRecordNotFoundError(error)) {
+        throw error;
+      }
+
       throw new NotFoundException({
         code: 'USER_NOT_FOUND',
         message: 'User not found',
       });
+    }
+  }
+
+  async selectDefaultAvatar(userId: string, avatarUrl: string) {
+    const previousAvatarUrl = await this.getCurrentAvatarUrl(userId);
+    const updatedUser = await this.updateUserAvatar(userId, avatarUrl);
+    await this.deletePreviousManagedAvatar(previousAvatarUrl, avatarUrl);
+
+    return {
+      message: 'Avatar updated successfully',
+      avatarUrl,
+      user: updatedUser,
+    };
+  }
+
+  async updateAvatar(userId: string, file: Express.Multer.File) {
+    const previousAvatarUrl = await this.getCurrentAvatarUrl(userId);
+    const uploadedImage = await this.uploadsService.saveImage(file);
+
+    try {
+      const updatedUser = await this.updateUserAvatar(
+        userId,
+        uploadedImage.url,
+      );
+
+      await this.deletePreviousManagedAvatar(
+        previousAvatarUrl,
+        uploadedImage.url,
+      );
+
+      return {
+        message: 'Avatar updated successfully',
+        avatarUrl: uploadedImage.url,
+        user: updatedUser,
+      };
+    } catch (error) {
+      await this.uploadsService.deleteImage(uploadedImage);
+      throw error;
     }
   }
 
@@ -216,11 +266,95 @@ export class UsersService {
       return {
         message: 'Your account has been permanently deleted.',
       };
-    } catch {
+    } catch (error: unknown) {
+      if (!this.isRecordNotFoundError(error)) {
+        throw error;
+      }
+
       throw new NotFoundException({
         code: 'USER_NOT_FOUND',
         message: 'User not found or already deleted',
       });
     }
+  }
+
+  private async getCurrentAvatarUrl(userId: string) {
+    const user = await this.prisma.user.findUnique({
+      where: { id: userId },
+      select: { avatarUrl: true },
+    });
+
+    if (!user) {
+      throw new NotFoundException({
+        code: 'USER_NOT_FOUND',
+        message: 'User not found',
+      });
+    }
+
+    return user.avatarUrl;
+  }
+
+  private async deletePreviousManagedAvatar(
+    previousAvatarUrl: string | null,
+    nextAvatarUrl: string,
+  ) {
+    if (
+      !previousAvatarUrl ||
+      previousAvatarUrl === nextAvatarUrl ||
+      !previousAvatarUrl.startsWith(`${UPLOAD_URL_PREFIX}/`)
+    ) {
+      return;
+    }
+
+    try {
+      const previousImage =
+        await this.uploadsService.findImageByUrl(previousAvatarUrl);
+
+      if (previousImage) {
+        await this.uploadsService.deleteImage(previousImage);
+      }
+    } catch (error: unknown) {
+      this.logger.warn(
+        `Failed to delete previous avatar ${previousAvatarUrl}: ${this.formatCleanupError(error)}`,
+      );
+    }
+  }
+
+  private async updateUserAvatar(userId: string, avatarUrl: string | null) {
+    try {
+      return await this.prisma.user.update({
+        where: { id: userId },
+        data: { avatarUrl },
+        select: {
+          id: true,
+          email: true,
+          username: true,
+          displayName: true,
+          avatarUrl: true,
+          createdAt: true,
+          updatedAt: true,
+        },
+      });
+    } catch (error: unknown) {
+      if (!this.isRecordNotFoundError(error)) {
+        throw error;
+      }
+
+      throw new NotFoundException({
+        code: 'USER_NOT_FOUND',
+        message: 'User not found',
+      });
+    }
+  }
+
+  private isRecordNotFoundError(error: unknown) {
+    return (
+      error instanceof Prisma.PrismaClientKnownRequestError &&
+      error.code === 'P2025'
+    );
+  }
+
+  private formatCleanupError(error: unknown) {
+    return error instanceof Error ? error.message : String(error);
   }
 }

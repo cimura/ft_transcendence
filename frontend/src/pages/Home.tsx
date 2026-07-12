@@ -1,11 +1,15 @@
 import { useNavigate } from 'react-router-dom'
-import { useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import { useAuthStore } from '../stores/authStore'
+import { useRoomStore } from '../stores/roomStore'
+import { createRoom } from '../api/rooms'
 import { useNotifications } from '../hooks/useNotifications'
 
 export function Home() {
   const navigate = useNavigate()
   const { currentUser, fetchCurrentUser, loading } = useAuthStore()
+  const { setCurrentRoom, upsertRoom } = useRoomStore()
+  const [isCreatingRoom, setIsCreatingRoom] = useState(false)
   const { notifications } = useNotifications()
 
   useEffect(() => {
@@ -25,6 +29,33 @@ export function Home() {
 
     if (fetchedUser) {
       navigate(`/profile/${fetchedUser.id}`)
+    }
+  }
+
+  const handleStartMatchClick = async () => {
+    if (isCreatingRoom) return
+
+    setIsCreatingRoom(true)
+    try {
+      let user = currentUser
+      if (!user) {
+        await fetchCurrentUser()
+        user = useAuthStore.getState().currentUser
+      }
+
+      const username = user?.displayName || user?.username || 'Player'
+      const room = await createRoom({
+        name: `${username} の部屋`,
+        maxPlayers: 2,
+      })
+
+      upsertRoom(room)
+      setCurrentRoom(room)
+      navigate(`/room/${room.id}`)
+    } catch (error) {
+      console.error('Failed to create match room:', error)
+    } finally {
+      setIsCreatingRoom(false)
     }
   }
 
@@ -50,12 +81,13 @@ export function Home() {
             </button>
           </div>
 
-          {/* 中央: 待機場（メイン） */}
+          {/* 中央: 対戦開始（メイン） */}
           <button
-            onClick={() => navigate('/lobby')}
+            onClick={handleStartMatchClick}
+            disabled={isCreatingRoom}
             className="rounded-3xl bg-black bg-opacity-70 px-16 py-12 text-4xl font-bold text-white transition-all hover:bg-opacity-90"
           >
-            待機場
+            {isCreatingRoom ? '準備中...' : '対戦開始'}
           </button>
           {/* 下段: 通知・ランキング・設定 */}
           <div className="grid grid-cols-3 gap-8">

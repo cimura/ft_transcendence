@@ -9,7 +9,6 @@ import {
   useNavigate,
   useLocation,
 } from 'react-router-dom'
-import { Lobby } from './pages/Lobby'
 import { WaitingRoom } from './pages/WaitingRoom'
 import { GameRoomPage } from './pages/GameRoomPage'
 import { FriendsMenuPage } from './pages/friends/FriendsMenuPage'
@@ -96,7 +95,6 @@ function AppRoutes() {
     <Routes>
       <Route path="/" element={<Navigate to="/home" replace />} />
       <Route path="/home" element={<Home />} />
-      <Route path="/lobby" element={<Lobby />} />
       <Route path="/room/:roomId" element={<WaitingRoom />} />
       <Route path="/game/:roomId" element={<GameRoomPage />} />
       <Route path="/rankings" element={<RankingsPage />} />

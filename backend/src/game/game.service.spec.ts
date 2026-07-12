@@ -1,19 +1,24 @@
 import { Test, TestingModule } from '@nestjs/testing';
+import { WsException } from '@nestjs/websockets';
 import type { Server } from 'socket.io';
 import { GameService } from './game.service';
-import { GAME_COUNTDOWN_SEC, GAME_TICK_RATE } from './constants/game-constants';
+import {
+  GAME_COUNTDOWN_SEC,
+  GAME_TICK_RATE,
+  DISCONNECT_TIMEOUT_MS,
+} from './constants/game-constants';
 import { ScoresService } from '../scores/scores.service';
 
 describe('GameService', () => {
   let service: GameService;
   let emit: jest.Mock;
-  let scoresService: {
-    recordMatchResult: jest.Mock;
-  };
+  let to: jest.Mock;
+  let scoresService: { recordMatchResult: jest.Mock };
 
   beforeEach(async () => {
     jest.useFakeTimers();
     emit = jest.fn();
+    to = jest.fn().mockReturnValue({ emit });
     scoresService = {
       recordMatchResult: jest.fn().mockResolvedValue(undefined),
     };
@@ -21,20 +26,18 @@ describe('GameService', () => {
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         GameService,
-        {
-          provide: ScoresService,
-          useValue: scoresService,
-        },
+        { provide: ScoresService, useValue: scoresService },
       ],
     }).compile();
 
     service = module.get<GameService>(GameService);
     service.setServer({
-      to: jest.fn().mockReturnValue({ emit }),
+      to,
     } as unknown as Server);
   });
 
   afterEach(() => {
+    jest.clearAllTimers();
     jest.useRealTimers();
   });
 
@@ -42,88 +45,131 @@ describe('GameService', () => {
     expect(service).toBeDefined();
   });
 
-  it('cancels countdown when a player leaves and the room no longer has enough players', () => {
-    service.handleGameJoin('room-1', 'player-1');
-    service.handleGameJoin('room-1', 'player-2');
+  describe('Connection & Setup', () => {
+    it('参加が許可され、初期データが返ること', () => {
+      const initData = service.handleGameJoin('room-1', 'player-1', 'client-1');
 
-    expect(emit).toHaveBeenCalledWith(
-      'game:countdown',
-      expect.objectContaining({ seconds: GAME_COUNTDOWN_SEC }),
-    );
+      expect(initData.yourId).toBe('player-1');
+      expect(initData.phase).toBe('waiting');
+      expect(initData.players['player-1']).toBeDefined();
+    });
 
-    emit.mockClear();
-    service.handleGameLeave('player-2');
+    it('異なるクライアントからのゴーストソケットの切断イベントを無視すること', () => {
+      service.handleGameJoin('room-1', 'player-1', 'client-1');
 
-    expect(emit).toHaveBeenCalledWith(
-      'game:state',
-      expect.objectContaining({
-        phase: 'waiting',
-        players: expect.objectContaining({
-          'player-1': expect.any(Object),
-        }),
-      }),
-    );
-    expect(emit).toHaveBeenCalledWith(
-      'game:state',
-      expect.objectContaining({
-        players: expect.not.objectContaining({
-          'player-2': expect.any(Object),
-        }),
-      }),
-    );
+      // ゴーストソケットからの切断通知
+      service.handleGameLeave('player-1', 'client-old');
 
-    const emittedAfterLeave = emit.mock.calls.length;
-    jest.advanceTimersByTime(
-      GAME_COUNTDOWN_SEC * 1000 + Math.ceil(1000 / GAME_TICK_RATE),
-    );
+      // 部屋から退出させられていないか確認するため、2人目を追加してゲームを開始してみる
+      service.handleGameJoin('room-1', 'player-2', 'client-2');
+      service.handleGameStart('room-1');
 
-    expect(emit).toHaveBeenCalledTimes(emittedAfterLeave);
+      // player-1 が残っていれば 2人揃っている判定になりカウントダウンが始まる
+      expect(emit).toHaveBeenCalledWith('game:countdown', expect.any(Object));
+    });
   });
 
-  it('starts a new countdown after the start condition is met again', () => {
-    service.handleGameJoin('room-1', 'player-1');
-    service.handleGameJoin('room-1', 'player-2');
-    service.handleGameLeave('player-2');
+  describe('Game Lifecycle & Disconnection', () => {
+    beforeEach(() => {
+      // 2人のプレイヤーを参加させてゲームを開始するヘルパー
+      service.handleGameJoin('room-1', 'player-1', 'client-1');
+      service.handleGameStart('room-1');
+      service.handleGameJoin('room-1', 'player-2', 'client-2');
+      service.handleGameStart('room-1');
+    });
 
-    emit.mockClear();
-    const initData = service.handleGameJoin('room-1', 'player-3');
+    it('人数が揃うとカウントダウンが始まり、その後playingへ移行すること', () => {
+      expect(emit).toHaveBeenCalledWith(
+        'game:countdown',
+        expect.objectContaining({ seconds: GAME_COUNTDOWN_SEC }),
+      );
 
-    expect(initData.phase).toBe('countdown');
-    expect(emit).toHaveBeenCalledWith(
-      'game:countdown',
-      expect.objectContaining({ seconds: GAME_COUNTDOWN_SEC }),
-    );
-  });
+      // カウントダウンを進める
+      jest.advanceTimersByTime(GAME_COUNTDOWN_SEC * 1000);
 
-  it('records match history when a playing game ends', async () => {
-    service.handleGameJoin('room-1', 'player-1');
-    service.handleGameJoin('room-1', 'player-2');
+      expect(emit).toHaveBeenCalledWith('game:playing');
 
-    jest.advanceTimersByTime(GAME_COUNTDOWN_SEC * 1000);
-    service.handleGameLeave('player-2');
-    await Promise.resolve();
+      // ゲームループが動いているか確認
+      jest.advanceTimersByTime(1000 / GAME_TICK_RATE);
+      expect(emit).toHaveBeenCalledWith('game:state', expect.any(Object));
+    });
 
-    expect(emit).toHaveBeenCalledWith(
-      'game:end',
-      expect.objectContaining({
-        winnerId: 'player-1',
-        isDraw: false,
-        rankings: expect.arrayContaining([
-          expect.objectContaining({ playerId: 'player-1' }),
-          expect.objectContaining({ playerId: 'player-2' }),
-        ]),
-      }),
-    );
-    expect(scoresService.recordMatchResult).toHaveBeenCalledWith(
-      expect.objectContaining({
-        gameType: 'Bomberman',
-        winnerId: 'player-1',
-        isDraw: false,
-        rankings: expect.arrayContaining([
-          expect.objectContaining({ playerId: 'player-1' }),
-          expect.objectContaining({ playerId: 'player-2' }),
-        ]),
-      }),
-    );
+    it('プレイ中に切断されても即座には終了せず、猶予時間後にタイムアウト負けになること', () => {
+      jest.advanceTimersByTime(GAME_COUNTDOWN_SEC * 1000); // プレイ開始
+
+      // player-1 が切断
+      service.handleGameLeave('player-1', 'client-1');
+
+      // まだゲームは終わらない
+      jest.advanceTimersByTime(10000);
+      expect(emit).not.toHaveBeenCalledWith('game:end', expect.any(Object));
+
+      // タイムアウト時間（30秒）経過後、ゲームループのTickで自爆判定が行われる
+      jest.advanceTimersByTime(DISCONNECT_TIMEOUT_MS - 10000 + 1000);
+
+      // player-1 が死んだことで player-2 の勝利になる
+      expect(emit).toHaveBeenCalledWith(
+        'game:end',
+        expect.objectContaining({
+          winnerId: 'player-2',
+        }),
+      );
+      expect(scoresService.recordMatchResult).toHaveBeenCalledWith(
+        expect.objectContaining({
+          gameType: 'Bomberman',
+          winnerId: 'player-2',
+          isDraw: false,
+        }),
+      );
+    });
+
+    it('猶予時間内に再接続（Join）すればゲームに復帰できること', () => {
+      jest.advanceTimersByTime(GAME_COUNTDOWN_SEC * 1000); // プレイ開始
+
+      // player-1 が切断
+      service.handleGameLeave('player-1', 'client-1');
+
+      // 10秒後に新しいソケットIDで復帰
+      jest.advanceTimersByTime(10000);
+      const initData = service.handleGameJoin(
+        'room-1',
+        'player-1',
+        'client-1-new',
+      );
+
+      expect(initData.phase).toBe('playing');
+
+      // そこからさらに30秒経過しても、切断が解除されているためゲームオーバーにならない
+      jest.advanceTimersByTime(DISCONNECT_TIMEOUT_MS);
+      expect(emit).not.toHaveBeenCalledWith('game:end', expect.any(Object));
+    });
+
+    it('ゲーム中に切断されていないソケットから多重ログインしようとするとエラーになること', () => {
+      jest.advanceTimersByTime(GAME_COUNTDOWN_SEC * 1000); // プレイ開始
+
+      expect(() => {
+        // player-1 はすでに繋がっているのに、別のタブなどから参加しようとする
+        service.handleGameJoin('room-1', 'player-1', 'client-1-new');
+      }).toThrow(WsException);
+    });
+
+    it('全員が切断してタイムアウトした場合、引き分けとして終了すること', () => {
+      jest.advanceTimersByTime(GAME_COUNTDOWN_SEC * 1000); // プレイ開始
+
+      // 全員切断
+      service.handleGameLeave('player-1', 'client-1');
+      service.handleGameLeave('player-2', 'client-2');
+
+      // タイムアウト時間経過
+      jest.advanceTimersByTime(DISCONNECT_TIMEOUT_MS + 1000);
+
+      // 全滅のため引き分け（isDraw: true）になる
+      expect(emit).toHaveBeenCalledWith(
+        'game:end',
+        expect.objectContaining({
+          isDraw: true,
+        }),
+      );
+    });
   });
 });

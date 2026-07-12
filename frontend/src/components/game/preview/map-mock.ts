@@ -7,7 +7,7 @@ import type {
   WorldPosition,
 } from '@ft_transcendence/shared/game-events.types'
 
-// ロビーでマップのプレビューを表示するためのモック (ゲームがスタートしてからでないと情報を得られないため)
+// 部屋でマップのプレビューを表示するためのモック (ゲームがスタートしてからでないと情報を得られないため)
 
 const SPAWN_SAFE_RADIUS = 1
 const DENSITY_X_WEIGHT = 13

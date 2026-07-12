@@ -3,52 +3,71 @@ import { useNavigate, useParams } from 'react-router-dom'
 import { Button } from '../components/common/Button'
 import { GameCanvas } from '../components/game/GameCanvas'
 import { GameResultOverlay } from '../components/game/GameResultOverlay'
-import { useLobbyStore } from '../stores/lobbyStore'
+import { useRoomStore } from '../stores/roomStore'
 import { useGameStore } from '../stores/gameStore'
 import type { PlayerSnapshot } from '@ft_transcendence/shared/game-events.types'
+import { getRoom } from '../api/rooms'
 
 export function GameRoomPage() {
   const { roomId } = useParams<{ roomId: string }>()
   const navigate = useNavigate()
-  const { currentRoom, rooms, setCurrentRoom } = useLobbyStore()
+  const { currentRoom, rooms, setCurrentRoom } = useRoomStore()
 
   const gameState = useGameStore((state) => state.gameState)
 
   useEffect(() => {
     if (!roomId) {
-      navigate('/lobby')
+      navigate('/home', { replace: true })
       return
     }
 
     if (currentRoom?.id === roomId) {
+      if (currentRoom.status === 'waiting') {
+        navigate(`/room/${currentRoom.id}`, { replace: true })
+      }
       return
     }
 
     const room = rooms.find((item) => item.id === roomId)
     if (room) {
       setCurrentRoom(room)
+      if (room.status === 'waiting') {
+        navigate(`/room/${room.id}`, { replace: true })
+      }
       return
     }
 
-    setCurrentRoom({
-      id: roomId,
-      name: 'Local Bomberman',
-      hostId: '0',
-      hostName: 'current_user',
-      players: [
-        {
-          userId: '0',
-          username: 'current_user',
-          isReady: true,
-          isHost: true,
-        },
-      ],
-      maxPlayers: 4,
-      status: 'playing',
-      mapId: 'local-bomberman',
-      createdAt: new Date(),
-    })
-  }, [navigate, roomId, rooms, setCurrentRoom, currentRoom?.id])
+    let cancelled = false
+
+    const loadRoom = async () => {
+      try {
+        const fetchedRoom = await getRoom(roomId)
+        if (cancelled) return
+        setCurrentRoom(fetchedRoom)
+        if (fetchedRoom.status === 'waiting') {
+          navigate(`/room/${fetchedRoom.id}`, { replace: true })
+        }
+      } catch (error) {
+        console.error('Failed to load game room:', error)
+        if (!cancelled) {
+          navigate('/home', { replace: true })
+        }
+      }
+    }
+
+    void loadRoom()
+
+    return () => {
+      cancelled = true
+    }
+  }, [
+    navigate,
+    roomId,
+    rooms,
+    setCurrentRoom,
+    currentRoom?.id,
+    currentRoom?.status,
+  ])
 
   if (!currentRoom) {
     return null
@@ -73,9 +92,9 @@ export function GameRoomPage() {
             <Button
               variant="secondary"
               size="sm"
-              onClick={() => navigate('/lobby')}
+              onClick={() => navigate('/home')}
             >
-              ロビーへ戻る
+              ホームへ戻る
             </Button>
           </div>
         </div>

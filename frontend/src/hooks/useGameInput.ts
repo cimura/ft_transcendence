@@ -59,24 +59,20 @@ export function useGameInput(socketRef: MutableRefObject<Socket | null>) {
 
       if (socketRef.current) {
         seqRef.current += 1
-        const clientTime = performance.now()
 
         if (input.type === 'move') {
           socketRef.current.emit('player:input', {
             direction: input.direction,
             seq: seqRef.current,
-            clientTime,
           })
         } else if (input.type === 'stop') {
           socketRef.current.emit('player:input', {
             direction: null,
             seq: seqRef.current,
-            clientTime,
           })
         } else if (input.type === 'place_bomb') {
           socketRef.current.emit('bomb:place', {
             seq: seqRef.current,
-            clientTime,
           })
         }
       }
