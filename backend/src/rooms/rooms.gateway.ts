@@ -21,6 +21,7 @@ import { Socket, Server } from 'socket.io';
 import { RoomsService } from './rooms.service';
 import { SocketAuthService } from '../websocket/socket-auth.service';
 import { SocketPresenceService } from '../websocket/socket-presence.service';
+import { getSocketCorsOrigins } from '../websocket/socket-cors';
 import type {
   RoomClientToServerEvents,
   RoomServerToClientEvents,
@@ -42,7 +43,7 @@ type RoomSocket = Socket<
 
 @WebSocketGateway({
   namespace: '/rooms',
-  cors: { origin: '*' },
+  cors: { origin: getSocketCorsOrigins() },
 })
 export class RoomsGateway implements OnGatewayConnection, OnGatewayDisconnect {
   private readonly logger = new Logger(RoomsGateway.name);
@@ -120,14 +121,34 @@ export class RoomsGateway implements OnGatewayConnection, OnGatewayDisconnect {
       return;
     }
 
-    if (client.data.roomId && client.data.roomId !== data.roomId) {
+    const previousRoomId = client.data.roomId;
+
+    try {
+      await client.join(data.roomId);
+    } catch (error) {
+      this.logger.error(
+        `failed to join room ${data.roomId}`,
+        error instanceof Error ? error.stack : String(error),
+      );
+      client.emit('room:error', {
+        message: 'ルームへの参加に失敗しました',
+      });
+      return;
+    }
+
+    if (previousRoomId && previousRoomId !== data.roomId) {
       this.socketPresenceService.unregister({
         namespace: 'rooms',
-        roomId: client.data.roomId,
+        roomId: previousRoomId,
         userId,
         socketId: client.id,
       });
-      await client.leave(client.data.roomId);
+      this.socketPresenceService.scheduleIfInactive(
+        { namespace: 'rooms', roomId: previousRoomId, userId },
+        2000,
+        () => this.leaveRoomAfterDisconnect(previousRoomId, userId),
+      );
+      await client.leave(previousRoomId);
     }
 
     client.data.roomId = data.roomId;
@@ -137,7 +158,6 @@ export class RoomsGateway implements OnGatewayConnection, OnGatewayDisconnect {
       userId,
       socketId: client.id,
     });
-    await client.join(data.roomId);
     this.logger.log(`room:join ${client.id} room=${data.roomId}`);
   }
 

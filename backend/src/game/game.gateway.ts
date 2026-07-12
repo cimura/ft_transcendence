@@ -1,3 +1,4 @@
+import { Logger } from '@nestjs/common';
 import {
   WebSocketGateway,
   SubscribeMessage,
@@ -12,6 +13,7 @@ import { Server, Socket } from 'socket.io';
 import { GameService } from './game.service';
 import { SocketAuthService } from '../websocket/socket-auth.service';
 import { SocketPresenceService } from '../websocket/socket-presence.service';
+import { getSocketCorsOrigins } from '../websocket/socket-cors';
 import type {
   ClientToServerEvents,
   ServerToClientEvents,
@@ -33,11 +35,13 @@ type GameSocket = Socket<
 
 @WebSocketGateway({
   namespace: '/game',
-  cors: { origin: '*' },
+  cors: { origin: getSocketCorsOrigins() },
 })
 export class GameGateway
   implements OnGatewayInit, OnGatewayConnection, OnGatewayDisconnect
 {
+  private readonly logger = new Logger(GameGateway.name);
+
   @WebSocketServer()
   server: Server<ClientToServerEvents, ServerToClientEvents>;
 
@@ -55,12 +59,12 @@ export class GameGateway
     const user = this.socketAuthService.authenticate(client);
     if (!user) {
       client.disconnect();
-      console.log(`[接続失敗] JWT未認証`);
+      this.logger.warn(`[接続失敗] JWT未認証 socket=${client.id}`);
       return;
     }
 
     client.data.user = user;
-    console.log(`[接続成功] ユーザーId: ${client.data.user.id}`);
+    this.logger.log(`[接続成功] ユーザーId: ${client.data.user.id}`);
   }
 
   @SubscribeMessage('game:join')
@@ -73,6 +77,21 @@ export class GameGateway
     if (!user) return;
 
     const previousRoomId = client.data.roomId;
+
+    try {
+      await client.join(data.roomId);
+    } catch (error) {
+      this.logger.error(
+        `[ルーム参加失敗] 部屋: ${data.roomId}`,
+        error instanceof Error ? error.stack : String(error),
+      );
+      client.emit('game:error', {
+        code: 'ROOM_JOIN_FAILED',
+        message: 'ゲームルームへの参加に失敗しました',
+      });
+      return;
+    }
+
     if (previousRoomId && previousRoomId !== data.roomId) {
       const remaining = this.socketPresenceService.unregister({
         namespace: 'game',
@@ -81,12 +100,11 @@ export class GameGateway
         socketId: client.id,
       });
       if (remaining === 0) {
-        this.gameService.handleGameLeave(user.id);
+        this.gameService.handleGameLeave(user.id, previousRoomId);
       }
       await client.leave(previousRoomId);
     }
 
-    await client.join(data.roomId);
     this.socketPresenceService.register({
       namespace: 'game',
       roomId: data.roomId,
@@ -98,7 +116,7 @@ export class GameGateway
     const initData = this.gameService.handleGameJoin(data.roomId, user.id);
     client.emit('game:init', initData);
 
-    console.log(
+    this.logger.log(
       `[ルーム参加] ユーザーID: ${user.id} が 部屋: ${data.roomId} に参加します`,
     );
   }
@@ -122,7 +140,7 @@ export class GameGateway
       socketId: client.id,
     });
     if (remaining === 0) {
-      this.gameService.handleGameLeave(userId);
+      this.gameService.handleGameLeave(userId, roomId);
     }
   }
 

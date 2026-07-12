@@ -153,17 +153,10 @@ export function WaitingRoom() {
       setCurrentRoom(null)
       navigate('/home')
     } catch (error) {
-      const status =
-        typeof error === 'object' &&
-        error !== null &&
-        'response' in error &&
-        typeof error.response === 'object' &&
-        error.response !== null &&
-        'status' in error.response
-          ? error.response.status
-          : undefined
-
-      if (status === 403 || status === 404) {
+      if (
+        axios.isAxiosError(error) &&
+        (error.response?.status === 403 || error.response?.status === 404)
+      ) {
         removeRoom(currentRoom.id)
         setCurrentRoom(null)
         navigate('/home')
