@@ -5,6 +5,9 @@ import { useRoomStore } from '../stores/roomStore'
 import { createRoom } from '../api/rooms'
 import { useNotifications } from '../hooks/useNotifications'
 
+/**
+ * Renders the home dashboard with navigation to profile, friends, lobby, notifications, rankings, and settings.
+ */
 export function Home() {
   const navigate = useNavigate()
   const { currentUser, fetchCurrentUser, loading } = useAuthStore()

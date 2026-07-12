@@ -3,9 +3,12 @@ import { useNavigate } from 'react-router-dom'
 import { getRankings } from '../api/stats'
 import type { RankingItem } from '../types/profile'
 
+/**
+ * Displays the rankings list and provides navigation to the home and player profile pages.
+ */
+
 const RANKING_GRID_COLS =
   'grid-cols-[52px_minmax(0,1fr)_76px] sm:grid-cols-[64px_minmax(0,1fr)_88px_88px_88px]'
-
 export function RankingsPage() {
   const navigate = useNavigate()
   const [rankings, setRankings] = useState<RankingItem[]>([])

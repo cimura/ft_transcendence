@@ -34,6 +34,9 @@ function App() {
   )
 }
 
+/**
+ * Renders application routes according to the user's authentication state.
+ */
 function AppRoutes() {
   const navigate = useNavigate()
   const location = useLocation()
