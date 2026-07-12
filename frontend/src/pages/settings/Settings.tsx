@@ -14,34 +14,39 @@ export const Settings = ({ onLogout }: SettingsProps) => {
   const isTopLevel = location.pathname === '/settings'
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-black p-4">
-      <div className="w-full max-w-2xl rounded-lg border-2 border-white/30 bg-black/80 p-6 sm:p-8">
-        <div className="mb-8 grid grid-cols-[1fr_auto_1fr] items-center gap-3">
+    <div className="space-page min-h-screen">
+      <header className="console-header">
+        <div className="mx-auto flex max-w-6xl items-center justify-between gap-4 px-5 py-5 sm:px-8">
           {isTopLevel ? (
             <button
               onClick={() => navigate('/home')}
-              className="justify-self-start rounded-md px-3 py-2 text-left text-sm text-white/70 transition-colors hover:bg-white/10 hover:text-white sm:text-base"
+              className="console-button console-button--muted order-2 px-4 py-2 text-xs"
             >
-              ✕ 閉じる
+              CLOSE
             </button>
           ) : (
             <button
               onClick={() => navigate('/settings')}
-              className="justify-self-start rounded-md px-3 py-2 text-left text-sm text-white/70 transition-colors hover:bg-white/10 hover:text-white sm:text-base"
+              className="console-button console-button--muted order-2 px-4 py-2 text-xs"
             >
-              ← 設定一覧に戻る
+              BACK TO SETTINGS
             </button>
           )}
 
-          <h1 className="text-center text-2xl font-bold text-white sm:text-3xl">
-            {isTopLevel ? '設定' : '詳細設定'}
-          </h1>
-
-          <div />
+          <div>
+            <p className="console-kicker">GALACTIC GAME NETWORK / CONFIG</p>
+            <h1 className="console-title">
+              {isTopLevel ? 'SETTINGS' : 'DETAIL SETTINGS'}
+            </h1>
+          </div>
         </div>
+      </header>
 
-        <Outlet context={{ onLogout } satisfies SettingsOutletContext} />
-      </div>
+      <main className="mx-auto max-w-4xl px-5 py-8 sm:px-8">
+        <div className="console-panel p-5 sm:p-8">
+          <Outlet context={{ onLogout } satisfies SettingsOutletContext} />
+        </div>
+      </main>
     </div>
   )
 }

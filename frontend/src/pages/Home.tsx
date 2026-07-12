@@ -6,7 +6,7 @@ import { createRoom } from '../api/rooms'
 import { useNotifications } from '../hooks/useNotifications'
 
 /**
- * Renders the home dashboard with navigation to profile, friends, lobby, notifications, rankings, and settings.
+ * Renders the home dashboard with navigation to profile, friends, notifications, rankings, and settings.
  */
 export function Home() {
   const navigate = useNavigate()
@@ -83,11 +83,11 @@ export function Home() {
           <section className="console-panel p-6 sm:p-8">
             <p className="console-kicker">PRIMARY DESTINATION</p>
             <h2 className="mt-1 text-3xl font-black tracking-wide text-white sm:text-4xl">
-              GAME LOBBY
+              MATCH CONSOLE
             </h2>
             <p className="mt-4 max-w-xl text-sm leading-6 text-emerald-100/70">
-              Match with nearby life forms, create a room, and keep an eye on
-              your towel.
+              Create a room, connect with nearby players, and enter the next
+              match.
             </p>
             <div className="mt-7 flex flex-wrap gap-3">
               <button
@@ -96,12 +96,6 @@ export function Home() {
                 className="nav-action px-5 py-3 text-sm"
               >
                 {isCreatingRoom ? 'PREPARING...' : 'START MATCH'}
-              </button>
-              <button
-                onClick={() => navigate('/lobby')}
-                className="nav-action px-5 py-3 text-sm"
-              >
-                OPEN LOBBY
               </button>
             </div>
           </section>

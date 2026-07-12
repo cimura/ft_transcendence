@@ -20,7 +20,7 @@ export function UserSearchBar({
         value={value}
         onChange={(e) => onChange(e.target.value)}
         placeholder={placeholder}
-        className="w-full bg-black/50 border-2 border-white/30 rounded-full px-6 py-3 text-white placeholder:text-white/50 focus:outline-none focus:border-white/60 transition-all"
+        className="console-input px-5 py-3 text-sm placeholder:text-emerald-100/40"
       />
 
       {/* 検索アイコン */}

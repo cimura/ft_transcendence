@@ -1,9 +1,9 @@
 import { useState } from 'react'
-import { useNavigate } from 'react-router-dom'
 import type { Friend } from '../../types/friend'
 import { FriendCard } from '../../components/friends/FriendCard'
 import { ConfirmDialog } from '../../components/friends/ConfirmDialog'
 import { useFriends } from '../../hooks/friends/useFriends'
+import { ConsolePage } from '../../components/common/ConsolePage'
 
 const ITEMS_PER_PAGE = 4
 
@@ -12,7 +12,6 @@ const ITEMS_PER_PAGE = 4
  * Displays a paginated list of friends with delete functionality
  */
 export function FriendsListPage() {
-  const navigate = useNavigate()
   const { friends, loading, error, deleteFriend } = useFriends()
   const [currentPage, setCurrentPage] = useState(1)
   const [deletingFriend, setDeletingFriend] = useState<Friend | null>(null)
@@ -56,75 +55,58 @@ export function FriendsListPage() {
   }
 
   return (
-    <div className="min-h-screen bg-black flex items-center justify-center p-4">
-      {/* メインコンテナ */}
-      <div className="relative w-full max-w-4xl">
-        {/* 戻るボタン */}
-        <button
-          onClick={() => navigate(-1)}
-          className="absolute top-4 left-4 bg-black/50 text-white px-6 py-3 rounded-full border-2 border-white/20 hover:border-white/40 transition-all"
-        >
-          戻る
-        </button>
-
-        {/* タイトル */}
-        <div className="bg-black/80 rounded-t-3xl border-2 border-white/30 px-8 py-6 text-center">
-          <h1 className="text-4xl font-bold text-white">フレンド一覧</h1>
-        </div>
-
-        {/* フレンドリスト */}
-        <div className="bg-black/80 border-x-2 border-white/30 px-8 py-6 space-y-4 min-h-[320px]">
-          {loading ? (
-            <div className="flex items-center justify-center py-12">
-              <div className="text-white text-xl">読み込み中...</div>
-            </div>
-          ) : error ? (
-            <div className="flex items-center justify-center py-12">
-              <div className="text-red-500 text-xl">{error}</div>
-            </div>
-          ) : friends.length === 0 ? (
-            <div className="flex items-center justify-center py-12">
-              <div className="text-white/50 text-xl">フレンドはいません</div>
-            </div>
-          ) : (
-            displayedFriends.map((friend) => (
-              <FriendCard
-                key={friend.id}
-                friend={friend}
-                onDelete={handleDeleteClick}
-              />
-            ))
-          )}
-        </div>
-
-        {/* ページネーション */}
-        <div className="bg-black/80 border-2 border-t-0 border-white/30 rounded-b-3xl px-8 py-6">
-          <div className="flex items-center justify-between">
-            {/* 前へボタン */}
-            <button
-              onClick={handlePrevPage}
-              disabled={currentPage === 1}
-              className="text-white px-6 py-3 bg-black/50 border-2 border-white/30 rounded-full disabled:opacity-30 disabled:cursor-not-allowed hover:border-white/50 transition-all"
-            >
-              ←
-            </button>
-
-            {/* ページ表示 */}
-            <div className="bg-black border-2 border-white/40 rounded-full px-8 py-3">
-              <span className="text-white text-2xl font-bold">
-                {displayedCount}/{friends.length}
-              </span>
-            </div>
-
-            {/* 次へボタン */}
-            <button
-              onClick={handleNextPage}
-              disabled={currentPage === totalPages}
-              className="text-white px-6 py-3 bg-black/50 border-2 border-white/30 rounded-full disabled:opacity-30 disabled:cursor-not-allowed hover:border-white/50 transition-all"
-            >
-              →
-            </button>
+    <ConsolePage title="FRIEND LIST" kicker="SOCIAL NETWORK / CONTACTS">
+      <div className="min-h-[320px] space-y-4">
+        {loading ? (
+          <div className="flex items-center justify-center py-12">
+            <div className="text-white text-xl">読み込み中...</div>
           </div>
+        ) : error ? (
+          <div className="flex items-center justify-center py-12">
+            <div className="text-red-500 text-xl">{error}</div>
+          </div>
+        ) : friends.length === 0 ? (
+          <div className="flex items-center justify-center py-12">
+            <div className="text-white/50 text-xl">フレンドはいません</div>
+          </div>
+        ) : (
+          displayedFriends.map((friend) => (
+            <FriendCard
+              key={friend.id}
+              friend={friend}
+              onDelete={handleDeleteClick}
+            />
+          ))
+        )}
+      </div>
+
+      {/* ページネーション */}
+      <div className="mt-6 border-t border-emerald-300/20 pt-6">
+        <div className="flex items-center justify-between">
+          {/* 前へボタン */}
+          <button
+            onClick={handlePrevPage}
+            disabled={currentPage === 1}
+            className="text-white px-6 py-3 bg-black/50 border-2 border-white/30 rounded-full disabled:opacity-30 disabled:cursor-not-allowed hover:border-white/50 transition-all"
+          >
+            ←
+          </button>
+
+          {/* ページ表示 */}
+          <div className="bg-black border-2 border-white/40 rounded-full px-8 py-3">
+            <span className="text-white text-2xl font-bold">
+              {displayedCount}/{friends.length}
+            </span>
+          </div>
+
+          {/* 次へボタン */}
+          <button
+            onClick={handleNextPage}
+            disabled={currentPage === totalPages}
+            className="text-white px-6 py-3 bg-black/50 border-2 border-white/30 rounded-full disabled:opacity-30 disabled:cursor-not-allowed hover:border-white/50 transition-all"
+          >
+            →
+          </button>
         </div>
       </div>
 
@@ -135,6 +117,6 @@ export function FriendsListPage() {
         onConfirm={handleConfirmDelete}
         onCancel={handleCancelDelete}
       />
-    </div>
+    </ConsolePage>
   )
 }

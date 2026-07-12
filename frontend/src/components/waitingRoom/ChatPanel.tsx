@@ -55,11 +55,11 @@ export function ChatPanel({
   }
 
   return (
-    <aside className="flex h-[560px] min-h-[420px] flex-col overflow-hidden rounded-lg border border-gray-300 bg-white shadow">
-      <div className="flex items-center justify-between border-b border-gray-200 px-4 py-3">
+    <aside className="console-panel flex h-[560px] min-h-[420px] flex-col overflow-hidden">
+      <div className="flex items-center justify-between border-b border-emerald-300/20 px-4 py-3">
         <div>
-          <h2 className="text-xl font-bold text-gray-900">チャット</h2>
-          <p className="text-xs text-gray-500">Room {roomId}</p>
+          <h2 className="console-kicker text-base">CHAT CHANNEL</h2>
+          <p className="text-xs text-emerald-100/50">Room {roomId}</p>
         </div>
         <div className="flex items-center gap-2 text-xs font-semibold text-gray-600">
           <span
@@ -71,14 +71,14 @@ export function ChatPanel({
       </div>
 
       {error && (
-        <div className="border-b border-red-200 bg-red-50 px-4 py-2 text-sm text-red-700">
+        <div className="border-b border-red-300/30 bg-red-300/10 px-4 py-2 text-sm text-red-100">
           {error}
         </div>
       )}
 
       <div className="flex-1 overflow-y-auto px-4 py-3">
         {messages.length === 0 ? (
-          <div className="flex h-full items-center justify-center text-center text-sm text-gray-400">
+          <div className="flex h-full items-center justify-center text-center text-sm text-emerald-100/40">
             まだメッセージはありません
           </div>
         ) : (
@@ -94,8 +94,8 @@ export function ChatPanel({
                   <div
                     className={`max-w-[88%] rounded-lg px-3 py-2 ${
                       isOwnMessage
-                        ? 'bg-blue-600 text-white'
-                        : 'bg-gray-100 text-gray-900'
+                        ? 'bg-[#1e7562] text-white'
+                        : 'bg-[#153f37] text-emerald-50'
                     }`}
                   >
                     <div className="mb-1 flex items-center gap-2 text-xs">
@@ -104,19 +104,21 @@ export function ChatPanel({
                           type="button"
                           onClick={() => navigate(`/profile/${message.userId}`)}
                           className={`font-semibold hover:underline ${
-                            isOwnMessage ? 'text-blue-100' : 'text-blue-700'
+                            isOwnMessage ? 'text-emerald-100' : 'text-[#b8ff64]'
                           }`}
                         >
                           {message.username}
                         </button>
                       ) : (
-                        <span className="font-semibold text-gray-600">
+                        <span className="font-semibold text-emerald-100/70">
                           {message.username}
                         </span>
                       )}
                       <span
                         className={
-                          isOwnMessage ? 'text-blue-100' : 'text-gray-500'
+                          isOwnMessage
+                            ? 'text-emerald-100/70'
+                            : 'text-emerald-100/45'
                         }
                       >
                         {formatMessageTime(message.createdAt)}
@@ -136,7 +138,7 @@ export function ChatPanel({
 
       <form
         onSubmit={handleSubmit}
-        className="border-t border-gray-200 bg-gray-50 p-3"
+        className="border-t border-emerald-300/20 bg-[#061d19] p-3"
       >
         <label htmlFor="chat-message" className="sr-only">
           メッセージ
@@ -149,13 +151,13 @@ export function ChatPanel({
             onChange={(event) => setDraft(event.target.value)}
             placeholder="メッセージを入力"
             disabled={!accessToken}
-            className="min-w-0 flex-1 rounded-md border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-200"
+            className="console-input min-w-0 flex-1 px-3 py-2 text-sm"
             maxLength={MAX_CHAT_MESSAGE_LENGTH}
           />
           <button
             type="submit"
             disabled={!accessToken || !draft.trim()}
-            className="h-10 rounded-md bg-blue-600 px-4 text-sm font-semibold text-white transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:bg-gray-300"
+            className="console-button h-10 px-4 text-sm disabled:cursor-not-allowed disabled:opacity-40"
           >
             送信
           </button>

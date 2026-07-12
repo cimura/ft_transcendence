@@ -31,7 +31,7 @@ export const MatchHistoryCard = ({ match }: MatchHistoryCardProps) => {
   }
 
   return (
-    <div className="bg-black/60 border-2 border-white/20 rounded-2xl p-4 hover:border-white/40 transition-all">
+    <div className="console-panel console-panel--subtle p-4 transition-all hover:border-[#b8ff64]">
       <div className="flex items-center gap-4">
         {/* 結果アイコン */}
         <div

@@ -11,7 +11,7 @@ interface FriendCardProps {
  */
 export function FriendCard({ friend, onDelete }: FriendCardProps) {
   return (
-    <div className="flex items-center gap-4 bg-black border-2 border-white/40 rounded-full px-6 py-4 hover:border-white/60 transition-all">
+    <div className="console-panel console-panel--subtle flex items-center gap-4 px-5 py-4 transition-all hover:border-[#b8ff64]">
       {/* アバター */}
       <div className="flex-shrink-0">
         {friend.avatarUrl ? (
@@ -29,7 +29,7 @@ export function FriendCard({ friend, onDelete }: FriendCardProps) {
 
       {/* ユーザー名 */}
       <div className="flex-1">
-        <p className="text-white text-2xl font-medium">{friend.username}</p>
+        <p className="text-lg font-medium text-white">{friend.username}</p>
       </div>
 
       {/* オンラインステータス */}
@@ -48,7 +48,7 @@ export function FriendCard({ friend, onDelete }: FriendCardProps) {
       {/* 削除ボタン */}
       <button
         onClick={() => onDelete(friend)}
-        className="flex-shrink-0 w-12 h-12 bg-white/10 hover:bg-white/20 rounded-full flex items-center justify-center transition-all border-2 border-white/20 hover:border-white/40"
+        className="console-button console-button--muted flex h-10 w-10 flex-shrink-0 items-center justify-center p-0"
       >
         {/* ゴミ箱アイコン（SVG） */}
         <svg

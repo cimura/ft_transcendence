@@ -45,16 +45,16 @@ export const AccountManagement = () => {
   return (
     <div className="space-y-6">
       {currentUser && (
-        <div className="rounded-md border border-white/10 bg-white/5 p-6">
-          <p className="text-sm text-white/60">ユーザー名</p>
+        <div className="console-panel console-panel--subtle p-6">
+          <p className="console-kicker">CURRENT IDENTITY</p>
           <p className="text-xl font-bold text-white">{currentUser.username}</p>
-          <p className="mt-3 text-sm text-white/60">メールアドレス</p>
-          <p className="text-white">{currentUser.email}</p>
+          <p className="mt-3 text-sm text-emerald-100/60">メールアドレス</p>
+          <p className="text-emerald-50/85">{currentUser.email}</p>
         </div>
       )}
 
       {!currentUser && loading && (
-        <div className="rounded-md border border-white/10 bg-white/5 p-6 text-sm text-white/60">
+        <div className="console-panel console-panel--subtle p-6 text-sm text-emerald-100/60">
           アカウント情報を読み込み中...
         </div>
       )}
@@ -68,7 +68,7 @@ export const AccountManagement = () => {
           <button
             onClick={handleRetryFetchCurrentUser}
             disabled={loading}
-            className="mt-4 rounded-md border border-red-500/40 bg-red-600/20 px-4 py-2 text-sm text-red-100 hover:bg-red-600/30 disabled:cursor-not-allowed disabled:opacity-60"
+            className="console-button console-button--danger mt-4 px-4 py-2 text-sm disabled:cursor-not-allowed disabled:opacity-60"
           >
             {loading ? '再試行中...' : '再試行'}
           </button>
@@ -76,7 +76,7 @@ export const AccountManagement = () => {
       )}
 
       {success && (
-        <div className="rounded-md border border-emerald-500/30 bg-emerald-500/10 p-4 text-sm text-emerald-200">
+        <div className="border border-[#b8ff64]/30 bg-[#b8ff64]/10 p-4 text-sm text-[#d2ff8c]">
           {success}
         </div>
       )}
@@ -87,7 +87,7 @@ export const AccountManagement = () => {
           setOpenModal('account')
         }}
         disabled={disableAccountActions}
-        className="w-full rounded-md border border-white/10 bg-white/5 p-4 text-white hover:bg-white/10 disabled:cursor-not-allowed disabled:opacity-60"
+        className="console-button console-button--muted w-full p-4 text-left disabled:cursor-not-allowed disabled:opacity-60"
       >
         アカウント情報変更
       </button>
@@ -97,7 +97,7 @@ export const AccountManagement = () => {
           setOpenModal('password')
         }}
         disabled={disableAccountActions}
-        className="w-full rounded-md border border-white/10 bg-white/5 p-4 text-white hover:bg-white/10 disabled:cursor-not-allowed disabled:opacity-60"
+        className="console-button console-button--muted w-full p-4 text-left disabled:cursor-not-allowed disabled:opacity-60"
       >
         パスワード変更
       </button>
@@ -107,7 +107,7 @@ export const AccountManagement = () => {
           setOpenModal('delete')
         }}
         disabled={disableAccountActions}
-        className="w-full rounded-md border border-red-900/50 bg-red-900/20 p-4 text-red-400 hover:bg-red-900/30 disabled:cursor-not-allowed disabled:opacity-60"
+        className="console-button console-button--danger w-full p-4 text-left disabled:cursor-not-allowed disabled:opacity-60"
       >
         アカウント削除
       </button>

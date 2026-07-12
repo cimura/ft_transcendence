@@ -7,6 +7,7 @@ import { ProfileEditModal } from '../components/profile/ProfileEditModal'
 import { StatsTab } from '../components/profile/StatsTab'
 import { HistoryTab } from '../components/profile/HistoryTab'
 import type { UserProfile } from '../types/user'
+import { ConsolePage } from '../components/common/ConsolePage'
 
 type TabType = 'stats' | 'history'
 
@@ -74,8 +75,8 @@ export const ProfilePage = () => {
   }
 
   return (
-    <div className="min-h-screen bg-black flex items-center justify-center p-4">
-      <div className="relative w-full max-w-4xl">
+    <ConsolePage title="PROFILE" kicker="GALACTIC GAME NETWORK / IDENTITY">
+      <div className="w-full">
         {/* プロフィールヘッダー */}
         <ProfileHeader
           profile={profile}
@@ -132,6 +133,6 @@ export const ProfilePage = () => {
           />
         )}
       </div>
-    </div>
+    </ConsolePage>
   )
 }

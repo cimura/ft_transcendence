@@ -10,7 +10,7 @@ export const SettingsMenu = () => {
   const [isLoggingOut, setIsLoggingOut] = useState(false)
 
   const baseButtonClass =
-    'flex w-full items-center justify-between rounded-md border border-white/10 bg-white/5 px-6 py-4 text-left font-medium text-white transition-colors hover:bg-white/10'
+    'console-button console-button--muted flex w-full items-center justify-between px-5 py-4 text-left'
 
   const handleLogout = async () => {
     setIsLoggingOut(true)
@@ -48,7 +48,7 @@ export const SettingsMenu = () => {
       <button
         onClick={handleLogout}
         disabled={isLoggingOut}
-        className="w-full rounded-md border border-red-900/50 bg-red-900/10 px-6 py-4 font-medium text-red-400 transition-colors hover:bg-red-900/20 disabled:cursor-not-allowed disabled:opacity-60"
+        className="console-button console-button--danger w-full px-5 py-4 disabled:cursor-not-allowed disabled:opacity-60"
       >
         {isLoggingOut ? 'ログアウト中...' : 'ログアウト'}
       </button>

@@ -13,7 +13,7 @@ const Toggle = ({ checked, onClick, label }: ToggleProps) => (
     aria-pressed={checked}
     onClick={onClick}
     className={`relative h-6 w-12 rounded-full transition-colors ${
-      checked ? 'bg-blue-600' : 'bg-gray-600'
+      checked ? 'bg-[#b8ff64]' : 'bg-[#153f37]'
     }`}
   >
     <span
@@ -30,7 +30,7 @@ export const NotificationSettings = () => {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between rounded-md border border-white/10 bg-white/5 p-4">
+      <div className="console-panel console-panel--subtle flex items-center justify-between p-4">
         <span className="text-white">プッシュ通知（未実装）</span>
         <Toggle
           checked={pushEnabled}
@@ -38,7 +38,7 @@ export const NotificationSettings = () => {
           label="プッシュ通知を切り替える"
         />
       </div>
-      <div className="flex items-center justify-between rounded-md border border-white/10 bg-white/5 p-4">
+      <div className="console-panel console-panel--subtle flex items-center justify-between p-4">
         <span className="text-white">メール通知（未実装）</span>
         <Toggle
           checked={emailEnabled}

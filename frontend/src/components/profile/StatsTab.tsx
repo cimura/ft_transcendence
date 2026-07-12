@@ -73,8 +73,7 @@ export const StatsTab = ({ userId }: StatsTabProps) => {
       {statCards.map((card, index) => (
         <div
           key={index}
-          className="bg-black/60 border-2 border-white/20 rounded-2xl p-6
-                     hover:border-white/40 transition-all"
+          className="console-panel console-panel--subtle p-6 transition-all hover:border-[#b8ff64]"
         >
           <div
             className={`w-12 h-12 rounded-full bg-gradient-to-br ${card.color}

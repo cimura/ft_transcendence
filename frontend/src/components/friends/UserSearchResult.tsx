@@ -34,15 +34,14 @@ export function UserSearchResult({
     return {
       disabled: false,
       text: 'フレンド申請',
-      className:
-        'bg-blue-500/20 border-2 border-blue-500 text-blue-500 hover:bg-blue-500 hover:text-white',
+      className: 'console-button',
     }
   }
 
   const buttonState = getButtonState()
 
   return (
-    <div className="bg-black/50 border-2 border-white/20 rounded-2xl p-4 hover:border-white/40 transition-all">
+    <div className="console-panel console-panel--subtle p-4 transition-all hover:border-[#b8ff64]">
       <div className="flex items-center justify-between">
         {/* ユーザー情報 */}
         <div className="flex items-center gap-4">
@@ -61,7 +60,7 @@ export function UserSearchResult({
         <button
           onClick={() => !buttonState.disabled && onSendRequest(user.id)}
           disabled={buttonState.disabled}
-          className={`${buttonState.className} px-6 py-2 rounded-full transition-all font-semibold`}
+          className={`${buttonState.className} px-5 py-2 text-xs`}
         >
           {buttonState.text}
         </button>
