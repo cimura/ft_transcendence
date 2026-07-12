@@ -58,6 +58,8 @@ export class RoomsGateway implements OnGatewayConnection, OnGatewayDisconnect {
   @WebSocketServer()
   server: Server;
 
+  private readonly chatEventQueues = new Map<string, Promise<void>>();
+
   constructor(
     private readonly roomsService: RoomsService,
     private readonly jwtService: JwtService,
@@ -67,6 +69,7 @@ export class RoomsGateway implements OnGatewayConnection, OnGatewayDisconnect {
     console.log(`[RoomsGateway] connected: ${client.id}`);
   }
   handleDisconnect(client: Socket) {
+    this.chatEventQueues.delete(client.id);
     console.log(`[RoomsGateway] disconnected: ${client.id}`);
   }
   @SubscribeMessage('lobby:join')
@@ -88,28 +91,30 @@ export class RoomsGateway implements OnGatewayConnection, OnGatewayDisconnect {
     @MessageBody() payload: ChatPayload,
     @ConnectedSocket() client: RoomsSocket,
   ) {
-    try {
-      const userId = this.authenticate(client);
-      const roomId = this.getRoomId(payload);
-      const roomName = this.chatRoomName(roomId);
-      const previousRoomId = client.data.chatRoomId;
+    return this.runChatEvent(client, async () => {
+      try {
+        const userId = this.authenticate(client);
+        const roomId = this.getRoomId(payload);
+        const roomName = this.chatRoomName(roomId);
+        const previousRoomId = client.data.chatRoomId;
 
-      const messages = await this.roomsService.findSocketMessages(
-        roomId,
-        userId,
-      );
+        const messages = await this.roomsService.findSocketMessages(
+          roomId,
+          userId,
+        );
 
-      if (previousRoomId && previousRoomId !== roomId) {
-        await client.leave(this.chatRoomName(previousRoomId));
+        if (previousRoomId && previousRoomId !== roomId) {
+          await client.leave(this.chatRoomName(previousRoomId));
+        }
+
+        await client.join(roomName);
+        client.data.chatRoomId = roomId;
+        client.emit('chat:history', { roomId, messages });
+        console.log(`[RoomsGateway] chat:join ${client.id} room=${roomId}`);
+      } catch (error) {
+        this.emitChatError(client, error);
       }
-
-      await client.join(roomName);
-      client.data.chatRoomId = roomId;
-      client.emit('chat:history', { roomId, messages });
-      console.log(`[RoomsGateway] chat:join ${client.id} room=${roomId}`);
-    } catch (error) {
-      this.emitChatError(client, error);
-    }
+    });
   }
 
   @SubscribeMessage('chat:leave')
@@ -117,20 +122,22 @@ export class RoomsGateway implements OnGatewayConnection, OnGatewayDisconnect {
     @MessageBody() payload: ChatPayload,
     @ConnectedSocket() client: RoomsSocket,
   ) {
-    const roomId =
-      typeof payload?.roomId === 'string'
-        ? payload.roomId
-        : client.data.chatRoomId;
+    return this.runChatEvent(client, async () => {
+      const roomId =
+        typeof payload?.roomId === 'string'
+          ? payload.roomId
+          : client.data.chatRoomId;
 
-    if (!roomId) return;
+      if (!roomId) return;
 
-    await client.leave(this.chatRoomName(roomId));
+      await client.leave(this.chatRoomName(roomId));
 
-    if (client.data.chatRoomId === roomId) {
-      client.data.chatRoomId = undefined;
-    }
+      if (client.data.chatRoomId === roomId) {
+        client.data.chatRoomId = undefined;
+      }
 
-    console.log(`[RoomsGateway] chat:leave ${client.id} room=${roomId}`);
+      console.log(`[RoomsGateway] chat:leave ${client.id} room=${roomId}`);
+    });
   }
 
   @SubscribeMessage('chat:message')
@@ -139,35 +146,37 @@ export class RoomsGateway implements OnGatewayConnection, OnGatewayDisconnect {
     @ConnectedSocket() client: RoomsSocket,
     @Ack() ack?: ChatAck,
   ) {
-    try {
-      const userId = this.authenticate(client);
-      const roomId = this.getRoomId(payload);
-      const text = this.getChatText(payload);
-      const roomName = this.chatRoomName(roomId);
-      const previousRoomId = client.data.chatRoomId;
-      const message = await this.roomsService.createSocketMessage(
-        roomId,
-        userId,
-        text,
-      );
+    return this.runChatEvent(client, async () => {
+      try {
+        const userId = this.authenticate(client);
+        const roomId = this.getRoomId(payload);
+        const text = this.getChatText(payload);
+        const roomName = this.chatRoomName(roomId);
+        const previousRoomId = client.data.chatRoomId;
+        const message = await this.roomsService.createSocketMessage(
+          roomId,
+          userId,
+          text,
+        );
 
-      if (previousRoomId !== roomId) {
-        if (previousRoomId) {
-          await client.leave(this.chatRoomName(previousRoomId));
+        if (previousRoomId !== roomId) {
+          if (previousRoomId) {
+            await client.leave(this.chatRoomName(previousRoomId));
+          }
+
+          await client.join(roomName);
+          client.data.chatRoomId = roomId;
         }
 
-        await client.join(roomName);
-        client.data.chatRoomId = roomId;
+        this.server.to(roomName).emit('chat:message', message);
+        ack?.({ ok: true });
+        console.log(`[RoomsGateway] chat:message ${client.id} room=${roomId}`);
+      } catch (error) {
+        const message = this.getErrorMessage(error);
+        this.emitChatError(client, error);
+        ack?.({ ok: false, error: message });
       }
-
-      this.server.to(roomName).emit('chat:message', message);
-      ack?.({ ok: true });
-      console.log(`[RoomsGateway] chat:message ${client.id} room=${roomId}`);
-    } catch (error) {
-      const message = this.getErrorMessage(error);
-      this.emitChatError(client, error);
-      ack?.({ ok: false, error: message });
-    }
+    });
   }
 
   emitRoomCreated(room: Awaited<ReturnType<RoomsService['create']>>) {
@@ -224,6 +233,21 @@ export class RoomsGateway implements OnGatewayConnection, OnGatewayDisconnect {
 
   private chatRoomName(roomId: string) {
     return `room:${roomId}`;
+  }
+
+  private runChatEvent(client: RoomsSocket, operation: () => Promise<void>) {
+    const previous = this.chatEventQueues.get(client.id) ?? Promise.resolve();
+    const current = previous.then(operation, operation);
+    const settled = current.catch(() => undefined);
+
+    this.chatEventQueues.set(client.id, settled);
+    void settled.then(() => {
+      if (this.chatEventQueues.get(client.id) === settled) {
+        this.chatEventQueues.delete(client.id);
+      }
+    });
+
+    return current;
   }
 
   private emitChatError(client: RoomsSocket, error: unknown) {

@@ -17,6 +17,17 @@ const chatMessage = {
 
 type RoomsGatewayClient = Parameters<RoomsGateway['handleJoinChat']>[1];
 
+const createDeferred = <T>() => {
+  let resolve: (value: T) => void;
+  let reject: (reason?: unknown) => void;
+  const promise = new Promise<T>((resolvePromise, rejectPromise) => {
+    resolve = resolvePromise;
+    reject = rejectPromise;
+  });
+
+  return { promise, resolve: resolve!, reject: reject! };
+};
+
 describe('RoomsGateway', () => {
   let gateway: RoomsGateway;
   let roomsService: {
@@ -122,6 +133,55 @@ describe('RoomsGateway', () => {
     expect(client.emit).toHaveBeenCalledWith('chat:error', {
       message: 'You are not a participant of this room',
     });
+  });
+
+  it('serializes chat events for the same socket', async () => {
+    const client = createClient({
+      token: 'Bearer token-1',
+      data: { chatRoomId: 'room-old' },
+    });
+    const history = createDeferred<(typeof chatMessage)[]>();
+    const message = { ...chatMessage, roomId: 'room-3' };
+    roomsService.findSocketMessages.mockReturnValue(history.promise);
+    roomsService.createSocketMessage.mockResolvedValue(message);
+
+    const join = gateway.handleJoinChat({ roomId: 'room-2' }, client);
+    const send = gateway.handleChatMessage(
+      { roomId: 'room-3', text: 'hello' },
+      client,
+    );
+
+    await Promise.resolve();
+    expect(roomsService.createSocketMessage).not.toHaveBeenCalled();
+
+    history.resolve([]);
+    await Promise.all([join, send]);
+
+    expect(client.leave).toHaveBeenNthCalledWith(1, 'room:room-old');
+    expect(client.join).toHaveBeenNthCalledWith(1, 'room:room-2');
+    expect(client.leave).toHaveBeenNthCalledWith(2, 'room:room-2');
+    expect(client.join).toHaveBeenNthCalledWith(2, 'room:room-3');
+    expect(client.data.chatRoomId).toBe('room-3');
+  });
+
+  it('runs chat:leave after an in-flight chat:join for the same socket', async () => {
+    const client = createClient({
+      token: 'Bearer token-1',
+      data: { chatRoomId: 'room-old' },
+    });
+    const history = createDeferred<(typeof chatMessage)[]>();
+    roomsService.findSocketMessages.mockReturnValue(history.promise);
+
+    const join = gateway.handleJoinChat({ roomId: 'room-2' }, client);
+    const leave = gateway.handleLeaveChat({ roomId: 'room-2' }, client);
+
+    history.resolve([]);
+    await Promise.all([join, leave]);
+
+    expect(client.join).toHaveBeenCalledWith('room:room-2');
+    expect(client.leave).toHaveBeenNthCalledWith(1, 'room:room-old');
+    expect(client.leave).toHaveBeenNthCalledWith(2, 'room:room-2');
+    expect(client.data.chatRoomId).toBeUndefined();
   });
 
   it('creates and broadcasts a chat message to the requested room', async () => {
