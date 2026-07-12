@@ -105,6 +105,25 @@ describe('RoomsGateway', () => {
     expect(client.data.chatRoomId).toBe(roomId);
   });
 
+  it('keeps the previous room joined when joining another room chat is rejected', async () => {
+    const client = createClient({
+      token: 'Bearer token-1',
+      data: { chatRoomId: 'room-old' },
+    });
+    roomsService.findSocketMessages.mockRejectedValue(
+      new Error('You are not a participant of this room'),
+    );
+
+    await gateway.handleJoinChat({ roomId }, client);
+
+    expect(client.leave).not.toHaveBeenCalled();
+    expect(client.join).not.toHaveBeenCalled();
+    expect(client.data.chatRoomId).toBe('room-old');
+    expect(client.emit).toHaveBeenCalledWith('chat:error', {
+      message: 'You are not a participant of this room',
+    });
+  });
+
   it('creates and broadcasts a chat message to the requested room', async () => {
     const client = createClient({
       token: 'Bearer token-1',
@@ -134,6 +153,50 @@ describe('RoomsGateway', () => {
     expect(client.join).toHaveBeenCalledWith(`room:${roomId}`);
     expect(client.data.chatRoomId).toBe(roomId);
     expect(serverTo).toHaveBeenCalledWith(`room:${roomId}`);
+  });
+
+  it('leaves the previous room before joining another room when sending a chat message', async () => {
+    const client = createClient({
+      token: 'Bearer token-1',
+      data: { chatRoomId: 'room-old' },
+    });
+    roomsService.createSocketMessage.mockResolvedValue(chatMessage);
+
+    await gateway.handleChatMessage({ roomId, text: 'hello' }, client);
+
+    expect(client.leave).toHaveBeenCalledWith('room:room-old');
+    expect(client.join).toHaveBeenCalledWith(`room:${roomId}`);
+    expect(client.data.chatRoomId).toBe(roomId);
+    expect(
+      (client.leave as unknown as jest.Mock).mock.invocationCallOrder[0],
+    ).toBeLessThan(
+      (client.join as unknown as jest.Mock).mock.invocationCallOrder[0],
+    );
+    expect(serverTo).toHaveBeenCalledWith(`room:${roomId}`);
+  });
+
+  it('keeps the previous room joined when sending a chat message is rejected', async () => {
+    const client = createClient({
+      token: 'Bearer token-1',
+      data: { chatRoomId: 'room-old' },
+    });
+    const ack = jest.fn();
+    roomsService.createSocketMessage.mockRejectedValue(
+      new Error('You are not a participant of this room'),
+    );
+
+    await gateway.handleChatMessage({ roomId, text: 'hello' }, client, ack);
+
+    expect(client.leave).not.toHaveBeenCalled();
+    expect(client.join).not.toHaveBeenCalled();
+    expect(client.data.chatRoomId).toBe('room-old');
+    expect(client.emit).toHaveBeenCalledWith('chat:error', {
+      message: 'You are not a participant of this room',
+    });
+    expect(ack).toHaveBeenCalledWith({
+      ok: false,
+      error: 'You are not a participant of this room',
+    });
   });
 
   it('rejects chat messages without a token', async () => {

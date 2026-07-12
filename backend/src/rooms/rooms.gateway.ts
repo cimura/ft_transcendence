@@ -92,15 +92,17 @@ export class RoomsGateway implements OnGatewayConnection, OnGatewayDisconnect {
       const userId = this.authenticate(client);
       const roomId = this.getRoomId(payload);
       const roomName = this.chatRoomName(roomId);
-
-      if (client.data.chatRoomId && client.data.chatRoomId !== roomId) {
-        await client.leave(this.chatRoomName(client.data.chatRoomId));
-      }
+      const previousRoomId = client.data.chatRoomId;
 
       const messages = await this.roomsService.findSocketMessages(
         roomId,
         userId,
       );
+
+      if (previousRoomId && previousRoomId !== roomId) {
+        await client.leave(this.chatRoomName(previousRoomId));
+      }
+
       await client.join(roomName);
       client.data.chatRoomId = roomId;
       client.emit('chat:history', { roomId, messages });
@@ -142,13 +144,18 @@ export class RoomsGateway implements OnGatewayConnection, OnGatewayDisconnect {
       const roomId = this.getRoomId(payload);
       const text = this.getChatText(payload);
       const roomName = this.chatRoomName(roomId);
+      const previousRoomId = client.data.chatRoomId;
       const message = await this.roomsService.createSocketMessage(
         roomId,
         userId,
         text,
       );
 
-      if (client.data.chatRoomId !== roomId) {
+      if (previousRoomId !== roomId) {
+        if (previousRoomId) {
+          await client.leave(this.chatRoomName(previousRoomId));
+        }
+
         await client.join(roomName);
         client.data.chatRoomId = roomId;
       }
