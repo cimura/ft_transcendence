@@ -14,9 +14,10 @@ export function isPassable(
     return false;
   if (room.map[y][x] !== 'empty') return false;
 
-  for (const bomb of Object.values(room.bombs)) {
+  for (const bombId in room.bombs) {
+    const bomb = room.bombs[bombId];
     if (bomb.position.x === x && bomb.position.y === y) {
-      const passingPlayers = room.bombPassingPlayers?.[bomb.id] || [];
+      const passingPlayers = room.bombPassingPlayers?.[bombId] || [];
       if (passingPlayers.includes(playerId)) {
         continue;
       }
@@ -44,14 +45,11 @@ export function getPlayersOverlappingTile(
       p.position.z + PLAYER_COLLISION_SIZE + 0.5,
     );
 
-    let isOverlapping = false;
-    for (let y = currentTop; y <= currentBottom; y++) {
-      for (let x = currentLeft; x <= currentRight; x++) {
-        if (gridX === x && gridY === y) {
-          isOverlapping = true;
-        }
-      }
-    }
+    const isOverlapping =
+      gridX >= currentLeft &&
+      gridX <= currentRight &&
+      gridY >= currentTop &&
+      gridY <= currentBottom;
 
     if (isOverlapping) {
       passingPlayers.push(pid);
@@ -134,14 +132,11 @@ export function updatePlayerMovements(room: GameSession): void {
         const bomb = room.bombs[bombId];
         if (!bomb) continue;
 
-        let isOverlapping = false;
-        for (let y = currentTop; y <= currentBottom; y++) {
-          for (let x = currentLeft; x <= currentRight; x++) {
-            if (bomb.position.x === x && bomb.position.y === y) {
-              isOverlapping = true;
-            }
-          }
-        }
+        const isOverlapping =
+          bomb.position.x >= currentLeft &&
+          bomb.position.x <= currentRight &&
+          bomb.position.y >= currentTop &&
+          bomb.position.y <= currentBottom;
 
         if (!isOverlapping) {
           room.bombPassingPlayers[bombId] = passingPlayers.filter(

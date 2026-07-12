@@ -7,7 +7,9 @@ import {
   OnGatewayInit,
   OnGatewayConnection,
   OnGatewayDisconnect,
+  WsException,
 } from '@nestjs/websockets';
+import { Logger } from '@nestjs/common';
 import { Server, Socket } from 'socket.io';
 import { JwtService } from '@nestjs/jwt';
 import { GameService } from './game.service';
@@ -38,6 +40,8 @@ type GameSocket = Socket<
 export class GameGateway
   implements OnGatewayInit, OnGatewayConnection, OnGatewayDisconnect
 {
+  private static readonly brand = 'GameService';
+  private readonly logger = new Logger(GameGateway.brand);
   @WebSocketServer()
   server: Server<ClientToServerEvents, ServerToClientEvents>;
 
@@ -61,10 +65,8 @@ export class GameGateway
       client.data.user = {
         id: payload.sub,
       };
-      console.log(`[接続成功] ユーザーId: ${client.data.user.id}`);
     } catch {
       client.disconnect();
-      console.log(`[接続失敗] JWT未認証`);
     }
   }
 
@@ -77,20 +79,36 @@ export class GameGateway
     const user = client.data.user;
     if (!user) return;
 
-    const previousRoomId = client.data.roomId;
-    if (previousRoomId && previousRoomId !== data.roomId) {
-      await client.leave(previousRoomId);
+    try {
+      const initData = this.gameService.handleGameJoin(
+        data.roomId,
+        user.id,
+        client.id,
+      );
+
+      const previousRoomId = client.data.roomId;
+      if (previousRoomId && previousRoomId !== data.roomId) {
+        await client.leave(previousRoomId);
+        this.gameService.handleGameLeave(user.id, client.id);
+      }
+
+      await client.join(data.roomId);
+      client.data.roomId = data.roomId;
+
+      client.emit('game:init', initData);
+
+      // ゲーム開始条件が満たされた場合のみゲームループを開始させる
+      this.gameService.handleGameStart(data.roomId);
+    } catch (error) {
+      this.logger.warn(
+        `Failed to join room { roomId: '${data.roomId}', userId: ${user.id} }`,
+        error instanceof Error ? error.stack : undefined,
+      );
+      client.emit('game:error', {
+        message:
+          error instanceof WsException ? error.message : 'Cannot join the room',
+      });
     }
-
-    await client.join(data.roomId);
-    client.data.roomId = data.roomId;
-
-    const initData = this.gameService.handleGameJoin(data.roomId, user.id);
-    client.emit('game:init', initData);
-
-    console.log(
-      `[ルーム参加] ユーザーID: ${user.id} が 部屋: ${data.roomId} に参加します`,
-    );
   }
 
   @SubscribeMessage('game:leave')
@@ -105,7 +123,7 @@ export class GameGateway
     }
 
     if (client.data.user) {
-      this.gameService.handleGameLeave(client.data.user.id);
+      this.gameService.handleGameLeave(client.data.user.id, client.id);
     }
   }
 
@@ -141,7 +159,7 @@ export class GameGateway
 
   handleDisconnect(client: GameSocket) {
     if (client.data.user) {
-      this.gameService.handleGameLeave(client.data.user.id);
+      this.gameService.handleGameLeave(client.data.user.id, client.id);
     }
   }
 }

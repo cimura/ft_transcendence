@@ -18,6 +18,9 @@ type GameStore = {
     countdown: { seconds: number; startsAt: number } | null
   ) => void
 
+  serverTimeOffset: number
+  setServerTimeOffset: (offset: number) => void
+
   myPlayerId: string | null
   setMyPlayerId: (id: string | null) => void
 
@@ -50,6 +53,9 @@ export const useGameStore = create<GameStore>((set) => ({
 
   countdown: null,
   setCountdown: (countdown) => set({ countdown }),
+
+  serverTimeOffset: 0,
+  setServerTimeOffset: (offset) => set({ serverTimeOffset: offset }),
 
   myPlayerId: null,
   setMyPlayerId: (id) => set({ myPlayerId: id }),

@@ -13,6 +13,7 @@ import type {
 export function evaluateGameEnd(
   room: GameSession,
   now: number,
+  isForceDraw: boolean,
 ): Parameters<ServerToClientEvents['game:end']>[0] | null {
   if (room.phase !== 'playing') return null;
 
@@ -26,7 +27,7 @@ export function evaluateGameEnd(
   const isGameOver =
     totalPlayers >= 2 ? livingPlayers.length <= 1 : livingPlayers.length === 0;
 
-  if (!isGameOver) return null;
+  if (!isGameOver && !isForceDraw) return null;
 
   let winnerId: string | null = null;
   let isDraw = false;
