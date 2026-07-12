@@ -26,9 +26,9 @@ export const AvatarUpload = ({
     }
 
     // ファイル形式チェック
-    const allowedTypes = ['image/jpeg', 'image/png', 'image/gif']
+    const allowedTypes = ['image/jpeg', 'image/png', 'image/webp']
     if (!allowedTypes.includes(file.type)) {
-      setValidationError('JPEG、PNG、GIF形式のみ対応しています')
+      setValidationError('JPEG、PNG、WebP形式のみ対応しています')
       return
     }
 
@@ -95,12 +95,12 @@ export const AvatarUpload = ({
           <input
             ref={fileInputRef}
             type="file"
-            accept="image/jpeg,image/png,image/gif"
+            accept="image/jpeg,image/png,image/webp"
             onChange={handleFileChange}
             className="hidden"
           />
           <p className="text-white/40 text-xs mt-2">
-            JPEG、PNG、GIF形式、5MB以下
+            JPEG、PNG、WebP形式、5MB以下
           </p>
         </div>
       </div>

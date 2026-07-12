@@ -1,4 +1,3 @@
-import { Logger } from '@nestjs/common';
 import {
   WebSocketGateway,
   SubscribeMessage,
@@ -8,7 +7,9 @@ import {
   OnGatewayInit,
   OnGatewayConnection,
   OnGatewayDisconnect,
+  WsException,
 } from '@nestjs/websockets';
+import { Logger } from '@nestjs/common';
 import { Server, Socket } from 'socket.io';
 import { GameService } from './game.service';
 import { SocketAuthService } from '../websocket/socket-auth.service';
@@ -18,6 +19,7 @@ import type {
   ClientToServerEvents,
   ServerToClientEvents,
 } from '@ft_transcendence/shared/game-events.types';
+import type { JwtPayload } from '../auth/interfaces/jwt-payload.interface';
 
 interface ConnectionData {
   user: {
@@ -41,7 +43,6 @@ export class GameGateway
   implements OnGatewayInit, OnGatewayConnection, OnGatewayDisconnect
 {
   private readonly logger = new Logger(GameGateway.name);
-
   @WebSocketServer()
   server: Server<ClientToServerEvents, ServerToClientEvents>;
 
@@ -64,7 +65,7 @@ export class GameGateway
     }
 
     client.data.user = user;
-    this.logger.log(`[接続成功] ユーザーId: ${client.data.user.id}`);
+    this.logger.log(`[接続成功] ユーザーId: ${user.id}`);
   }
 
   @SubscribeMessage('game:join')
@@ -77,17 +78,16 @@ export class GameGateway
     if (!user) return;
 
     const previousRoomId = client.data.roomId;
-
     try {
       await client.join(data.roomId);
     } catch (error) {
-      this.logger.error(
-        `[ルーム参加失敗] 部屋: ${data.roomId}`,
-        error instanceof Error ? error.stack : String(error),
+      this.logger.warn(
+        `Failed to join room { roomId: '${data.roomId}', userId: ${user.id} }`,
+        error instanceof Error ? error.stack : undefined,
       );
       client.emit('game:error', {
-        code: 'ROOM_JOIN_FAILED',
-        message: 'ゲームルームへの参加に失敗しました',
+        message:
+          error instanceof WsException ? error.message : 'Cannot join the room',
       });
       return;
     }
@@ -100,7 +100,7 @@ export class GameGateway
         socketId: client.id,
       });
       if (remaining === 0) {
-        this.gameService.handleGameLeave(user.id, previousRoomId);
+        this.gameService.handleGameLeave(user.id, client.id);
       }
       await client.leave(previousRoomId);
     }
@@ -113,12 +113,27 @@ export class GameGateway
     });
     client.data.roomId = data.roomId;
 
-    const initData = this.gameService.handleGameJoin(data.roomId, user.id);
-    client.emit('game:init', initData);
-
-    this.logger.log(
-      `[ルーム参加] ユーザーID: ${user.id} が 部屋: ${data.roomId} に参加します`,
-    );
+    try {
+      const initData = this.gameService.handleGameJoin(
+        data.roomId,
+        user.id,
+        client.id,
+      );
+      client.emit('game:init', initData);
+      this.gameService.handleGameStart(data.roomId);
+    } catch (error) {
+      this.socketPresenceService.unregister({
+        namespace: 'game',
+        roomId: data.roomId,
+        userId: user.id,
+        socketId: client.id,
+      });
+      client.data.roomId = previousRoomId;
+      client.emit('game:error', {
+        message:
+          error instanceof Error ? error.message : 'Cannot join the room',
+      });
+    }
   }
 
   @SubscribeMessage('game:leave')
@@ -127,20 +142,21 @@ export class GameGateway
     client: GameSocket,
   ) {
     const roomId = client.data.roomId;
-    const userId = client.data.user?.id;
-    if (!roomId || !userId) return;
+    if (roomId) {
+      await client.leave(roomId);
+      client.data.roomId = undefined;
+    }
 
-    await client.leave(roomId);
-    client.data.roomId = undefined;
-
-    const remaining = this.socketPresenceService.unregister({
-      namespace: 'game',
-      roomId,
-      userId,
-      socketId: client.id,
-    });
-    if (remaining === 0) {
-      this.gameService.handleGameLeave(userId, roomId);
+    if (client.data.user && roomId) {
+      const remaining = this.socketPresenceService.unregister({
+        namespace: 'game',
+        roomId,
+        userId: client.data.user.id,
+        socketId: client.id,
+      });
+      if (remaining === 0) {
+        this.gameService.handleGameLeave(client.data.user.id, client.id);
+      }
     }
   }
 
@@ -188,7 +204,7 @@ export class GameGateway
     this.socketPresenceService.scheduleIfInactive(
       { namespace: 'game', roomId, userId },
       2000,
-      () => this.gameService.handleGameLeave(userId, roomId),
+      () => this.gameService.handleGameLeave(userId, client.id),
     );
   }
 }

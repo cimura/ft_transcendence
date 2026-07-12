@@ -78,7 +78,6 @@ export function processExplosions(
     }
 
     if (destroyedBlocks.length > 0) {
-      room.mapRevision++;
       room.stats[bomb.ownerId].blocksDestroyed += destroyedBlocks.length;
     }
 
