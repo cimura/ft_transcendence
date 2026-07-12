@@ -4,6 +4,7 @@ import {
   Get,
   Param,
   Post,
+  Put,
   Query,
   Request,
   UseGuards,
@@ -16,6 +17,7 @@ import {
 } from '@nestjs/swagger';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import type { UserRequest } from '../users/interfaces/user-request.interface';
+import { CreateRoomInvitationDto } from './dto/create-room-invitation.dto';
 import { CreateRoomDto } from './dto/create-room.dto';
 import { CreateRoomMessageDto } from './dto/create-room-message.dto';
 import { QueryRoomsDto } from './dto/query-rooms.dto';
@@ -63,6 +65,42 @@ export class RoomsController {
     const room = await this.roomsService.join(roomId, req.user.userId);
     this.roomsGateway.emitRoomUpdated(room);
     return room;
+  }
+
+  @Post(':roomId/invitations')
+  @ApiOperation({ summary: 'ルームへの招待を作成' })
+  @ApiResponse({ status: 201, description: '成功時' })
+  createInvitation(
+    @Request() req: UserRequest,
+    @Param('roomId') roomId: string,
+    @Body() dto: CreateRoomInvitationDto,
+  ) {
+    return this.roomsService.createInvitation(roomId, req.user.userId, dto);
+  }
+
+  @Put('invitations/:invitationId/accept')
+  @ApiOperation({ summary: 'ルーム招待を承認して参加' })
+  @ApiResponse({ status: 200, description: '成功時' })
+  async acceptInvitation(
+    @Request() req: UserRequest,
+    @Param('invitationId') invitationId: string,
+  ) {
+    const room = await this.roomsService.acceptInvitation(
+      invitationId,
+      req.user.userId,
+    );
+    this.roomsGateway.emitRoomUpdated(room);
+    return room;
+  }
+
+  @Put('invitations/:invitationId/decline')
+  @ApiOperation({ summary: 'ルーム招待を辞退' })
+  @ApiResponse({ status: 200, description: '成功時' })
+  declineInvitation(
+    @Request() req: UserRequest,
+    @Param('invitationId') invitationId: string,
+  ) {
+    return this.roomsService.declineInvitation(invitationId, req.user.userId);
   }
 
   @Post(':roomId/leave')

@@ -25,6 +25,7 @@ import { AccountManagement } from './pages/settings/AccountManagement'
 import { NotificationSettings } from './pages/settings/NotificationPage'
 import { PrivacySettings } from './pages/settings/PrivacySettings'
 import { useAuthStore } from './stores/authStore'
+import { NotificationsPage } from './pages/NotificationsPage'
 
 function App() {
   return (
@@ -99,6 +100,7 @@ function AppRoutes() {
       <Route path="/room/:roomId" element={<WaitingRoom />} />
       <Route path="/game/:roomId" element={<GameRoomPage />} />
       <Route path="/rankings" element={<RankingsPage />} />
+      <Route path="/notifications" element={<NotificationsPage />} />
 
       {/* フレンド機能 */}
       <Route path="/friends" element={<FriendsMenuPage />} />
@@ -109,11 +111,6 @@ function AppRoutes() {
       {/* プロフィール */}
       <Route path="/profile/:userId" element={<ProfilePage />} />
 
-      {/* 以下は後で実装 */}
-      <Route
-        path="/friends"
-        element={<div className="p-8">フレンド画面（準備中）</div>}
-      />
       <Route
         path="/settings"
         element={<Settings onLogout={handleLogoutSuccess} />}

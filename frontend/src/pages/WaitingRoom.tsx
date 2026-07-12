@@ -6,8 +6,11 @@ import { PlayerCard } from '../components/waitingRoom/PlayerCard'
 import { ChatPanel } from '../components/waitingRoom/ChatPanel'
 import { GameMapPreview } from '../components/game/preview/GameMapPreview'
 import { useAuthStore } from '../stores/authStore'
-import { leaveRoom } from '../api/rooms'
+import { createRoomInvitation, leaveRoom } from '../api/rooms'
+import { getApiErrorMessage } from '../api/errors'
 import { useLobbySocket } from '../hooks/useLobbySocket'
+import { useFriends } from '../hooks/friends/useFriends'
+import type { GameRoom } from '../types/room'
 
 export function WaitingRoom() {
   const { roomId } = useParams<{ roomId: string }>()
@@ -16,7 +19,6 @@ export function WaitingRoom() {
     useLobbyStore()
   const { currentUser, accessToken, fetchCurrentUser } = useAuthStore()
   const [isReady, setIsReady] = useState(false)
-
   const currentUserId = currentUser?.id
 
   useLobbySocket()
@@ -181,6 +183,10 @@ export function WaitingRoom() {
                 全員が Ready になるとゲームを開始できます
               </p>
             )}
+
+            {isHost && currentRoom.status === 'waiting' && (
+              <RoomInviteSection currentRoom={currentRoom} />
+            )}
           </section>
 
           <section className="rounded-lg bg-white p-4 shadow">
@@ -230,6 +236,77 @@ export function WaitingRoom() {
           />
         </div>
       </main>
+    </div>
+  )
+}
+
+function RoomInviteSection({ currentRoom }: { currentRoom: GameRoom }) {
+  const { friends } = useFriends()
+  const [selectedInviteeId, setSelectedInviteeId] = useState('')
+  const [inviteMessage, setInviteMessage] = useState<string | null>(null)
+  const [inviteError, setInviteError] = useState<string | null>(null)
+  const [inviteLoading, setInviteLoading] = useState(false)
+
+  const handleInviteFriend = async () => {
+    if (!selectedInviteeId) return
+
+    try {
+      setInviteLoading(true)
+      setInviteError(null)
+      setInviteMessage(null)
+      await createRoomInvitation(currentRoom.id, selectedInviteeId)
+      const invitedFriend = friends.find(
+        (friend) => friend.id === selectedInviteeId
+      )
+      setInviteMessage(
+        `${invitedFriend?.username ?? 'フレンド'} に招待を送りました`
+      )
+      setSelectedInviteeId('')
+    } catch (error) {
+      setInviteError(getApiErrorMessage(error, '招待の送信に失敗しました'))
+    } finally {
+      setInviteLoading(false)
+    }
+  }
+
+  return (
+    <div className="mt-6 rounded-lg bg-white p-4 shadow">
+      <h3 className="text-lg font-bold text-gray-900">フレンドを招待</h3>
+      <div className="mt-3 flex gap-3">
+        <select
+          value={selectedInviteeId}
+          onChange={(event) => setSelectedInviteeId(event.target.value)}
+          className="min-w-0 flex-1 rounded-md border border-gray-300 px-3 py-2 text-gray-900"
+        >
+          <option value="">フレンドを選択</option>
+          {friends
+            .filter(
+              (friend) =>
+                !currentRoom.players.some(
+                  (player) => player.userId === friend.id
+                )
+            )
+            .map((friend) => (
+              <option key={friend.id} value={friend.id}>
+                {friend.username}
+              </option>
+            ))}
+        </select>
+        <Button
+          variant="primary"
+          size="sm"
+          onClick={handleInviteFriend}
+          disabled={!selectedInviteeId || inviteLoading}
+        >
+          招待
+        </Button>
+      </div>
+      {inviteMessage && (
+        <p className="mt-2 text-sm text-green-700">{inviteMessage}</p>
+      )}
+      {inviteError && (
+        <p className="mt-2 text-sm text-red-700">{inviteError}</p>
+      )}
     </div>
   )
 }
