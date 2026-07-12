@@ -124,9 +124,13 @@ export function useRoomChat(roomId: string, accessToken: string | null) {
     })
 
     socket.on('chat:history', (payload: unknown) => {
-      if (!Array.isArray(payload)) return
+      if (!isRecord(payload)) return
 
-      const history = payload
+      const historyRoomId = getString(payload, 'roomId')
+      const historyMessages = payload.messages
+      if (historyRoomId !== roomId || !Array.isArray(historyMessages)) return
+
+      const history = historyMessages
         .map((item) => normalizeChatMessage(item, roomId))
         .filter(
           (message): message is ChatMessage =>
