@@ -165,12 +165,7 @@ export const uploadAvatar = async (file: File): Promise<UserProfile> => {
   formData.append('file', file)
   const response = await api.post<UpdateAvatarResponse>(
     `/users/me/avatar`,
-    formData,
-    {
-      headers: {
-        'Content-Type': 'multipart/form-data',
-      },
-    }
+    formData
   )
   return toUserProfile(response.data.user, true)
 }
