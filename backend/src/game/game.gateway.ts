@@ -89,7 +89,7 @@ export class GameGateway
       const previousRoomId = client.data.roomId;
       if (previousRoomId && previousRoomId !== data.roomId) {
         await client.leave(previousRoomId);
-        this.gameService.handleGameLeave(user.id, client.id);
+        this.gameService.handleGameLeave(previousRoomId, user.id, client.id);
       }
 
       await client.join(data.roomId);
@@ -117,14 +117,12 @@ export class GameGateway
     client: GameSocket,
   ) {
     const roomId = client.data.roomId;
-    if (roomId) {
-      await client.leave(roomId);
-      client.data.roomId = undefined;
-    }
+    if (!roomId || !client.data.user) return;
 
-    if (client.data.user) {
-      this.gameService.handleGameLeave(client.data.user.id, client.id);
-    }
+    await client.leave(roomId);
+    client.data.roomId = undefined;
+
+    this.gameService.handleGameLeave(roomId, client.data.user.id, client.id);
   }
 
   @SubscribeMessage('player:input')
@@ -158,8 +156,9 @@ export class GameGateway
   }
 
   handleDisconnect(client: GameSocket) {
-    if (client.data.user) {
-      this.gameService.handleGameLeave(client.data.user.id, client.id);
-    }
+    const roomId = client.data.roomId;
+    if (!roomId || !client.data.user) return;
+
+    this.gameService.handleGameLeave(roomId, client.data.user.id, client.id);
   }
 }
