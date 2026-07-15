@@ -7,19 +7,27 @@ import {
   GAME_TICK_RATE,
   DISCONNECT_TIMEOUT_MS,
 } from './constants/game-constants';
+import { ScoresService } from '../scores/scores.service';
 
 describe('GameService', () => {
   let service: GameService;
   let emit: jest.Mock;
   let to: jest.Mock;
+  let scoresService: { recordMatchResult: jest.Mock };
 
   beforeEach(async () => {
     jest.useFakeTimers();
     emit = jest.fn();
     to = jest.fn().mockReturnValue({ emit });
+    scoresService = {
+      recordMatchResult: jest.fn().mockResolvedValue(undefined),
+    };
 
     const module: TestingModule = await Test.createTestingModule({
-      providers: [GameService],
+      providers: [
+        GameService,
+        { provide: ScoresService, useValue: scoresService },
+      ],
     }).compile();
 
     service = module.get<GameService>(GameService);
@@ -104,6 +112,13 @@ describe('GameService', () => {
         'game:end',
         expect.objectContaining({
           winnerId: 'player-2',
+        }),
+      );
+      expect(scoresService.recordMatchResult).toHaveBeenCalledWith(
+        expect.objectContaining({
+          gameType: 'Bomberman',
+          winnerId: 'player-2',
+          isDraw: false,
         }),
       );
     });

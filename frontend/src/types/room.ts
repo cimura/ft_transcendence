@@ -6,8 +6,12 @@ export interface GameRoom {
   players: RoomPlayer[]
   maxPlayers: 2 | 3 | 4
   status: 'waiting' | 'playing' | 'finished'
+  mode?: 'online' | 'local_cpu'
   mapId?: string
-  createdAt: Date
+  createdAt: Date | string
+  updatedAt?: Date | string
+  startedAt?: Date | string | null
+  finishedAt?: Date | string | null
 }
 
 export interface RoomPlayer {
@@ -21,5 +25,7 @@ export interface RoomPlayer {
 export interface CreateRoomDto {
   name: string
   maxPlayers: 2 | 3 | 4
+  gameId?: string
+  mode?: 'online' | 'local_cpu'
   mapId?: string
 }

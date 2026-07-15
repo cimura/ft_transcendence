@@ -16,6 +16,12 @@ interface BackendProfileResponse {
   user: BackendProfileUser
 }
 
+export interface UpdateAvatarResponse {
+  message: string
+  avatarUrl: string
+  user: BackendProfileUser
+}
+
 const toUserProfile = (
   user: BackendProfileUser,
   isCurrentUser: boolean
@@ -151,80 +157,36 @@ export const updateProfile = async (
 
 /**
  * Upload avatar image
- * @param userId User ID
  * @param file Image file to upload
  * @returns Promise<{ avatarUrl: string }> New avatar URL
  */
-export const uploadAvatar = async (
-  userId: string,
-  file: File
-): Promise<{ avatarUrl: string }> => {
-  // モックレスポンス（ファイルをローカルURLとして保存）
-  return new Promise((resolve, reject) => {
-    setTimeout(() => {
-      if (file.size > 5 * 1024 * 1024) {
-        reject(new Error('File size exceeds 5MB'))
-        return
-      }
-
-      const allowedTypes = ['image/jpeg', 'image/png', 'image/gif']
-      if (!allowedTypes.includes(file.type)) {
-        reject(
-          new Error('Invalid file type. Only JPEG, PNG, and GIF are allowed.')
-        )
-        return
-      }
-
-      // ローカルURLを生成（実際のアップロードはせず、プレビュー用）
-      const avatarUrl = URL.createObjectURL(file)
-
-      // モックデータを更新
-      const user = mockUsers[userId]
-      if (user) {
-        user.avatarUrl = avatarUrl
-        user.updatedAt = new Date()
-      }
-
-      resolve({ avatarUrl })
-    }, 500)
-  })
-
-  // 実際のAPI実装時はこちらを使用
-  // const formData = new FormData()
-  // formData.append('file', file)
-  // const response = await api.post<{ avatarUrl: string }>(
-  //   `/api/users/${userId}/avatar`,
-  //   formData,
-  //   {
-  //     headers: {
-  //       'Content-Type': 'multipart/form-data',
-  //     },
-  //   }
-  // )
-  // return response.data
+export const uploadAvatar = async (file: File): Promise<UserProfile> => {
+  const formData = new FormData()
+  formData.append('file', file)
+  const response = await api.post<UpdateAvatarResponse>(
+    `/users/me/avatar`,
+    formData,
+    {
+      headers: {
+        'Content-Type': undefined,
+      },
+    }
+  )
+  return toUserProfile(response.data.user, true)
 }
 
 /**
  * Set default avatar
- * @param userId User ID
  * @param avatarUrl Default avatar URL
  * @returns Promise<{ avatarUrl: string }> New avatar URL
  */
 export const setDefaultAvatar = async (
-  userId: string,
   avatarUrl: string
 ): Promise<{ avatarUrl: string }> => {
-  // モックデータを更新
-  return new Promise((resolve, reject) => {
-    setTimeout(() => {
-      const user = mockUsers[userId]
-      if (user) {
-        user.avatarUrl = avatarUrl
-        user.updatedAt = new Date()
-        resolve({ avatarUrl })
-      } else {
-        reject(new Error('User not found'))
-      }
-    }, 300)
+  const response = await api.patch<UpdateAvatarResponse>('/users/me/avatar', {
+    avatarUrl,
   })
+  return {
+    avatarUrl: response.data.avatarUrl,
+  }
 }

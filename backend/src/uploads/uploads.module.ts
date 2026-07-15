@@ -6,5 +6,6 @@ import { UploadsService } from './uploads.service';
 @Module({
   controllers: [UploadsController],
   providers: [UploadsService, PrismaService],
+  exports: [UploadsService],
 })
 export class UploadsModule {}

@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef } from 'react'
 import { createInitialBombermanMap, initialPlayers } from './map-mock'
 import { renderBombermanScene } from './BombermanRenderer'
 
-// TODO: ロビーにいるときにマップ情報を取得して表示できるようにする (現状map-mockを仕様)
+// TODO: 部屋にいるときにマップ情報を取得して表示できるようにする (現状map-mockを使用)
 // (現在はゲームがスタートしてからサーバーからマップが送られてくるので表示できない)
 
 const PREVIEW_TILE_SIZE = 40

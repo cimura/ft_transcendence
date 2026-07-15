@@ -32,6 +32,8 @@ const createRoom = (
     maxPlayers: number;
     status: RoomStatus;
     mode: RoomMode;
+    hostId: string;
+    host: typeof user;
     participants: Array<{
       userId: string;
       isHost: boolean;
@@ -44,7 +46,7 @@ const createRoom = (
   id: overrides.id ?? 'room-1',
   gameId: 'bomberman',
   name: 'Test Room',
-  hostId: user.id,
+  hostId: overrides.hostId ?? user.id,
   maxPlayers: overrides.maxPlayers ?? 2,
   status: overrides.status ?? RoomStatus.WAITING,
   mode: overrides.mode ?? RoomMode.ONLINE,
@@ -53,7 +55,7 @@ const createRoom = (
   updatedAt: now,
   startedAt: null,
   finishedAt: null,
-  host: user,
+  host: overrides.host ?? user,
   participants: overrides.participants ?? [
     {
       userId: user.id,
@@ -108,6 +110,7 @@ describe('RoomsService', () => {
     roomParticipant: {
       create: jest.fn(),
       update: jest.fn(),
+      updateMany: jest.fn(),
       delete: jest.fn(),
     },
     roomMessage: {
@@ -351,7 +354,7 @@ describe('RoomsService', () => {
     ).rejects.toThrow(ConflictException);
   });
 
-  it('filters rooms by status for the lobby list', async () => {
+  it('filters rooms by status for the room list', async () => {
     const room = createRoom();
     prisma.gameRoom.findMany.mockResolvedValue([room]);
 
@@ -483,13 +486,28 @@ describe('RoomsService', () => {
       ],
     });
     const updatedRoom = createRoom();
-    prisma.gameRoom.findUnique
-      .mockResolvedValueOnce(room)
-      .mockResolvedValueOnce(updatedRoom);
+    const tx = {
+      $queryRaw: jest.fn(),
+      gameRoom: {
+        findUnique: jest.fn().mockResolvedValue(room),
+        delete: jest.fn(),
+        update: jest.fn(),
+      },
+      roomParticipant: {
+        delete: jest.fn(),
+        update: jest.fn(),
+        updateMany: jest.fn(),
+      },
+    };
+    prisma.$transaction.mockImplementation(
+      async (callback: (transaction: typeof tx) => Promise<unknown>) =>
+        callback(tx),
+    );
+    prisma.gameRoom.findUnique.mockResolvedValue(updatedRoom);
 
     const result = await service.leave('room-1', guest.id);
 
-    expect(prisma.roomParticipant.delete).toHaveBeenCalledWith({
+    expect(tx.roomParticipant.delete).toHaveBeenCalledWith({
       where: { roomId_userId: { roomId: 'room-1', userId: guest.id } },
     });
     expect(result.players).toEqual([
@@ -502,14 +520,108 @@ describe('RoomsService', () => {
 
   it('deletes the room when the host leaves', async () => {
     const room = createRoom();
-    prisma.gameRoom.findUnique.mockResolvedValue(room);
+    const tx = {
+      $queryRaw: jest.fn(),
+      gameRoom: {
+        findUnique: jest.fn().mockResolvedValue(room),
+        delete: jest.fn(),
+        update: jest.fn(),
+      },
+      roomParticipant: {
+        delete: jest.fn(),
+        update: jest.fn(),
+        updateMany: jest.fn(),
+      },
+    };
+    prisma.$transaction.mockImplementation(
+      async (callback: (transaction: typeof tx) => Promise<unknown>) =>
+        callback(tx),
+    );
 
     const result = await service.leave('room-1', user.id);
 
-    expect(prisma.gameRoom.delete).toHaveBeenCalledWith({
+    expect(tx.gameRoom.delete).toHaveBeenCalledWith({
       where: { id: 'room-1' },
     });
     expect(result).toEqual({ deleted: true, roomId: 'room-1' });
+  });
+
+  it('transfers host ownership when the host leaves and participants remain', async () => {
+    const room = createRoom({
+      participants: [
+        {
+          userId: user.id,
+          isHost: true,
+          isReady: true,
+          joinedAt: now,
+          user,
+        },
+        {
+          userId: guest.id,
+          isHost: false,
+          isReady: false,
+          joinedAt: new Date(now.getTime() + 1000),
+          user: guest,
+        },
+      ],
+    });
+    const updatedRoom = createRoom({
+      hostId: guest.id,
+      host: guest,
+      participants: [
+        {
+          userId: guest.id,
+          isHost: true,
+          isReady: true,
+          joinedAt: new Date(now.getTime() + 1000),
+          user: guest,
+        },
+      ],
+    });
+    const tx = {
+      $queryRaw: jest.fn(),
+      gameRoom: {
+        findUnique: jest.fn().mockResolvedValue(room),
+        delete: jest.fn(),
+        update: jest.fn(),
+      },
+      roomParticipant: {
+        delete: jest.fn(),
+        update: jest.fn(),
+        updateMany: jest.fn(),
+      },
+    };
+    prisma.$transaction.mockImplementation(
+      async (callback: (transaction: typeof tx) => Promise<unknown>) =>
+        callback(tx),
+    );
+    prisma.gameRoom.findUnique.mockResolvedValue(updatedRoom);
+
+    const result = await service.leave('room-1', user.id);
+
+    expect(tx.roomParticipant.delete).toHaveBeenCalledWith({
+      where: { roomId_userId: { roomId: 'room-1', userId: user.id } },
+    });
+    expect(tx.roomParticipant.update).toHaveBeenCalledWith({
+      where: { roomId_userId: { roomId: 'room-1', userId: guest.id } },
+      data: { isHost: true, isReady: true },
+    });
+    expect(tx.gameRoom.update).toHaveBeenCalledWith({
+      where: { id: 'room-1' },
+      data: { hostId: guest.id },
+    });
+    expect(result).toEqual(
+      expect.objectContaining({
+        hostId: guest.id,
+        players: [
+          expect.objectContaining({
+            userId: guest.id,
+            isHost: true,
+            isReady: true,
+          }),
+        ],
+      }),
+    );
   });
 
   it('does not start until the room is full', async () => {

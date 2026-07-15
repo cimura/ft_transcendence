@@ -21,6 +21,21 @@ export interface MatchHistory {
   gameType: string
 }
 
+export interface RankingItem {
+  userId: string
+  username: string
+  displayName: string | null
+  avatarUrl: string | null
+  rank: number
+  totalGames: number
+  wins: number
+  losses: number
+  draws: number
+  kills: number
+  points: number
+  winRate: number
+}
+
 export interface UpdateProfileDto {
   displayName?: string
 }
@@ -37,3 +52,7 @@ export interface PaginatedResponse<T> {
 }
 
 export type MatchHistoryResponse = PaginatedResponse<MatchHistory>
+
+export interface RankingsResponse {
+  data: RankingItem[]
+}

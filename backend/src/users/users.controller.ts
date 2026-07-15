@@ -2,14 +2,20 @@ import {
   Controller,
   Get,
   Patch,
+  Post,
   Delete,
   Body,
   UseGuards,
+  UseInterceptors,
+  UploadedFile,
   Request,
   HttpCode,
   HttpStatus,
   Query,
+  BadRequestException,
 } from '@nestjs/common';
+import { FileInterceptor } from '@nestjs/platform-express';
+import { memoryStorage } from 'multer';
 import {
   ApiTags,
   ApiOperation,
@@ -22,10 +28,12 @@ import {
 } from '@nestjs/swagger';
 import { UsersService } from './users.service';
 import { UpdateUserDto } from './dto/update-user.dto';
+import { SelectDefaultAvatarDto } from './dto/select-default-avatar.dto';
 import { UserSearchResponseDto } from './dto/users-response.dto';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
-import { ProfileResponseDto } from './dto/profile.dto';
+import { AvatarUpdateResponseDto, ProfileResponseDto } from './dto/profile.dto';
 import type { UserRequest } from './interfaces/user-request.interface';
+import { MAX_IMAGE_SIZE_BYTES } from '../uploads/uploads.constants';
 
 @Controller('users')
 @ApiTags('users')
@@ -84,6 +92,61 @@ export class UsersController {
     const userId = req.user.userId;
 
     return this.usersService.updateMe(userId, dto);
+  }
+
+  @Patch('me/avatar')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'ログイン中のユーザーのデフォルトアバターを設定' })
+  @ApiOkResponse({
+    description: 'アバター画像更新成功。最新のユーザー情報を返します',
+    type: AvatarUpdateResponseDto,
+  })
+  @ApiBadRequestResponse({
+    description: '不正なアバターURLです',
+  })
+  @ApiNotFoundResponse({
+    description: '更新対象のユーザーが見つかりません',
+  })
+  async selectDefaultAvatar(
+    @Request() req: UserRequest,
+    @Body() dto: SelectDefaultAvatarDto,
+  ): Promise<AvatarUpdateResponseDto> {
+    return this.usersService.selectDefaultAvatar(
+      req.user.userId,
+      dto.avatarUrl,
+    );
+  }
+
+  @Post('me/avatar')
+  @HttpCode(HttpStatus.OK)
+  @UseInterceptors(
+    FileInterceptor('file', {
+      storage: memoryStorage(),
+      limits: {
+        fileSize: MAX_IMAGE_SIZE_BYTES,
+      },
+    }),
+  )
+  @ApiOperation({ summary: 'ログイン中のユーザーのアバター画像をアップロード' })
+  @ApiOkResponse({
+    description: 'アバター画像更新成功。最新のユーザー情報を返します',
+    type: AvatarUpdateResponseDto,
+  })
+  @ApiBadRequestResponse({
+    description: '画像ファイルが未指定、または許可されていない形式です',
+  })
+  @ApiNotFoundResponse({
+    description: '更新対象のユーザーが見つかりません',
+  })
+  async uploadAvatar(
+    @Request() req: UserRequest,
+    @UploadedFile() file?: Express.Multer.File,
+  ): Promise<AvatarUpdateResponseDto> {
+    if (!file) {
+      throw new BadRequestException('file is required');
+    }
+
+    return this.usersService.updateAvatar(req.user.userId, file);
   }
 
   @Delete('me')
