@@ -73,21 +73,30 @@ export default function Signup({
     }
   }
 
+  // frontend/src/components/SignUp.tsx の return 以降
+
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-100">
-      <div className="bg-white p-8 rounded-lg shadow-md w-96">
-        <h1 className="text-2xl font-bold mb-6 text-center">Sign Up</h1>
-        <form action={handleSignup} className="space-y-4">
+    // 背景を透明にして文字色を白ベースに
+    <div className="min-h-screen flex items-center justify-center relative text-white">
+      
+      {/* すりガラス風のカードデザイン */}
+      <div className="bg-black/40 backdrop-blur-md border border-cyan-500/30 p-8 rounded-xl shadow-[0_0_20px_rgba(0,255,255,0.15)] w-96 relative z-10">
+        <h1 className="text-3xl font-bold mb-6 text-center tracking-wider text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 to-blue-500">
+          Sign Up
+        </h1>
+        
+        <form action={handleSignup} className="space-y-5">
           {error && (
-            <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded">
+            <div className="bg-red-900/50 border border-red-500 text-red-200 px-4 py-3 rounded backdrop-blur-sm">
               {error}
             </div>
           )}
+          
           {/** Email */}
           <div>
             <label
               htmlFor="email"
-              className="block text-sm font-medium text-gray-700 mb-2"
+              className="block text-sm font-medium text-cyan-100 mb-2"
             >
               Email
             </label>
@@ -96,22 +105,23 @@ export default function Signup({
               id="email"
               name="email"
               required
-              className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 ${
+              className={`w-full px-4 py-2 bg-black/50 border rounded-md text-white placeholder-gray-500 focus:outline-none focus:ring-2 transition-all ${
                 fieldErrors.email
-                  ? 'border-red-500 focus:ring-red-500'
-                  : 'border-gray-300'
+                  ? 'border-red-500 focus:ring-red-500 focus:border-transparent'
+                  : 'border-cyan-800 focus:ring-cyan-500 focus:border-transparent'
               }`}
+              placeholder="Enter your email"
             />
-            {/* Email conflict error */}
             {fieldErrors.email && (
-              <p className="text-red-500 text-xs mt-1">{fieldErrors.email}</p>
+              <p className="text-red-400 text-xs mt-1">{fieldErrors.email}</p>
             )}
           </div>
+          
           {/** Username */}
           <div>
             <label
               htmlFor="username"
-              className="block text-sm font-medium text-gray-700 mb-2"
+              className="block text-sm font-medium text-cyan-100 mb-2"
             >
               Username
             </label>
@@ -121,24 +131,25 @@ export default function Signup({
               name="username"
               required
               minLength={3}
-              className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 ${
+              className={`w-full px-4 py-2 bg-black/50 border rounded-md text-white placeholder-gray-500 focus:outline-none focus:ring-2 transition-all ${
                 fieldErrors.username
-                  ? 'border-red-500 focus:ring-red-500'
-                  : 'border-gray-300'
+                  ? 'border-red-500 focus:ring-red-500 focus:border-transparent'
+                  : 'border-cyan-800 focus:ring-cyan-500 focus:border-transparent'
               }`}
+              placeholder="Enter username"
             />
-            {/* Username conflict error */}
             {fieldErrors.username && (
-              <p className="text-red-500 text-xs mt-1">
+              <p className="text-red-400 text-xs mt-1">
                 {fieldErrors.username}
               </p>
             )}
           </div>
+          
           {/** Password */}
           <div>
             <label
               htmlFor="password"
-              className="block text-sm font-medium text-gray-700 mb-2"
+              className="block text-sm font-medium text-cyan-100 mb-2"
             >
               Password
             </label>
@@ -148,14 +159,16 @@ export default function Signup({
               name="password"
               required
               minLength={8}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full px-4 py-2 bg-black/50 border border-cyan-800 rounded-md text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-transparent transition-all"
+              placeholder="••••••••"
             />
           </div>
+          
           {/** Confirm Password */}
           <div>
             <label
               htmlFor="confirmPassword"
-              className="block text-sm font-medium text-gray-700 mb-2"
+              className="block text-sm font-medium text-cyan-100 mb-2"
             >
               Confirm Password
             </label>
@@ -165,23 +178,26 @@ export default function Signup({
               name="confirmPassword"
               required
               minLength={8}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full px-4 py-2 bg-black/50 border border-cyan-800 rounded-md text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-transparent transition-all"
+              placeholder="••••••••"
             />
           </div>
+          
           {/** Signup Button */}
           <button
             type="submit"
             disabled={loading}
-            className="w-full bg-blue-600 text-white py-2 px-4 rounded-md hover:bg-blue-700 transition-colors disabled:bg-gray-400"
+            className="w-full bg-gradient-to-r from-cyan-600 to-blue-600 text-white py-2.5 px-4 rounded-md hover:from-cyan-500 hover:to-blue-500 transition-all font-bold tracking-wide shadow-[0_0_15px_rgba(0,255,255,0.3)] disabled:opacity-50 disabled:cursor-not-allowed mt-4"
           >
-            {loading ? 'Registering...' : 'Sign Up'}
+            {loading ? 'Registering...' : 'Initialize Account'}
           </button>
         </form>
-        <div className="mt-4 text-center text-sm text-gray-600">
+        
+        <div className="mt-6 text-center text-sm text-cyan-200/70">
           Already have an account?{' '}
           <button
             onClick={onSwitchToSignIn}
-            className="text-blue-600 hover:text-blue-800 font-medium"
+            className="text-cyan-400 hover:text-cyan-300 hover:underline font-medium transition-colors"
           >
             Sign in
           </button>

@@ -15,14 +15,17 @@ export function Button({
   ...props
 }: ButtonProps) {
   const baseStyles =
-    'rounded-md font-semibold transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 disabled:cursor-not-allowed'
+  'rounded-full font-bold tracking-wider transition-all duration-300 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-black disabled:cursor-not-allowed disabled:opacity-50 border border-transparent backdrop-blur-sm'
   const variantStyles = {
     primary:
-      'bg-blue-600 hover:bg-blue-700 text-white focus:ring-blue-500 disabled:bg-blue-300 disabled:hover:bg-blue-300',
+      // ネオンシアンの輝きを持つボタン
+      'bg-cyan-600/80 hover:bg-cyan-500 text-white shadow-[0_0_15px_rgba(0,255,255,0.4)] hover:shadow-[0_0_25px_rgba(0,255,255,0.6)] border-cyan-400/50',
     secondary:
-      'bg-gray-600 hover:bg-gray-700 text-white focus:ring-gray-500 disabled:bg-gray-300 disabled:hover:bg-gray-300',
+      // 暗めのスペースブルーのボタン
+      'bg-slate-800/80 hover:bg-slate-700 text-cyan-100 border-slate-600 hover:border-cyan-500/50',
     danger:
-      'bg-red-600 hover:bg-red-700 text-white focus:ring-red-500 disabled:bg-red-300 disabled:hover:bg-red-300',
+      // エラー/警告用（赤い星や爆発をイメージ）
+      'bg-red-600/80 hover:bg-red-500 text-white shadow-[0_0_15px_rgba(255,0,0,0.4)] border-red-400/50',
   }
 
   const sizeStyles = {
