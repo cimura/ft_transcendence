@@ -48,7 +48,7 @@ export function Home() {
 
       const username = user?.displayName || user?.username || 'Player'
       const room = await createRoom({
-        name: `${username} の部屋`,
+        name: `${username} の作戦領域`,
         maxPlayers: 2,
       })
 
@@ -63,84 +63,153 @@ export function Home() {
   }
 
   return (
-    // 背景は透明のまま、画面全体を中央揃えに
-    <div className="relative min-h-screen bg-transparent flex items-center justify-center overflow-hidden">
+    <div className="relative min-h-screen bg-transparent flex items-center justify-center overflow-hidden font-sans text-cyan-50 select-none">
       
-      {/* うっすらとしたHUD（ヘッドアップディスプレイ）風のガイドライン */}
-      <div className="absolute inset-10 border border-cyan-900/20 rounded-full pointer-events-none" />
+      {/* 1. 明るい全体エフェクト: スキャンラインと上からの光 */}
+      <div className="absolute inset-0 bg-[linear-gradient(transparent_50%,rgba(0,255,255,0.05)_50%)] bg-[size:100%_4px] pointer-events-none z-50" />
+      {/* 暗くするエフェクトを削除し、代わりに上部から明るい光を差し込ませる */}
+      <div className="absolute top-0 inset-x-0 h-40 bg-gradient-to-b from-cyan-500/20 to-transparent pointer-events-none z-40" />
 
-      <div className="flex flex-col items-center justify-center gap-16 w-full max-w-4xl p-8 relative z-10">
+      {/* 背景のタクティカルグリッド（明るめ） */}
+      <div className="absolute inset-0 bg-[linear-gradient(rgba(0,255,255,0.1)_1px,transparent_1px),linear-gradient(90deg,rgba(0,255,255,0.1)_1px,transparent_1px)] bg-[size:60px_60px] pointer-events-none z-0">
+        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[800px] h-[800px] border border-cyan-400/20 rounded-full shadow-[0_0_50px_rgba(0,255,255,0.1)]" />
+        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] border border-cyan-400/30 rounded-full border-dashed" />
+      </div>
+
+      {/* 2. コックピットの上下フレーム（半透明で明るく） */}
+      <div className="absolute top-0 inset-x-0 h-12 bg-black/30 backdrop-blur-md border-b border-cyan-400/60 flex justify-between items-center px-8 z-30 shadow-[0_4px_20px_rgba(0,255,255,0.2)]">
+        <div className="flex gap-6 items-center">
+          <span className="text-red-400 font-bold text-xs tracking-widest animate-pulse flex items-center gap-2 drop-shadow-[0_0_5px_rgba(255,0,0,0.8)]">
+            <span className="w-2 h-2 bg-red-400 rounded-full" /> LIVE
+          </span>
+          <span className="font-mono text-[10px] text-cyan-300 tracking-widest">SYS_OS // VER.4.2.0</span>
+        </div>
+        <div className="flex gap-1 items-end h-4 opacity-80">
+          {[...Array(15)].map((_, i) => (
+            <div key={i} className="w-1.5 bg-cyan-300" style={{ height: `${Math.random() * 100}%`, opacity: Math.random() }} />
+          ))}
+        </div>
+      </div>
+
+      <div className="absolute bottom-0 inset-x-0 h-10 bg-black/30 backdrop-blur-md border-t border-cyan-400/60 flex justify-between items-center px-8 z-30 shadow-[0_-4px_20px_rgba(0,255,255,0.2)]">
+        <span className="font-mono text-[10px] text-cyan-300 tracking-[0.3em]">LOCAL_IP // 192.168.XXX.XXX</span>
+        <div className="flex gap-2">
+          <div className="w-8 h-1 bg-cyan-400/30"><div className="w-full h-full bg-cyan-300 animate-pulse" /></div>
+          <div className="w-8 h-1 bg-cyan-400/30"><div className="w-1/2 h-full bg-cyan-300" /></div>
+        </div>
+      </div>
+
+      {/* --- メインコンソール --- */}
+      <div className="flex flex-col items-center justify-center gap-8 w-full max-w-5xl p-8 relative z-10 mt-4">
         
-        {/* 上段: マイプロフィール・フレンド */}
-        <div className="flex w-full justify-between gap-12 px-10">
+        {/* 上段: マイプロフィール・フレンド (透明感のある装甲パネル) */}
+        <div className="flex w-full justify-between gap-12 px-8 relative">
+          
           <button
             onClick={handleMyProfileClick}
             disabled={loading}
-            // 変更点: 左上と右下だけ角を丸くしてSF風の装甲パネルのような形に
-            // ホバー時に上に少し浮き（-translate-y-1）、文字間隔が広がる
-            className="group relative flex-1 rounded-tl-3xl rounded-br-3xl rounded-tr-md rounded-bl-md bg-black/50 backdrop-blur-md border border-cyan-500/40 py-6 text-xl font-bold text-cyan-100 transition-all duration-300 hover:bg-cyan-900/50 hover:border-cyan-300 hover:shadow-[0_0_25px_rgba(0,255,255,0.6)] hover:-translate-y-1 hover:scale-105"
+            className="group relative flex-1 bg-cyan-900/30 backdrop-blur-md p-1 transition-all duration-300 hover:-translate-y-1 hover:shadow-[0_10px_30px_rgba(0,255,255,0.3)] hover:bg-cyan-800/40"
+            style={{ clipPath: 'polygon(15px 0, 100% 0, 100% calc(100% - 15px), calc(100% - 15px) 100%, 0 100%, 0 15px)' }}
           >
-            <span className="relative z-10 transition-all duration-300 group-hover:tracking-[0.3em]">マイプロフィール</span>
+            <div className="bg-gradient-to-b from-cyan-600/30 to-blue-900/30 h-full w-full py-5 px-6 flex flex-col items-start relative border border-cyan-400/60 group-hover:border-cyan-300 transition-colors"
+                 style={{ clipPath: 'polygon(12px 0, 100% 0, 100% calc(100% - 12px), calc(100% - 12px) 100%, 0 100%, 0 12px)' }}>
+              
+              {/* 四隅のリベット（ネオンブルーで発光） */}
+              <div className="absolute top-2 right-2 w-1.5 h-1.5 rounded-full bg-cyan-300 shadow-[0_0_5px_rgba(0,255,255,0.8)]" />
+              <div className="absolute bottom-2 left-2 w-1.5 h-1.5 rounded-full bg-cyan-300 shadow-[0_0_5px_rgba(0,255,255,0.8)]" />
+
+              <span className="text-[10px] text-cyan-300 font-mono tracking-[0.2em] mb-1 font-bold drop-shadow-md">ID_CARD //</span>
+              <span className="text-2xl font-bold text-white tracking-widest drop-shadow-md group-hover:text-white transition-colors">マイプロフィール</span>
+            </div>
           </button>
 
           <button
             onClick={() => navigate('/friends')}
-            // こちらは右上と左下を丸くして、左右対称のデザインにする
-            className="group relative flex-1 rounded-tr-3xl rounded-bl-3xl rounded-tl-md rounded-br-md bg-black/50 backdrop-blur-md border border-cyan-500/40 py-6 text-xl font-bold text-cyan-100 transition-all duration-300 hover:bg-cyan-900/50 hover:border-cyan-300 hover:shadow-[0_0_25px_rgba(0,255,255,0.6)] hover:-translate-y-1 hover:scale-105"
+            className="group relative flex-1 bg-cyan-900/30 backdrop-blur-md p-1 transition-all duration-300 hover:-translate-y-1 hover:shadow-[0_10px_30px_rgba(0,255,255,0.3)] hover:bg-cyan-800/40"
+            style={{ clipPath: 'polygon(0 0, calc(100% - 15px) 0, 100% 15px, 100% 100%, 15px 100%, 0 calc(100% - 15px))' }}
           >
-            <span className="relative z-10 transition-all duration-300 group-hover:tracking-[0.3em]">フレンド</span>
+            <div className="bg-gradient-to-b from-cyan-600/30 to-blue-900/30 h-full w-full py-5 px-6 flex flex-col items-end relative border border-cyan-400/60 group-hover:border-cyan-300 transition-colors"
+                 style={{ clipPath: 'polygon(0 0, calc(100% - 12px) 0, 100% 12px, 100% 100%, 12px 100%, 0 calc(100% - 12px))' }}>
+              
+              <div className="absolute top-2 left-2 w-1.5 h-1.5 rounded-full bg-cyan-300 shadow-[0_0_5px_rgba(0,255,255,0.8)]" />
+              <div className="absolute bottom-2 right-2 w-1.5 h-1.5 rounded-full bg-cyan-300 shadow-[0_0_5px_rgba(0,255,255,0.8)]" />
+
+              <span className="text-[10px] text-cyan-300 font-mono tracking-[0.2em] mb-1 font-bold drop-shadow-md">// RADAR_LINK</span>
+              <span className="text-2xl font-bold text-white tracking-widest drop-shadow-md group-hover:text-white transition-colors">フレンド</span>
+            </div>
           </button>
         </div>
 
-        {/* 中央: 対戦開始（メイン） - 巨大なリアクターコア風 */}
-        <div className="relative w-full max-w-xl">
-          {/* ボタンの背後で常に脈打つオーラ（パルスアニメーション） */}
-          <div className="absolute -inset-4 rounded-[3rem] bg-gradient-to-r from-cyan-500 to-blue-600 opacity-20 blur-xl animate-pulse pointer-events-none" />
+        {/* 中央: 対戦開始（メインリアクター点火スイッチ） */}
+        <div className="relative w-full max-w-2xl my-6">
+          
+          {/* 3. ハザードストライプ（警戒帯）の枠を明るく */}
+          <div className="absolute -inset-1.5 bg-[repeating-linear-gradient(45deg,transparent,transparent_10px,rgba(251,191,36,0.6)_10px,rgba(251,191,36,0.6)_20px)] rounded-[2rem] blur-[1px] group-hover:opacity-100 transition-opacity" />
           
           <button
             onClick={handleStartMatchClick}
             disabled={isCreatingRoom}
-            // 鋭角なデザイン。ホバー時に大きく光り、拡大する
-            className="group relative w-full overflow-hidden rounded-[2.5rem] rounded-tl-none rounded-br-none bg-gradient-to-br from-cyan-600/80 via-blue-700/80 to-indigo-900/80 backdrop-blur-md border-2 border-cyan-300/60 py-12 text-5xl font-bold text-white transition-all duration-500 ease-out hover:border-cyan-100 hover:shadow-[0_0_50px_rgba(0,255,255,0.8)] hover:scale-110 disabled:opacity-50"
+            className="group relative w-full bg-black/40 backdrop-blur-xl border-2 border-cyan-300/80 rounded-[2rem] py-14 flex flex-col items-center justify-center overflow-hidden transition-all duration-500 hover:scale-[1.02] disabled:opacity-50"
+            style={{ boxShadow: 'inset 0 0 30px rgba(0, 255, 255, 0.2), 0 0 30px rgba(0, 255, 255, 0.4)' }}
           >
-            {/* ホバー時に左から右へ光の反射が走るギミック */}
-            <div className="absolute inset-0 w-full h-full bg-gradient-to-r from-transparent via-white/40 to-transparent -translate-x-full transition-transform duration-700 ease-in-out group-hover:translate-x-full" />
+            {/* メカニカルな内部パネル（グラデーションを明るく） */}
+            <div className="absolute inset-2 border border-cyan-400/50 rounded-[1.5rem] bg-gradient-to-b from-cyan-600/30 to-blue-900/40 pointer-events-none" />
+
+            {/* スキャンレーザーアニメーション */}
+            <div className="absolute inset-0 bg-gradient-to-b from-transparent via-cyan-300/40 to-transparent -translate-y-full group-hover:translate-y-full transition-transform duration-1000 ease-in-out" />
             
-            <span className="relative z-10 transition-all duration-500 group-hover:tracking-[0.4em] group-hover:drop-shadow-[0_0_15px_rgba(255,255,255,1)]">
-              {isCreatingRoom ? 'SYSTEM BOOTING...' : '対戦開始'}
+            <span className="text-yellow-300 font-mono text-xs font-bold tracking-[0.5em] mb-3 relative z-10 flex items-center gap-2 drop-shadow-md">
+              <span className="w-2 h-2 bg-yellow-300 rotate-45 animate-ping" /> MAIN ENGINE IGNITION
             </span>
+            
+            <span className="relative z-10 text-6xl font-black text-white tracking-[0.2em] group-hover:tracking-[0.3em] transition-all duration-500 drop-shadow-[0_0_15px_rgba(255,255,255,0.8)]">
+              {isCreatingRoom ? 'INITIALIZING...' : '対戦開始'}
+            </span>
+            
+            {/* 下部のバーコード/データストリーム */}
+            <div className="absolute bottom-4 inset-x-8 flex items-end justify-between opacity-80">
+              <div className="font-mono text-[8px] font-bold text-cyan-300 tracking-widest">AUTH: ACCEPTED</div>
+              <div className="flex gap-1">
+                <div className="w-1 h-2 bg-cyan-300" /><div className="w-2 h-3 bg-cyan-300" /><div className="w-1 h-4 bg-cyan-300 animate-pulse" /><div className="w-3 h-2 bg-cyan-300" />
+              </div>
+              <div className="font-mono text-[8px] font-bold text-cyan-300 tracking-widest">SEQ: 001100</div>
+            </div>
           </button>
         </div>
 
-        {/* 下段: 通知・ランキング・設定 */}
-        <div className="flex w-full justify-center gap-8">
-          <button
-            onClick={() => navigate('/notifications')}
-            className="group relative w-48 rounded-tl-2xl rounded-br-2xl rounded-tr-sm rounded-bl-sm bg-black/50 backdrop-blur-md border border-cyan-500/40 py-4 text-lg font-bold text-cyan-100 transition-all duration-300 hover:bg-cyan-900/50 hover:border-cyan-300 hover:shadow-[0_0_20px_rgba(0,255,255,0.6)] hover:-translate-y-1 hover:scale-105"
-          >
-            <span className="relative z-10 transition-all duration-300 group-hover:tracking-[0.2em]">通知</span>
-            {notifications.length > 0 && (
-              // 通知アイコンも少しリッチに（浮遊感のあるアニメーション）
-              <span className="absolute -right-2 -top-2 flex h-7 min-w-7 items-center justify-center rounded-full bg-red-500 shadow-[0_0_15px_rgba(255,0,0,0.8)] px-2 text-sm font-bold text-white border border-red-300 animate-bounce">
-                {notifications.length}
+        {/* 下段: 通知・ランキング・設定 (明るめのホログラムスイッチ) */}
+        <div className="flex w-full justify-center gap-6 px-10">
+          {[
+            { id: 'notifications', label: '通知', sub: 'ALERTS', path: '/notifications', badge: notifications.length },
+            { id: 'rankings', label: 'ランキング', sub: 'RANKING', path: '/rankings' },
+            { id: 'settings', label: '設定', sub: 'SETTINGS', path: '/settings' }
+          ].map((item) => (
+            <button
+              key={item.id}
+              onClick={() => navigate(item.path)}
+              className="group relative flex-1 bg-cyan-950/40 backdrop-blur-md border border-cyan-400/60 py-4 px-6 flex flex-col items-center justify-center transition-all duration-300 hover:border-cyan-300 hover:bg-cyan-800/60 hover:shadow-[0_5px_20px_rgba(0,255,255,0.4)] hover:-translate-y-1"
+              style={{ clipPath: 'polygon(10px 0, calc(100% - 10px) 0, 100% 10px, 100% calc(100% - 10px), calc(100% - 10px) 100%, 10px 100%, 0 calc(100% - 10px), 0 10px)' }}
+            >
+              <div className="absolute top-1 left-1 w-1 h-1 bg-cyan-300 rounded-full shadow-[0_0_5px_rgba(0,255,255,0.8)]" />
+              <div className="absolute top-1 right-1 w-1 h-1 bg-cyan-300 rounded-full shadow-[0_0_5px_rgba(0,255,255,0.8)]" />
+              
+              <span className="text-[10px] text-cyan-300 font-bold font-mono tracking-widest mb-1 drop-shadow-sm">{item.sub}</span>
+              <span className="text-xl font-bold text-white tracking-widest drop-shadow-md transition-colors">
+                {item.label}
               </span>
-            )}
-          </button>
-          
-          <button
-            onClick={() => navigate('/rankings')}
-            // 中央のボタンは対称形の六角形っぽいイメージに
-            className="group relative w-48 rounded-xl bg-black/50 backdrop-blur-md border border-cyan-500/40 py-4 text-lg font-bold text-cyan-100 transition-all duration-300 hover:bg-cyan-900/50 hover:border-cyan-300 hover:shadow-[0_0_20px_rgba(0,255,255,0.6)] hover:-translate-y-1 hover:scale-105"
-          >
-            <span className="relative z-10 transition-all duration-300 group-hover:tracking-[0.2em]">ランキング</span>
-          </button>
-          
-          <button
-            onClick={() => navigate('/settings')}
-            className="group relative w-48 rounded-tr-2xl rounded-bl-2xl rounded-tl-sm rounded-br-sm bg-black/50 backdrop-blur-md border border-cyan-500/40 py-4 text-lg font-bold text-cyan-100 transition-all duration-300 hover:bg-cyan-900/50 hover:border-cyan-300 hover:shadow-[0_0_20px_rgba(0,255,255,0.6)] hover:-translate-y-1 hover:scale-105"
-          >
-            <span className="relative z-10 transition-all duration-300 group-hover:tracking-[0.2em]">設定</span>
-          </button>
+
+              {/* 通知バッジ（ハザード風） */}
+              {item.badge ? (
+                <span className="absolute top-0 right-0 flex h-6 min-w-6 items-center justify-center bg-red-500 px-2 text-xs font-bold text-white border-l border-b border-red-400 animate-pulse shadow-[0_0_10px_rgba(255,0,0,0.5)]"
+                      style={{ clipPath: 'polygon(0 0, 100% 0, 100% 100%, 10px 100%, 0 calc(100% - 10px))' }}>
+                  {item.badge}
+                </span>
+              ) : null}
+
+              {/* 下部のインジケーターランプ */}
+              <div className="absolute bottom-1 w-8 h-1 bg-cyan-500/50 group-hover:bg-cyan-300 group-hover:shadow-[0_0_10px_rgba(0,255,255,0.8)] transition-all duration-300" />
+            </button>
+          ))}
         </div>
         
       </div>
