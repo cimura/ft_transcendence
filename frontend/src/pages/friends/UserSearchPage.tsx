@@ -22,24 +22,27 @@ export function UserSearchPage() {
   }
 
   return (
-    <div className="min-h-screen bg-black flex items-center justify-center p-4">
+    <div className="min-h-screen bg-transparent flex items-center justify-center p-4 relative">
       {/* メインコンテナ */}
-      <div className="relative w-full max-w-4xl">
+      <div className="relative w-full max-w-4xl z-10 mt-12">
         {/* 戻るボタン */}
         <button
           onClick={() => navigate(-1)}
-          className="absolute top-4 left-4 bg-black/50 text-white px-6 py-3 rounded-full border-2 border-white/20 hover:border-white/40 transition-all"
+          className="absolute -top-16 left-0 bg-black/40 backdrop-blur-md text-cyan-100 px-6 py-2 rounded-full border border-cyan-500/50 hover:bg-cyan-900/50 hover:border-cyan-300 hover:shadow-[0_0_15px_rgba(0,255,255,0.3)] transition-all"
         >
-          戻る
+          &lt; 戻る
         </button>
 
         {/* タイトル */}
-        <div className="bg-black/80 rounded-t-3xl border-2 border-white/30 px-8 py-6 text-center">
-          <h1 className="text-4xl font-bold text-white">ユーザー検索</h1>
+        <div className="bg-black/50 backdrop-blur-md rounded-t-3xl border border-cyan-500/30 px-8 py-6 text-center relative overflow-hidden">
+          <div className="absolute top-0 inset-x-0 h-[2px] bg-gradient-to-r from-transparent via-cyan-400 to-transparent opacity-70" />
+          <h1 className="text-4xl font-bold tracking-widest text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 to-blue-500 drop-shadow-[0_0_10px_rgba(0,255,255,0.3)]">
+            ユーザー検索
+          </h1>
         </div>
 
         {/* コンテンツエリア */}
-        <div className="bg-black/80 border-x-2 border-b-2 border-white/30 rounded-b-3xl px-8 py-6 min-h-[400px]">
+        <div className="bg-black/50 backdrop-blur-md border-x border-b border-cyan-500/30 rounded-b-3xl px-8 py-6 min-h-[400px]">
           {/* 検索バー */}
           <div className="mb-6">
             <UserSearchBar value={query} onChange={setQuery} />
@@ -48,14 +51,14 @@ export function UserSearchPage() {
           {/* ローディング表示 */}
           {loading && (
             <div className="flex items-center justify-center py-12">
-              <div className="text-white text-xl">検索中...</div>
+              <div className="text-cyan-100/60 text-xl animate-pulse">検索中...</div>
             </div>
           )}
 
           {/* エラー表示 */}
           {error && (
             <div className="flex items-center justify-center py-12">
-              <div className="text-red-500 text-xl">{error}</div>
+              <div className="text-red-400 text-xl">{error}</div>
             </div>
           )}
 
@@ -64,13 +67,13 @@ export function UserSearchPage() {
             <>
               {query.trim() === '' ? (
                 <div className="flex items-center justify-center py-12">
-                  <div className="text-white/50 text-xl">
+                  <div className="text-cyan-100/50 text-xl tracking-widest">
                     ユーザー名を入力して検索してください
                   </div>
                 </div>
               ) : results.length === 0 ? (
                 <div className="flex items-center justify-center py-12">
-                  <div className="text-white/50 text-xl">
+                  <div className="text-cyan-100/50 text-xl tracking-widest">
                     ユーザーが見つかりませんでした
                   </div>
                 </div>
