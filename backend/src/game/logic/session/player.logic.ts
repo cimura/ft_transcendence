@@ -146,7 +146,10 @@ export function disconnectPlayerFromRoom(
   }
 
   // 入力をリセット
-  room.playerInputs[playerId].direction = null;
+  const playerInput = room.playerInputs?.[playerId];
+  if (playerInput) {
+    playerInput.direction = null;
+  }
 
   // 切断時の時間を保存（タイムアウト判定のため）
   player.isDisconnected = true;
