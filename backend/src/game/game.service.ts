@@ -239,7 +239,9 @@ export class GameService {
       }
       // タイムアウトかどうか
       const connection = room.playerConnections[playerId];
-      if (!connection) return false;
+      if (!connection) {
+        return false;
+      }
       const isTimedOut =
         Date.now() - connection.lastActiveTime >= DISCONNECT_TIMEOUT_MS;
       if (isTimedOut) {

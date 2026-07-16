@@ -7,7 +7,6 @@ import {
   OnGatewayInit,
   OnGatewayConnection,
   OnGatewayDisconnect,
-  WsException,
 } from '@nestjs/websockets';
 import { Logger } from '@nestjs/common';
 import { Server, Socket } from 'socket.io';
@@ -59,12 +58,12 @@ export class GameGateway
     const user = this.socketAuthService.authenticate(client);
     if (!user) {
       client.disconnect();
-      this.logger.warn(`[接続失敗] JWT未認証 socket=${client.id}`);
+      this.logger.warn(`User could not connect to Game WebSocket`);
       return;
     }
 
     client.data.user = user;
-    this.logger.log(`[接続成功] ユーザーId: ${user.id}`);
+    this.logger.log(`User connected to Game WebSocket { useId: '${user.id}' }`);
   }
 
   @SubscribeMessage('game:join')
@@ -76,21 +75,25 @@ export class GameGateway
     const user = client.data.user;
     if (!user) return;
 
-    const previousRoomId = client.data.roomId;
+    let initData;
     try {
-      await client.join(data.roomId);
+      initData = this.gameService.handleGameJoin(
+        data.roomId,
+        user.id,
+        client.id,
+      );
     } catch (error) {
       this.logger.warn(
-        `Failed to join room { roomId: '${data.roomId}', userId: ${user.id} }`,
-        error instanceof Error ? error.stack : undefined,
+        `Permission Denied: Failed to join room { roomId: '${data.roomId}', userId: '${user.id}' }`,
       );
       client.emit('game:error', {
         message:
-          error instanceof WsException ? error.message : 'Cannot join the room',
+          error instanceof Error ? error.message : 'Cannot join the room',
       });
       return;
     }
 
+    const previousRoomId = client.data.roomId;
     if (previousRoomId && previousRoomId !== data.roomId) {
       const remaining = this.socketPresenceService.unregister({
         namespace: 'game',
@@ -104,6 +107,21 @@ export class GameGateway
       await client.leave(previousRoomId);
     }
 
+    client.data.roomId = data.roomId;
+
+    try {
+      await client.join(data.roomId);
+    } catch (error) {
+      this.logger.warn(
+        `System Error: Failed to join room { roomId: '${data.roomId}', userId: '${user.id}' }`,
+      );
+      client.emit('game:error', {
+        message:
+          error instanceof Error ? error.message : 'Cannot join the room',
+      });
+      return;
+    }
+
     this.socketPresenceService.register({
       namespace: 'game',
       roomId: data.roomId,
@@ -111,29 +129,8 @@ export class GameGateway
       socketId: client.id,
     });
 
-    client.data.roomId = data.roomId;
-
-    try {
-      const initData = this.gameService.handleGameJoin(
-        data.roomId,
-        user.id,
-        client.id,
-      );
-      client.emit('game:init', initData);
-      this.gameService.handleGameStart(data.roomId);
-    } catch (error) {
-      this.socketPresenceService.unregister({
-        namespace: 'game',
-        roomId: data.roomId,
-        userId: user.id,
-        socketId: client.id,
-      });
-      client.data.roomId = previousRoomId;
-      client.emit('game:error', {
-        message:
-          error instanceof Error ? error.message : 'Cannot join the room',
-      });
-    }
+    client.emit('game:init', initData);
+    this.gameService.handleGameStart(data.roomId);
   }
 
   @SubscribeMessage('game:leave')
@@ -193,16 +190,14 @@ export class GameGateway
     const userId = client.data.user?.id;
     if (!roomId || !userId) return;
 
-    this.socketPresenceService.unregister({
+    const remaining = this.socketPresenceService.unregister({
       namespace: 'game',
       roomId,
       userId,
       socketId: client.id,
     });
-    this.socketPresenceService.scheduleIfInactive(
-      { namespace: 'game', roomId, userId },
-      2000,
-      () => this.gameService.handleGameLeave(roomId, userId, client.id),
-    );
+    if (remaining === 0) {
+      this.gameService.handleGameLeave(roomId, userId, client.id);
+    }
   }
 }
