@@ -73,15 +73,7 @@ export class GameGateway
 
     const previousRoomId = client.data.roomId;
     if (previousRoomId && previousRoomId !== data.roomId) {
-      const remaining = this.socketPresenceService.unregister({
-        namespace: 'game',
-        roomId: previousRoomId,
-        userId: user.id,
-        socketId: client.id,
-      });
-      if (remaining === 0) {
-        this.gameService.handleGameLeave(previousRoomId, user.id, client.id);
-      }
+      this.cleanupPlayerConnection(previousRoomId, user.id, client.id);
       await client.leave(previousRoomId);
     }
 
@@ -116,15 +108,7 @@ export class GameGateway
     await client.leave(roomId);
     client.data.roomId = undefined;
 
-    const remaining = this.socketPresenceService.unregister({
-      namespace: 'game',
-      roomId,
-      userId: client.data.user.id,
-      socketId: client.id,
-    });
-    if (remaining === 0) {
-      this.gameService.handleGameLeave(roomId, client.data.user.id, client.id);
-    }
+    this.cleanupPlayerConnection(roomId, client.data.user.id, client.id);
   }
 
   @SubscribeMessage('player:input')
@@ -162,14 +146,23 @@ export class GameGateway
     const userId = client.data.user?.id;
     if (!roomId || !userId) return;
 
+    this.cleanupPlayerConnection(roomId, userId, client.id);
+  }
+
+  private cleanupPlayerConnection(
+    roomId: string,
+    userId: string,
+    clientId: string,
+  ): void {
     const remaining = this.socketPresenceService.unregister({
       namespace: 'game',
       roomId,
       userId,
-      socketId: client.id,
+      socketId: clientId,
     });
+
     if (remaining === 0) {
-      this.gameService.handleGameLeave(roomId, userId, client.id);
+      this.gameService.handleGameLeave(roomId, userId, clientId);
     }
   }
 }
