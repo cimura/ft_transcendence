@@ -7,36 +7,26 @@ import {
   OnGatewayInit,
   OnGatewayConnection,
   OnGatewayDisconnect,
+  WsException,
 } from '@nestjs/websockets';
-import { Logger } from '@nestjs/common';
-import { Server, Socket } from 'socket.io';
+import { Logger, UseFilters } from '@nestjs/common';
+import { Server } from 'socket.io';
 import { GameService } from './game.service';
+import { GameExceptionFilter } from './game-exception.filter';
 import { SocketAuthService } from '../websocket/socket-auth.service';
 import { SocketPresenceService } from '../websocket/socket-presence.service';
 import { getSocketCorsOrigins } from '../websocket/socket-cors';
+import type { GameSocket } from './game.types';
 import type {
   ClientToServerEvents,
   ServerToClientEvents,
 } from '@ft_transcendence/shared/game-events.types';
 
-interface ConnectionData {
-  user: {
-    id: string;
-  };
-  roomId?: string;
-}
-
-type GameSocket = Socket<
-  ClientToServerEvents,
-  ServerToClientEvents,
-  Record<string, never>,
-  ConnectionData
->;
-
 @WebSocketGateway({
   namespace: '/game',
   cors: { origin: getSocketCorsOrigins() },
 })
+@UseFilters(GameExceptionFilter)
 export class GameGateway
   implements OnGatewayInit, OnGatewayConnection, OnGatewayDisconnect
 {
@@ -75,23 +65,11 @@ export class GameGateway
     const user = client.data.user;
     if (!user) return;
 
-    let initData;
-    try {
-      initData = this.gameService.handleGameJoin(
-        data.roomId,
-        user.id,
-        client.id,
-      );
-    } catch (error) {
-      this.logger.warn(
-        `Permission Denied: Failed to join room { roomId: '${data.roomId}', userId: '${user.id}' }`,
-      );
-      client.emit('game:error', {
-        message:
-          error instanceof Error ? error.message : 'Cannot join the room',
-      });
-      return;
-    }
+    const initData = this.gameService.handleGameJoin(
+      data.roomId,
+      user.id,
+      client.id,
+    );
 
     const previousRoomId = client.data.roomId;
     if (previousRoomId && previousRoomId !== data.roomId) {
@@ -107,19 +85,13 @@ export class GameGateway
       await client.leave(previousRoomId);
     }
 
-    client.data.roomId = data.roomId;
-
     try {
       await client.join(data.roomId);
+      client.data.roomId = data.roomId;
     } catch (error) {
-      this.logger.warn(
-        `System Error: Failed to join room { roomId: '${data.roomId}', userId: '${user.id}' }`,
+      throw new WsException(
+        error instanceof Error ? error.message : 'Cannot join the room',
       );
-      client.emit('game:error', {
-        message:
-          error instanceof Error ? error.message : 'Cannot join the room',
-      });
-      return;
     }
 
     this.socketPresenceService.register({
