@@ -25,6 +25,8 @@ import { NotificationSettings } from './pages/settings/NotificationPage'
 import { PrivacySettings } from './pages/settings/PrivacySettings'
 import { useAuthStore } from './stores/authStore'
 import { NotificationsPage } from './pages/NotificationsPage'
+import { PrivacyPolicyPage } from './pages/PrivacyPolicyPage'
+import { TermsOfServicePage } from './pages/TermsOfServicePage'
 
 function App() {
   return (
@@ -38,6 +40,19 @@ function App() {
  * Renders application routes according to the user's authentication state.
  */
 function AppRoutes() {
+  return (
+    <Routes>
+      <Route path="/privacy-policy" element={<PrivacyPolicyPage />} />
+      <Route path="/terms-of-service" element={<TermsOfServicePage />} />
+      <Route path="*" element={<AuthenticatedRoutes />} />
+    </Routes>
+  )
+}
+
+/**
+ * Renders routes whose behavior depends on the user's authentication state.
+ */
+function AuthenticatedRoutes() {
   const navigate = useNavigate()
   const location = useLocation()
   const isLoggedIn = useAuthStore((state) => Boolean(state.accessToken))
