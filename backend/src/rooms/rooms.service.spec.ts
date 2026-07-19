@@ -324,9 +324,16 @@ describe('RoomsService', () => {
         callback(tx),
     );
 
-    await expect(
-      service.acceptInvitation(invitation.id, guest.id),
-    ).rejects.toThrow(ForbiddenException);
+    try {
+      await service.acceptInvitation(invitation.id, guest.id);
+      fail('Expected invitation acceptance to be rejected');
+    } catch (error) {
+      expect(error).toBeInstanceOf(ForbiddenException);
+      expect((error as ForbiddenException).getResponse()).toEqual({
+        code: 'ROOM_INVITATION_NO_LONGER_ALLOWED',
+        message: 'フレンド関係が解除されたため、この招待には参加できません。',
+      });
+    }
 
     expect(tx.roomInvitation.updateMany).not.toHaveBeenCalled();
     expect(tx.roomParticipant.create).not.toHaveBeenCalled();

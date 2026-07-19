@@ -351,9 +351,10 @@ export class RoomsService {
     `;
 
     if (friendships.length === 0) {
-      throw new ForbiddenException(
-        'Only current friends can accept this invitation',
-      );
+      throw new ForbiddenException({
+        code: 'ROOM_INVITATION_NO_LONGER_ALLOWED',
+        message: 'フレンド関係が解除されたため、この招待には参加できません。',
+      });
     }
   }
 
