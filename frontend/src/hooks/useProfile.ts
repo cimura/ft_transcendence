@@ -103,10 +103,7 @@ export const useUploadAvatar = () => {
       return newAvatarUrl
     } catch (err) {
       setError(
-        getApiErrorMessage(
-          err,
-          'デフォルトアバターの設定に失敗しました。'
-        )
+        getApiErrorMessage(err, 'デフォルトアバターの設定に失敗しました。')
       )
       return null
     } finally {
