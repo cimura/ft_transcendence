@@ -13,6 +13,7 @@ import {
   MatchHistoryResponseDto,
 } from './dto/match-history.dto';
 import { RankingQueryDto, RankingsResponseDto } from './dto/ranking.dto';
+import { UserStatsDto } from './dto/user-stats.dto';
 
 @Controller('scores')
 @ApiTags('scores')
@@ -30,6 +31,16 @@ export class ScoresController {
   })
   getRankings(@Query() query: RankingQueryDto): Promise<RankingsResponseDto> {
     return this.scoresService.getRankings(query.limit ?? 20);
+  }
+
+  @Get('user/:userId/stats')
+  @ApiOperation({ summary: '統計を取得' })
+  @ApiOkResponse({
+    description: '成功時',
+    type: UserStatsDto,
+  })
+  getUserStats(@Param('userId') userId: string): Promise<UserStatsDto> {
+    return this.scoresService.getUserStats(userId);
   }
 
   @Get('user/:userId')

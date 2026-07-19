@@ -1,10 +1,11 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, NotFoundException } from '@nestjs/common';
 import { MatchHistoryResponseDto } from './dto/match-history.dto';
 import { RankingsResponseDto } from './dto/ranking.dto';
 import { PrismaService } from '../prisma.service';
 import { MatchResult } from '../generated/prisma/enums';
 import { Prisma } from '../generated/prisma/client.js';
 import type { PlayerRanking } from '@ft_transcendence/shared/game-events.types';
+import { UserStatsDto } from './dto/user-stats.dto';
 
 type RankingAggregateRow = {
   userId: string;
@@ -121,6 +122,78 @@ export class ScoresService {
       hasMore: offset + limit < total,
       total,
       page,
+    };
+  }
+
+  async getUserStats(userId: string): Promise<UserStatsDto> {
+    const user = await this.prisma.user.findUnique({
+      where: { id: userId },
+      select: { id: true },
+    });
+
+    if (!user) {
+      throw new NotFoundException('User not found');
+    }
+
+    const participants = await this.prisma.matchParticipant.findMany({
+      where: { userId },
+      select: {
+        result: true,
+        kills: true,
+      },
+      orderBy: [
+        {
+          match: {
+            finishedAt: 'asc',
+          },
+        },
+        {
+          matchId: 'asc',
+        },
+      ],
+    });
+
+    let wins = 0;
+    let losses = 0;
+    let draws = 0;
+    let kills = 0;
+    let currentWinStreak = 0;
+    let maxWinStreak = 0;
+
+    for (const participant of participants) {
+      kills += participant.kills ?? 0;
+
+      switch (participant.result) {
+        case MatchResult.WIN:
+          wins += 1;
+          currentWinStreak += 1;
+          maxWinStreak = Math.max(maxWinStreak, currentWinStreak);
+          break;
+
+        case MatchResult.LOSS:
+          losses += 1;
+          currentWinStreak = 0;
+          break;
+
+        case MatchResult.DRAW:
+          draws += 1;
+          currentWinStreak = 0;
+          break;
+      }
+    }
+
+    const totalGames = participants.length;
+    const winRate =
+      totalGames === 0 ? 0 : Number(((wins / totalGames) * 100).toFixed(1));
+
+    return {
+      totalGames,
+      wins,
+      losses,
+      draws,
+      kills,
+      winRate,
+      maxWinStreak,
     };
   }
 
