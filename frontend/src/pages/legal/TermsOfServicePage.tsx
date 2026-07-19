@@ -43,6 +43,13 @@ export function TermsOfServicePage() {
           本サービスは42のft_transcendenceカリキュラムの一環として提供されており、継続的な利用可能性や特定目的への適合性を保証するものではありません。本規約はプロジェクトの説明文書であり、専門的な法的助言を提供するものではありません。
         </p>
       </section>
+
+      <section>
+        <h2 className="text-xl font-semibold text-gray-900">規約の変更</h2>
+        <p className="mt-2">
+          本サービスの機能や運用内容の変更に応じて、本規約を変更することがあります。変更した場合は、このページの内容と最終更新日を更新してお知らせします。変更後も本サービスを利用する場合は、最新の規約が適用されます。
+        </p>
+      </section>
     </LegalPageLayout>
   )
 }
