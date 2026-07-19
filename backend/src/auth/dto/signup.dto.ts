@@ -19,19 +19,19 @@ export class SignUpRequestDto {
   })
   @IsEmail(
     {},
-    { message: 'Please enter your email address in the correct format.' },
+    { message: 'Eメールアドレスを正しく入力してください' },
   )
-  @IsNotEmpty({ message: 'Email is required.' })
+  @IsNotEmpty({ message: 'Eメールアドレスを入力してください' })
   email: string;
 
   @ApiProperty({
     example: 'example42',
     description: 'ユーザーの名前（ユニーク）',
   })
-  @IsNotEmpty({ message: 'Username is required.' })
+  @IsNotEmpty({ message: 'ユーザー名を入力してください.' })
   @Matches(/^[a-zA-Z0-9_-]+$/, {
     message:
-      'Username can only contain alphanumeric characters, underscores, and hyphens (no symbols like @).',
+      'ユーザー名には英数字、アンダースコア、ハイフンのみ使用できます',
   })
   username: string;
 
@@ -40,8 +40,8 @@ export class SignUpRequestDto {
     description: 'サインイン用のパスワード (8文字以上)',
   })
   @IsString()
-  @IsNotEmpty({ message: 'Password is required.' })
-  @MinLength(8, { message: 'Password must be at least 8 characters long.' })
+  @IsNotEmpty({ message: 'パスワードを入力してください' })
+  @MinLength(8, { message: 'パスワードは最低8文字以上必要です' })
   password: string;
 }
 

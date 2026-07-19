@@ -34,7 +34,7 @@ export default function Signup({
     if (!usernameRegex.test(username)) {
       setFieldErrors({
         username:
-          'Username can only contain alphanumeric characters, underscores, and hyphens.',
+          'ユーザー名には英数字、アンダースコア、ハイフンのみ使用できます',
       })
       return
     }
