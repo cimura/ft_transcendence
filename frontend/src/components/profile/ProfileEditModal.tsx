@@ -47,6 +47,8 @@ export const ProfileEditModal = ({
         })
         if (!profileResult) return
         updatedProfile = profileResult
+        // 後続のアバター更新が失敗しても、成功済みの変更を画面へ反映する
+        onSuccess(updatedProfile)
       }
 
       // アバターの更新
@@ -55,15 +57,15 @@ export const ProfileEditModal = ({
         const avatarResult = await uploadAvatar(uploadedFile)
         if (!avatarResult) return
         updatedProfile = avatarResult
+        onSuccess(updatedProfile)
       } else if (selectedDefaultAvatar) {
         // デフォルトアバターの設定
         const newAvatarUrl = await setDefaultAvatar(selectedDefaultAvatar)
         if (!newAvatarUrl) return
         updatedProfile = { ...updatedProfile, avatarUrl: newAvatarUrl }
+        onSuccess(updatedProfile)
       }
 
-      // 成功時のコールバック
-      onSuccess(updatedProfile)
       setUsername(updatedProfile.username)
       setSelectedDefaultAvatar(null)
       setUploadedFile(null)
