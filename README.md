@@ -85,6 +85,11 @@ https://localhost:8443
 https://localhost:8443/api/
 ```
 
+### Legal pages
+
+- [Privacy Policy](https://localhost:8443/legal/privacy-policy)
+- [Terms of Service](https://localhost:8443/legal/terms-of-service)
+
 Because the local HTTPS certificate is self-signed, the browser may show a security warning.
 
 ### How to test with curl

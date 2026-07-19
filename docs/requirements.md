@@ -183,8 +183,8 @@
 - [ ] Docker ワンコマンド起動（`make` 等）
 - [ ] Google Chrome 最新版で動作
 - [ ] ブラウザコンソールにエラー・警告なし
-- [ ] Privacy Policy ページ（フッターからアクセス可能）
-- [ ] Terms of Service ページ（フッターからアクセス可能）
+- [x] Privacy Policy ページ（Sign In / Sign Up 下部・設定一覧からアクセス可能）
+- [x] Terms of Service ページ（Sign In / Sign Up 下部・設定一覧からアクセス可能）
 - [ ] マルチユーザー同時接続対応
 - [ ] HTTPS（自己署名証明書）
 - [ ] メール + パスワード認証（bcrypt ハッシュ化・ソルト）
@@ -198,7 +198,10 @@
 ## Privacy Policy / Terms of Service
 
 - AI で内容を生成して固定化した静的ページ
-- フッターからアクセス可能
+- 未ログイン状態でもアクセス可能な公開ルート
+  - Privacy Policy: `/legal/privacy-policy`
+  - Terms of Service: `/legal/terms-of-service`
+- Sign In / Sign Up 下部・設定一覧からアクセス可能
 
 ---
 
