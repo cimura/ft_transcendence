@@ -59,7 +59,6 @@ describe('UsersService', () => {
   it('returns a profile for the specified user', async () => {
     const user = {
       id: 'user-id',
-      email: 'user@example.com',
       username: 'user',
       displayName: null,
       avatarUrl: null,
@@ -73,7 +72,6 @@ describe('UsersService', () => {
       where: { id: 'user-id' },
       select: {
         id: true,
-        email: true,
         username: true,
         displayName: true,
         avatarUrl: true,

@@ -13,7 +13,7 @@ type TabType = 'stats' | 'history'
 export const ProfilePage = () => {
   const { userId } = useParams<{ userId: string }>()
   const navigate = useNavigate()
-  const { currentUser, fetchCurrentUser } = useAuthStore()
+  const { currentUser, fetchCurrentUser, setCurrentUser } = useAuthStore()
   const { profile: fetchedProfile, loading, error } = useProfile(userId)
   const [profile, setProfile] = useState<UserProfile | null>(null)
   const [activeTab, setActiveTab] = useState<TabType>('stats')
@@ -45,6 +45,14 @@ export const ProfilePage = () => {
 
   const handleProfileUpdate = (updatedProfile: UserProfile) => {
     setProfile(updatedProfile)
+    if (currentUser && updatedProfile.id === currentUser.id) {
+      setCurrentUser({
+        ...currentUser,
+        username: updatedProfile.username,
+        avatarUrl: updatedProfile.avatarUrl,
+        updatedAt: updatedProfile.updatedAt,
+      })
+    }
   }
 
   if (loading) {

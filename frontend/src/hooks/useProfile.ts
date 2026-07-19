@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import type { UserProfile } from '../types/user'
 import type { UpdateProfileDto } from '../types/profile'
 import * as profileApi from '../api/profile'
+import { getApiErrorMessage } from '../api/errors'
 
 /**
  * Custom hook for fetching user profile
@@ -28,7 +29,7 @@ export const useProfile = (userId: string | undefined) => {
         const data = await profileApi.getProfile(userId)
         setProfile(data)
       } catch (err) {
-        setError(err instanceof Error ? err.message : 'Failed to fetch profile')
+        setError(getApiErrorMessage(err, 'プロフィールの取得に失敗しました。'))
       } finally {
         setLoading(false)
       }
@@ -57,7 +58,7 @@ export const useUpdateProfile = () => {
       const updated = await profileApi.updateProfile(data)
       return updated
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to update profile')
+      setError(getApiErrorMessage(err, 'プロフィールの更新に失敗しました。'))
       return null
     } finally {
       setLoading(false)

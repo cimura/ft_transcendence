@@ -39,7 +39,9 @@ export const ProfileHeader = ({
             {profile.displayName || profile.username}
           </h1>
           <p className="text-white/60 text-sm mb-1">@{profile.username}</p>
-          <p className="text-white/40 text-sm">{profile.email}</p>
+          {profile.email && (
+            <p className="text-white/40 text-sm">{profile.email}</p>
+          )}
         </div>
 
         {/* アクションボタン */}

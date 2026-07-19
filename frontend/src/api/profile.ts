@@ -4,7 +4,7 @@ import api from './client'
 
 interface BackendProfileUser {
   id: string
-  email: string
+  email?: string
   username: string
   displayName: string | null
   avatarUrl: string | null

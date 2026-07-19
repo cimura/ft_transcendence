@@ -36,7 +36,6 @@ describe('UsersController', () => {
   it('returns the profile for the route user ID', async () => {
     const user = {
       id: 'user-id',
-      email: 'user@example.com',
       username: 'user',
       displayName: null,
       avatarUrl: null,

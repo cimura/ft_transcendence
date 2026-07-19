@@ -31,7 +31,8 @@ export interface RegisterCredentials {
   passwordConfirm: string
 }
 
-export interface UserProfile extends User {
+export interface UserProfile extends Omit<User, 'email'> {
+  email?: string
   isFriend: boolean
   isCurrentUser: boolean
 }

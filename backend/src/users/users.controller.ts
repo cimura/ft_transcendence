@@ -32,7 +32,11 @@ import { UpdateUserDto } from './dto/update-user.dto';
 import { SelectDefaultAvatarDto } from './dto/select-default-avatar.dto';
 import { UserSearchResponseDto } from './dto/users-response.dto';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
-import { AvatarUpdateResponseDto, ProfileResponseDto } from './dto/profile.dto';
+import {
+  AvatarUpdateResponseDto,
+  ProfileResponseDto,
+  PublicProfileResponseDto,
+} from './dto/profile.dto';
 import type { UserRequest } from './interfaces/user-request.interface';
 import { MAX_IMAGE_SIZE_BYTES } from '../uploads/uploads.constants';
 
@@ -76,14 +80,14 @@ export class UsersController {
   @ApiOperation({ summary: '指定ユーザーのプロフィールの取得' })
   @ApiOkResponse({
     description: '成功時',
-    type: ProfileResponseDto,
+    type: PublicProfileResponseDto,
   })
   @ApiNotFoundResponse({
     description: '指定したユーザーが見つかりません',
   })
   async profileById(
     @Param('userId') userId: string,
-  ): Promise<ProfileResponseDto> {
+  ): Promise<PublicProfileResponseDto> {
     const user = await this.usersService.profileById(userId);
     return {
       message: 'Profile retrieved successfully.',
