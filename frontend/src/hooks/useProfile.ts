@@ -7,16 +7,20 @@ import { getApiErrorMessage } from '../api/errors'
 /**
  * Custom hook for fetching user profile
  * @param userId User ID to fetch
+ * @param currentUserId Authenticated user ID
  * @returns Profile data, loading state, and error
  */
-export const useProfile = (userId: string | undefined) => {
+export const useProfile = (
+  userId: string | undefined,
+  currentUserId: string | undefined
+) => {
   const [profile, setProfile] = useState<UserProfile | null>(null)
   const [loading, setLoading] = useState<boolean>(false)
   const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
-    if (!userId) {
-      // userIdが未定義の場合は初期状態にリセット
+    if (!userId || !currentUserId) {
+      // 必要なユーザーIDが未取得の場合は初期状態にリセット
       // eslint-disable-next-line react-hooks/set-state-in-effect
       setProfile(null)
       return
@@ -26,7 +30,7 @@ export const useProfile = (userId: string | undefined) => {
       try {
         setLoading(true)
         setError(null)
-        const data = await profileApi.getProfile(userId)
+        const data = await profileApi.getProfile(userId, currentUserId)
         setProfile(data)
       } catch (err) {
         setError(getApiErrorMessage(err, 'プロフィールの取得に失敗しました。'))
@@ -36,7 +40,7 @@ export const useProfile = (userId: string | undefined) => {
     }
 
     fetchProfile()
-  }, [userId])
+  }, [userId, currentUserId])
 
   return { profile, loading, error }
 }

@@ -41,21 +41,20 @@ const toUserProfile = (
 /**
  * Get user profile by ID
  * @param userId User ID to fetch
+ * @param currentUserId Authenticated user ID
  * @returns Promise<UserProfile> User profile data
  */
-export const getProfile = async (userId: string): Promise<UserProfile> => {
-  const currentUserResponse =
-    await api.get<BackendProfileResponse>('/users/profile')
-  const currentUser = currentUserResponse.data.user
+export const getProfile = async (
+  userId: string,
+  currentUserId: string
+): Promise<UserProfile> => {
+  const isCurrentUser = userId === currentUserId
+  const endpoint = isCurrentUser
+    ? '/users/profile'
+    : `/users/${encodeURIComponent(userId)}/profile`
+  const response = await api.get<BackendProfileResponse>(endpoint)
 
-  if (currentUser.id === userId) {
-    return toUserProfile(currentUser, true)
-  }
-
-  const response = await api.get<BackendProfileResponse>(
-    `/users/${encodeURIComponent(userId)}/profile`
-  )
-  return toUserProfile(response.data.user, false)
+  return toUserProfile(response.data.user, isCurrentUser)
 }
 
 /**
