@@ -49,13 +49,12 @@ export const useUpdateProfile = () => {
   const [error, setError] = useState<string | null>(null)
 
   const updateProfile = async (
-    userId: string,
     data: UpdateProfileDto
   ): Promise<UserProfile | null> => {
     try {
       setLoading(true)
       setError(null)
-      const updated = await profileApi.updateProfile(userId, data)
+      const updated = await profileApi.updateProfile(data)
       return updated
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to update profile')

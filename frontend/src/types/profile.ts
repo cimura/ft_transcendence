@@ -37,7 +37,7 @@ export interface RankingItem {
 }
 
 export interface UpdateProfileDto {
-  displayName?: string
+  username: string
 }
 
 export interface UploadAvatarDto {
