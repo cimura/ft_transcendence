@@ -235,6 +235,7 @@ describe('RoomsService', () => {
     const invitation = {
       id: 'invitation-1',
       roomId: 'room-1',
+      inviterId: user.id,
       inviteeId: guest.id,
       status: RoomInvitationStatus.PENDING,
     };
@@ -271,6 +272,7 @@ describe('RoomsService', () => {
         create: jest.fn(),
       },
     };
+    tx.$queryRaw.mockResolvedValue([{ id: 'friendship-1' }]);
     prisma.$transaction.mockImplementation(
       async (callback: (transaction: typeof tx) => Promise<unknown>) =>
         callback(tx),
@@ -299,14 +301,47 @@ describe('RoomsService', () => {
     expect(result.id).toBe('room-1');
   });
 
-  it('rejects an invitation accept when the guarded status update loses the race', async () => {
+  it('rejects a pending invitation after the friendship was deleted', async () => {
     const invitation = {
       id: 'invitation-1',
       roomId: 'room-1',
+      inviterId: user.id,
       inviteeId: guest.id,
       status: RoomInvitationStatus.PENDING,
     };
     const tx = {
+      $queryRaw: jest.fn().mockResolvedValue([]),
+      roomInvitation: {
+        findUnique: jest.fn().mockResolvedValue(invitation),
+        updateMany: jest.fn(),
+      },
+      roomParticipant: {
+        create: jest.fn(),
+      },
+    };
+    prisma.$transaction.mockImplementation(
+      async (callback: (transaction: typeof tx) => Promise<unknown>) =>
+        callback(tx),
+    );
+
+    await expect(
+      service.acceptInvitation(invitation.id, guest.id),
+    ).rejects.toThrow(ForbiddenException);
+
+    expect(tx.roomInvitation.updateMany).not.toHaveBeenCalled();
+    expect(tx.roomParticipant.create).not.toHaveBeenCalled();
+  });
+
+  it('rejects an invitation accept when the guarded status update loses the race', async () => {
+    const invitation = {
+      id: 'invitation-1',
+      roomId: 'room-1',
+      inviterId: user.id,
+      inviteeId: guest.id,
+      status: RoomInvitationStatus.PENDING,
+    };
+    const tx = {
+      $queryRaw: jest.fn().mockResolvedValue([{ id: 'friendship-1' }]),
       roomInvitation: {
         findUnique: jest.fn().mockResolvedValue(invitation),
         updateMany: jest.fn().mockResolvedValue({ count: 0 }),
