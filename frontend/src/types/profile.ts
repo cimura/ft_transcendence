@@ -9,7 +9,7 @@ export interface UserStats {
   draws: number
   kills: number
   winRate: number
-  maxWinStreak?: number
+  maxWinStreak: number
 }
 
 export interface MatchHistory {
