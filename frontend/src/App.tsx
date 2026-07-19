@@ -25,8 +25,8 @@ import { NotificationSettings } from './pages/settings/NotificationPage'
 import { PrivacySettings } from './pages/settings/PrivacySettings'
 import { useAuthStore } from './stores/authStore'
 import { NotificationsPage } from './pages/NotificationsPage'
-import { PrivacyPolicyPage } from './pages/PrivacyPolicyPage'
-import { TermsOfServicePage } from './pages/TermsOfServicePage'
+import { PrivacyPolicyPage } from './pages/legal/PrivacyPolicyPage'
+import { TermsOfServicePage } from './pages/legal/TermsOfServicePage'
 
 function App() {
   return (
@@ -42,8 +42,16 @@ function App() {
 function AppRoutes() {
   return (
     <Routes>
-      <Route path="/privacy-policy" element={<PrivacyPolicyPage />} />
-      <Route path="/terms-of-service" element={<TermsOfServicePage />} />
+      <Route path="/legal/privacy-policy" element={<PrivacyPolicyPage />} />
+      <Route path="/legal/terms-of-service" element={<TermsOfServicePage />} />
+      <Route
+        path="/privacy-policy"
+        element={<Navigate to="/legal/privacy-policy" replace />}
+      />
+      <Route
+        path="/terms-of-service"
+        element={<Navigate to="/legal/terms-of-service" replace />}
+      />
       <Route path="*" element={<AuthenticatedRoutes />} />
     </Routes>
   )
