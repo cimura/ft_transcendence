@@ -33,19 +33,6 @@ export const SettingsMenu = () => {
       </button>
 
       <button
-        onClick={() => navigate('notifications')}
-        className={baseButtonClass}
-      >
-        <span>通知設定</span>
-        <span className="text-white/50">＞</span>
-      </button>
-
-      <button onClick={() => navigate('privacy')} className={baseButtonClass}>
-        <span>プライバシー</span>
-        <span className="text-white/50">＞</span>
-      </button>
-
-      <button
         onClick={handleLogout}
         disabled={isLoggingOut}
         className="w-full rounded-md border border-red-900/50 bg-red-900/10 px-6 py-4 font-medium text-red-400 transition-colors hover:bg-red-900/20 disabled:cursor-not-allowed disabled:opacity-60"

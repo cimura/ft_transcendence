@@ -21,8 +21,6 @@ import { Home } from './pages/Home'
 import { Settings } from './pages/settings/Settings'
 import { SettingsMenu } from './pages/settings/SettingsMenu'
 import { AccountManagement } from './pages/settings/AccountManagement'
-import { NotificationSettings } from './pages/settings/NotificationPage'
-import { PrivacySettings } from './pages/settings/PrivacySettings'
 import { useAuthStore } from './stores/authStore'
 import { NotificationsPage } from './pages/NotificationsPage'
 
@@ -118,8 +116,6 @@ function AppRoutes() {
       >
         <Route index element={<SettingsMenu />} /> {/* 設定のトップメニュー */}
         <Route path="account" element={<AccountManagement />} />
-        <Route path="notifications" element={<NotificationSettings />} />
-        <Route path="privacy" element={<PrivacySettings />} />
       </Route>
 
       {/* ログイン状態で存在しないURLに入ったら /home にリダイレクト */}
