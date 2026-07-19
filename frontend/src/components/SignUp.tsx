@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { signUpApi, AuthApiError } from '../api/auth'
 import { useAuthStore } from '../stores/authStore'
+import { LegalLinks } from './legal/LegalLinks'
 
 interface SignupProps {
   onSignupSuccess: () => void
@@ -186,6 +187,7 @@ export default function Signup({
             Sign in
           </button>
         </div>
+        <LegalLinks />
       </div>
     </div>
   )
