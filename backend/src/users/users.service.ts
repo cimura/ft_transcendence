@@ -40,13 +40,17 @@ export class UsersService {
     });
 
     if (!user) {
-      throw new UnauthorizedException({
+      throw new NotFoundException({
         code: 'USER_NOT_FOUND',
         message: 'User not found',
       });
     }
 
     return user;
+  }
+
+  async profileById(userId: string): Promise<ProfileUserDto> {
+    return this.profile(userId);
   }
 
   async search(

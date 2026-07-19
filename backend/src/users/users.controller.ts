@@ -12,6 +12,7 @@ import {
   HttpCode,
   HttpStatus,
   Query,
+  Param,
   BadRequestException,
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
@@ -69,6 +70,25 @@ export class UsersController {
     @Query('q') query = '',
   ): Promise<UserSearchResponseDto[]> {
     return this.usersService.search(req.user.userId, query);
+  }
+
+  @Get(':userId/profile')
+  @ApiOperation({ summary: '指定ユーザーのプロフィールの取得' })
+  @ApiOkResponse({
+    description: '成功時',
+    type: ProfileResponseDto,
+  })
+  @ApiNotFoundResponse({
+    description: '指定したユーザーが見つかりません',
+  })
+  async profileById(
+    @Param('userId') userId: string,
+  ): Promise<ProfileResponseDto> {
+    const user = await this.usersService.profileById(userId);
+    return {
+      message: 'Profile retrieved successfully.',
+      user,
+    };
   }
 
   @Patch('me')
