@@ -83,7 +83,9 @@ export const useUploadAvatar = () => {
       const userProfile = await profileApi.uploadAvatar(file)
       return userProfile
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to upload avatar')
+      setError(
+        getApiErrorMessage(err, 'アバターのアップロードに失敗しました。')
+      )
       return null
     } finally {
       setLoading(false)
@@ -101,7 +103,10 @@ export const useUploadAvatar = () => {
       return newAvatarUrl
     } catch (err) {
       setError(
-        err instanceof Error ? err.message : 'Failed to set default avatar'
+        getApiErrorMessage(
+          err,
+          'デフォルトアバターの設定に失敗しました。'
+        )
       )
       return null
     } finally {
