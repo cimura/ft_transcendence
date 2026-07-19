@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useCallback, useState } from 'react'
 import { Modal } from '../common/Modal'
 import { AvatarUpload } from './AvatarUpload'
 import { DefaultAvatarSelector } from './DefaultAvatarSelector'
@@ -75,12 +75,12 @@ export const ProfileEditModal = ({
     }
   }
 
-  const handleClose = () => {
+  const handleClose = useCallback(() => {
     setUsername(profile.username)
     setSelectedDefaultAvatar(null)
     setUploadedFile(null)
     onClose()
-  }
+  }, [profile.username, onClose])
 
   const isLoading = profileLoading || avatarLoading
   const error = profileError || avatarError
