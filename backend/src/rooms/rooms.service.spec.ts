@@ -331,7 +331,8 @@ describe('RoomsService', () => {
       expect(error).toBeInstanceOf(ForbiddenException);
       expect((error as ForbiddenException).getResponse()).toEqual({
         code: 'ROOM_INVITATION_NO_LONGER_ALLOWED',
-        message: 'フレンド関係が解除されたため、この招待には参加できません。',
+        message:
+          'Cannot join this invitation because the friendship has been terminated.',
       });
     }
 
