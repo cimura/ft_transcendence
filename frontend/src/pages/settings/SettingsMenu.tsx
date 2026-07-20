@@ -33,19 +33,6 @@ export const SettingsMenu = () => {
         <span className="text-white/50">＞</span>
       </button>
 
-      <button
-        onClick={() => navigate('notifications')}
-        className={baseButtonClass}
-      >
-        <span>通知設定</span>
-        <span className="text-white/50">＞</span>
-      </button>
-
-      <button onClick={() => navigate('privacy')} className={baseButtonClass}>
-        <span>プライバシー</span>
-        <span className="text-white/50">＞</span>
-      </button>
-
       <LegalLinks variant="menu" />
 
       <button
