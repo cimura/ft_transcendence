@@ -4,7 +4,7 @@ import api from './client'
 
 interface BackendProfileUser {
   id: string
-  email: string
+  email?: string
   username: string
   displayName: string | null
   avatarUrl: string | null
@@ -39,120 +39,34 @@ const toUserProfile = (
 })
 
 /**
- * モックユーザーデータ
- */
-const mockUsers: Record<string, UserProfile> = {
-  'current-user-id': {
-    id: 'current-user-id',
-    email: 'me@example.com',
-    username: 'current_user',
-    displayName: 'Current User',
-    avatarUrl: '/avatars/default-1.svg',
-    isGuest: false,
-    createdAt: new Date('2024-01-01'),
-    updatedAt: new Date(),
-    isFriend: false,
-    isCurrentUser: true,
-  },
-  'user-1': {
-    id: 'user-1',
-    email: 'alice@example.com',
-    username: 'alice',
-    displayName: 'Alice',
-    avatarUrl: '/avatars/default-2.svg',
-    isGuest: false,
-    createdAt: new Date('2024-01-15'),
-    updatedAt: new Date(),
-    isFriend: true,
-    isCurrentUser: false,
-  },
-  'user-2': {
-    id: 'user-2',
-    email: 'bob@example.com',
-    username: 'bob',
-    displayName: 'Bob',
-    avatarUrl: '/avatars/default-3.svg',
-    isGuest: false,
-    createdAt: new Date('2024-02-01'),
-    updatedAt: new Date(),
-    isFriend: false,
-    isCurrentUser: false,
-  },
-  'user-3': {
-    id: 'user-3',
-    email: 'charlie@example.com',
-    username: 'charlie',
-    displayName: 'Charlie',
-    avatarUrl: '/avatars/default-4.svg',
-    isGuest: false,
-    createdAt: new Date('2024-02-15'),
-    updatedAt: new Date(),
-    isFriend: true,
-    isCurrentUser: false,
-  },
-}
-
-/**
  * Get user profile by ID
  * @param userId User ID to fetch
+ * @param currentUserId Authenticated user ID
  * @returns Promise<UserProfile> User profile data
  */
-export const getProfile = async (userId: string): Promise<UserProfile> => {
-  const mockUser = mockUsers[userId]
-  let currentUser: BackendProfileUser | null = null
+export const getProfile = async (
+  userId: string,
+  currentUserId: string
+): Promise<UserProfile> => {
+  const isCurrentUser = userId === currentUserId
+  const endpoint = isCurrentUser
+    ? '/users/profile'
+    : `/users/${encodeURIComponent(userId)}/profile`
+  const response = await api.get<BackendProfileResponse>(endpoint)
 
-  try {
-    const response = await api.get<BackendProfileResponse>('/users/profile')
-    currentUser = response.data.user
-  } catch (error) {
-    if (!mockUser) {
-      throw error
-    }
-  }
-
-  if (currentUser) {
-    const currentUserProfile = toUserProfile(currentUser, true)
-
-    if (currentUserProfile.id === userId) {
-      return currentUserProfile
-    }
-  }
-
-  // 他ユーザーのプロフィールAPIができるまで、固定モックを暫定利用する
-  if (mockUser) {
-    return mockUser
-  }
-
-  throw new Error('User not found')
+  return toUserProfile(response.data.user, isCurrentUser)
 }
 
 /**
  * Update user profile
- * @param userId User ID to update
  * @param data Update data
  * @returns Promise<UserProfile> Updated user profile
  */
 export const updateProfile = async (
-  userId: string,
   data: UpdateProfileDto
 ): Promise<UserProfile> => {
-  // モックデータを更新
-  return new Promise((resolve, reject) => {
-    setTimeout(() => {
-      const user = mockUsers[userId]
-      if (user) {
-        const updated = { ...user, ...data, updatedAt: new Date() }
-        mockUsers[userId] = updated
-        resolve(updated)
-      } else {
-        reject(new Error('User not found'))
-      }
-    }, 300)
-  })
-
-  // 実際のAPI実装時はこちらを使用
-  // const response = await api.put<UserProfile>(`/api/users/${userId}`, data)
-  // return response.data
+  const response = await api.patch<BackendProfileResponse>('/users/me', data)
+  return toUserProfile(response.data.user, true)
 }
 
 /**
@@ -168,7 +82,7 @@ export const uploadAvatar = async (file: File): Promise<UserProfile> => {
     formData,
     {
       headers: {
-        'Content-Type': 'multipart/form-data',
+        'Content-Type': undefined,
       },
     }
   )

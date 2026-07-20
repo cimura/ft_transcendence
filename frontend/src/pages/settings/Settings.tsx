@@ -51,7 +51,7 @@ export const Settings = ({ onLogout }: SettingsProps) => {
 
               {/* タイトル（中央配置） */}
               <h1 className="absolute left-1/2 -translate-x-1/2 text-2xl font-bold tracking-widest text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 to-blue-500 drop-shadow-[0_0_8px_rgba(0,255,255,0.3)]">
-                {isRootSettings ? 'SYSTEM SETTINGS' : '詳細設定'}
+                {isRootSettings ? 'SYSTEM SETTINGS' : '設定'}
               </h1>
               
               {/* レイアウト調整用の空要素 */}

@@ -26,7 +26,7 @@ export class UpdateUserDto {
   @IsString()
   @Matches(/^[a-zA-Z0-9_-]+$/, {
     message:
-      'Username can only contain alphanumeric characters, underscores, and hyphens (no symbols like @).',
+      'ユーザー名には英数字、アンダースコア、ハイフンのみ使用できます',
   })
   username?: string;
 

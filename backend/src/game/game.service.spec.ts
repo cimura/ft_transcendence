@@ -58,7 +58,7 @@ describe('GameService', () => {
       service.handleGameJoin('room-1', 'player-1', 'client-1');
 
       // ゴーストソケットからの切断通知
-      service.handleGameLeave('player-1', 'client-old');
+      service.handleGameLeave('room-1', 'player-1', 'client-old');
 
       // 部屋から退出させられていないか確認するため、2人目を追加してゲームを開始してみる
       service.handleGameJoin('room-1', 'player-2', 'client-2');
@@ -98,7 +98,7 @@ describe('GameService', () => {
       jest.advanceTimersByTime(GAME_COUNTDOWN_SEC * 1000); // プレイ開始
 
       // player-1 が切断
-      service.handleGameLeave('player-1', 'client-1');
+      service.handleGameLeave('room-1', 'player-1', 'client-1');
 
       // まだゲームは終わらない
       jest.advanceTimersByTime(10000);
@@ -127,7 +127,7 @@ describe('GameService', () => {
       jest.advanceTimersByTime(GAME_COUNTDOWN_SEC * 1000); // プレイ開始
 
       // player-1 が切断
-      service.handleGameLeave('player-1', 'client-1');
+      service.handleGameLeave('room-1', 'player-1', 'client-1');
 
       // 10秒後に新しいソケットIDで復帰
       jest.advanceTimersByTime(10000);
@@ -157,8 +157,8 @@ describe('GameService', () => {
       jest.advanceTimersByTime(GAME_COUNTDOWN_SEC * 1000); // プレイ開始
 
       // 全員切断
-      service.handleGameLeave('player-1', 'client-1');
-      service.handleGameLeave('player-2', 'client-2');
+      service.handleGameLeave('room-1', 'player-1', 'client-1');
+      service.handleGameLeave('room-1', 'player-2', 'client-2');
 
       // タイムアウト時間経過
       jest.advanceTimersByTime(DISCONNECT_TIMEOUT_MS + 1000);

@@ -85,6 +85,11 @@ https://localhost:8443
 https://localhost:8443/api/
 ```
 
+### Legal pages
+
+- [Privacy Policy](https://localhost:8443/legal/privacy-policy)
+- [Terms of Service](https://localhost:8443/legal/terms-of-service)
+
 Because the local HTTPS certificate is self-signed, the browser may show a security warning.
 
 ### How to test with curl
@@ -106,13 +111,13 @@ npm run start:dev
 If needed, generate it manually:
 
 ```bash
-docker compose -f docker/docker-compose.yml exec backend npx prisma generate
+docker compose -f docker/docker-compose.yml exec -w /app/backend backend npm run prisma:generate
 ```
 
 To check the migration status:
 
 ```bash
-docker compose -f docker/docker-compose.yml exec backend npx prisma migrate status
+docker compose -f docker/docker-compose.yml exec -w /app/backend backend npm run prisma:migrate:status
 ```
 
 To apply development migrations manually:
@@ -124,7 +129,7 @@ make migrate
 or
 
 ```bash
-docker compose -f docker/docker-compose.yml exec backend npx prisma migrate dev
+docker compose -f docker/docker-compose.yml exec -w /app/backend backend npm run prisma:migrate:dev
 ```
 
 ## Code formatting
@@ -144,4 +149,3 @@ docker compose -f docker/docker-compose.yml exec backend npm run format
 ```
 
 The backend has its own .prettierignore file because Prettier is executed inside the backend container. Generated Prisma files under src/generated/ are excluded from formatting.
-

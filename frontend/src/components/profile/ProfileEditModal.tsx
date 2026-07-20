@@ -1,8 +1,8 @@
-import { useState } from 'react'
+import { useCallback, useState } from 'react'
 import { Modal } from '../common/Modal'
 import { AvatarUpload } from './AvatarUpload'
 import { DefaultAvatarSelector } from './DefaultAvatarSelector'
-import { useUploadAvatar } from '../../hooks/useProfile'
+import { useUpdateProfile, useUploadAvatar } from '../../hooks/useProfile'
 import type { UserProfile } from '../../types/user'
 
 interface ProfileEditModalProps {
@@ -18,7 +18,7 @@ export const ProfileEditModal = ({
   profile,
   onSuccess,
 }: ProfileEditModalProps) => {
-  const [displayName, setDisplayName] = useState(profile.displayName || '')
+  const [username, setUsername] = useState(profile.username)
   const [selectedDefaultAvatar, setSelectedDefaultAvatar] = useState<
     string | null
   >(null)
@@ -30,40 +30,61 @@ export const ProfileEditModal = ({
     loading: avatarLoading,
     error: avatarError,
   } = useUploadAvatar()
+  const {
+    updateProfile,
+    loading: profileLoading,
+    error: profileError,
+  } = useUpdateProfile()
 
   const handleSave = async () => {
     try {
-      let newAvatarUrl: string | null = null
-      if (uploadedFile) {
-        const updatedProfile = await uploadAvatar(uploadedFile)
-        if (!updatedProfile) return
-        newAvatarUrl = updatedProfile.avatarUrl || null
-      } else if (selectedDefaultAvatar) {
-        newAvatarUrl = await setDefaultAvatar(selectedDefaultAvatar)
-        if (!newAvatarUrl) return
+      let updatedProfile = profile
+      const normalizedUsername = username.trim()
+
+      // ユーザー名の更新
+      if (normalizedUsername !== profile.username) {
+        const profileResult = await updateProfile({
+          username: normalizedUsername,
+        })
+        if (!profileResult) return
+        updatedProfile = profileResult
+        // 後続のアバター更新が失敗しても、成功済みの変更を画面へ反映する
+        onSuccess(updatedProfile)
       }
 
-      const updatedProfile: UserProfile = {
-        ...profile,
-        displayName,
-        avatarUrl: newAvatarUrl || profile.avatarUrl,
+      // アバターの更新
+      if (uploadedFile) {
+        // カスタム画像のアップロード
+        const avatarResult = await uploadAvatar(uploadedFile)
+        if (!avatarResult) return
+        updatedProfile = avatarResult
+        onSuccess(updatedProfile)
+      } else if (selectedDefaultAvatar) {
+        // デフォルトアバターの設定
+        const newAvatarUrl = await setDefaultAvatar(selectedDefaultAvatar)
+        if (!newAvatarUrl) return
+        updatedProfile = { ...updatedProfile, avatarUrl: newAvatarUrl }
+        onSuccess(updatedProfile)
       }
-      onSuccess(updatedProfile)
+
+      setUsername(updatedProfile.username)
+      setSelectedDefaultAvatar(null)
+      setUploadedFile(null)
       onClose()
     } catch (error) {
       console.error('Failed to update profile:', error)
     }
   }
 
-  const handleClose = () => {
-    setDisplayName(profile.displayName || '')
+  const handleClose = useCallback(() => {
+    setUsername(profile.username)
     setSelectedDefaultAvatar(null)
     setUploadedFile(null)
     onClose()
-  }
+  }, [profile.username, onClose])
 
-  const isLoading = avatarLoading
-  const error = avatarError
+  const isLoading = profileLoading || avatarLoading
+  const error = profileError || avatarError
 
   return (
     <Modal isOpen={isOpen} onClose={handleClose} className="w-full max-w-2xl bg-transparent p-0">
@@ -101,18 +122,18 @@ export const ProfileEditModal = ({
 
           <div className="mb-8 p-5 rounded-xl border border-cyan-900/50 bg-cyan-950/20 relative">
             <label className="flex items-center gap-2 text-cyan-400 font-mono text-xs tracking-widest mb-3">
-              <span className="w-1.5 h-1.5 bg-cyan-400 rounded-full" /> DISPLAY_NAME
+              <span className="w-1.5 h-1.5 bg-cyan-400 rounded-full" /> USERNAME
             </label>
             <input
               type="text"
-              value={displayName}
-              onChange={(e) => setDisplayName(e.target.value)}
+              value={username}
+              onChange={(e) => setUsername(e.target.value)}
               maxLength={50}
               className="w-full px-4 py-3 bg-black/50 border border-cyan-700/80 rounded-lg text-cyan-100 font-bold tracking-wider placeholder-cyan-800 focus:outline-none focus:border-cyan-400 focus:ring-1 focus:ring-cyan-400 transition-all shadow-[inset_0_0_10px_rgba(0,255,255,0.05)]"
-              placeholder="新しい表示名を入力..."
+              placeholder="新しいユーザー名を入力..."
             />
             <p className="text-cyan-600/60 font-mono text-[10px] mt-2 text-right tracking-widest">
-              LENGTH: {displayName.length}/50
+              LENGTH: {username.length}/50
             </p>
           </div>
 

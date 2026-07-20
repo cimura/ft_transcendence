@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { signUpApi, AuthApiError } from '../api/auth'
 import { useAuthStore } from '../stores/authStore'
+import { LegalLinks } from './legal/LegalLinks'
 
 interface SignupProps {
   onSignupSuccess: () => void
@@ -34,7 +35,7 @@ export default function Signup({
     if (!usernameRegex.test(username)) {
       setFieldErrors({
         username:
-          'Username can only contain alphanumeric characters, underscores, and hyphens.',
+          'ユーザー名には英数字、アンダースコア、ハイフンのみ使用できます',
       })
       return
     }
@@ -202,6 +203,7 @@ export default function Signup({
             Sign in
           </button>
         </div>
+        <LegalLinks />
       </div>
     </div>
   )

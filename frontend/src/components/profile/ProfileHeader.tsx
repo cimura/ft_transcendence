@@ -47,8 +47,12 @@ export const ProfileHeader = ({
             {profile.displayName || profile.username}
           </h1>
           <p className="text-cyan-400/80 font-medium mb-1 tracking-wider">@{profile.username}</p>
-          <p className="text-cyan-100/40 text-sm">{profile.email}</p>
+          {profile.email && (
+            <p className="text-cyan-100/40 text-sm">{profile.email}</p>
+          )}
         </div>
+
+        {/* アクションボタン */}
 
         {/* アクションボタン */}
         <div className="flex gap-4 pt-4">

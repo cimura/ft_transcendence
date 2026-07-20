@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { useNavigate, useOutletContext } from 'react-router-dom'
 import { useAuthStore } from '../../stores/authStore'
+import { LegalLinks } from '../../components/legal/LegalLinks'
 import type { SettingsOutletContext } from './Settings'
 
 export const SettingsMenu = () => {
@@ -36,21 +37,8 @@ export const SettingsMenu = () => {
         <span className="text-cyan-500/50 group-hover:text-cyan-300 group-hover:translate-x-1 transition-all">&gt;</span>
       </button>
 
-      <button
-        onClick={() => navigate('notifications')}
-        className="group relative flex w-full items-center justify-between rounded-xl border border-cyan-500/30 bg-black/40 backdrop-blur-sm px-6 py-5 text-left font-bold text-cyan-100 transition-all duration-300 hover:border-cyan-300 hover:bg-cyan-950/40 hover:shadow-[0_0_15px_rgba(0,255,255,0.2)] hover:-translate-y-0.5"
-      >
-        <span className="tracking-wider">通知設定</span>
-        <span className="text-cyan-500/50 group-hover:text-cyan-300 group-hover:translate-x-1 transition-all">&gt;</span>
-      </button>
-
-      <button 
-        onClick={() => navigate('privacy')} 
-        className="group relative flex w-full items-center justify-between rounded-xl border border-cyan-500/30 bg-black/40 backdrop-blur-sm px-6 py-5 text-left font-bold text-cyan-100 transition-all duration-300 hover:border-cyan-300 hover:bg-cyan-950/40 hover:shadow-[0_0_15px_rgba(0,255,255,0.2)] hover:-translate-y-0.5"
-      >
-        <span className="tracking-wider">プライバシー</span>
-        <span className="text-cyan-500/50 group-hover:text-cyan-300 group-hover:translate-x-1 transition-all">&gt;</span>
-      </button>
+      {/* チームが追加した法的リンク（利用規約など） */}
+      <LegalLinks variant="menu" />
 
       {/* ログアウトは危険な操作なので赤く発光させる */}
       <button
