@@ -1,6 +1,7 @@
 import { create } from 'zustand'
 import { getNotifications } from '../api/notifications'
 import type { NotificationItem } from '../types/notification'
+import type { RealtimeNotification } from '@ft_transcendence/shared/realtime-events.types'
 
 interface NotificationStore {
   notifications: NotificationItem[]
@@ -10,6 +11,7 @@ interface NotificationStore {
   fetchNotifications: () => Promise<void>
   ensureNotifications: () => Promise<void>
   removeNotification: (notificationId: string) => void
+  addNotification: (notification: RealtimeNotification) => void
 }
 
 const toErrorMessage = (error: unknown) =>
@@ -47,4 +49,22 @@ export const useNotificationStore = create<NotificationStore>((set, get) => ({
         (notification) => notification.id !== notificationId
       ),
     })),
+
+  addNotification: (notification) =>
+    set((state) => {
+      if (state.notifications.some((item) => item.id === notification.id)) {
+        return state
+      }
+
+      return {
+        notifications: [
+          notification as NotificationItem,
+          ...state.notifications,
+        ].sort(
+          (a, b) =>
+            new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+        ),
+        loaded: true,
+      }
+    }),
 }))

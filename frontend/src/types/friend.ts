@@ -1,15 +1,12 @@
 /**
  * Friend type definition
- * Represents a user's friend with online status
+ * Represents a user's friend
  */
 export interface Friend {
   id: string
   username: string
   email: string
   avatarUrl?: string
-  isOnline: boolean
-  status: FriendStatus
-  lastSeen?: Date
 }
 
 /**
@@ -44,11 +41,6 @@ export interface SearchResult {
   isFriend: boolean
   isPending: boolean
 }
-
-/**
- * Friend status type for online/offline indicator
- */
-export type FriendStatus = 'online' | 'offline' | 'in_game'
 
 /**
  * Friend request status type

@@ -4,6 +4,7 @@ import {
   ForbiddenException,
   Injectable,
   NotFoundException,
+  Optional,
 } from '@nestjs/common';
 import { PrismaService } from '../prisma.service';
 import { GamesService } from '../games/games.service';
@@ -19,6 +20,7 @@ import { CreateRoomInvitationDto } from './dto/create-room-invitation.dto';
 import { CreateRoomDto } from './dto/create-room.dto';
 import { CreateRoomMessageDto } from './dto/create-room-message.dto';
 import type { QueryRoomStatus } from './dto/query-rooms.dto';
+import { RealtimeGateway } from '../websocket/realtime.gateway';
 
 const MAX_MESSAGES_PER_ROOM = 50;
 const MESSAGE_COOLDOWN_MS = 1000;
@@ -77,6 +79,7 @@ export class RoomsService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly gamesService: GamesService,
+    @Optional() private readonly realtimeGateway?: RealtimeGateway,
   ) {}
 
   async findAll(status?: QueryRoomStatus) {
@@ -227,7 +230,17 @@ export class RoomsService {
       throw error;
     }
 
-    return this.toInvitationResponse(invitation);
+    const invitationResponse = this.toInvitationResponse(invitation);
+    this.realtimeGateway?.emitNotificationForUser(inviteeId, {
+      id: invitationResponse.id,
+      type: 'room_invitation',
+      createdAt: invitationResponse.createdAt.toISOString(),
+      actor: invitationResponse.inviter,
+      room: invitationResponse.room,
+      invitationId: invitationResponse.id,
+    });
+
+    return invitationResponse;
   }
 
   async acceptInvitation(invitationId: string, userId: string) {

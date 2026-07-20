@@ -40,7 +40,7 @@ export class UsersService {
     });
 
     if (!user) {
-      throw new UnauthorizedException({
+      throw new NotFoundException({
         code: 'USER_NOT_FOUND',
         message: 'User not found',
       });

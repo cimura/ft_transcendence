@@ -25,6 +25,7 @@ import { NotificationSettings } from './pages/settings/NotificationPage'
 import { PrivacySettings } from './pages/settings/PrivacySettings'
 import { useAuthStore } from './stores/authStore'
 import { NotificationsPage } from './pages/NotificationsPage'
+import { useRealtimeSocket } from './hooks/useRealtimeSocket'
 
 function App() {
   return (
@@ -41,6 +42,7 @@ function AppRoutes() {
   const navigate = useNavigate()
   const location = useLocation()
   const isLoggedIn = useAuthStore((state) => Boolean(state.accessToken))
+  useRealtimeSocket()
 
   useEffect(() => {
     if (

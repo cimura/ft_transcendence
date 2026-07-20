@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { useParams, useNavigate } from 'react-router-dom'
+import { useParams, useNavigate, useLocation } from 'react-router-dom'
 import { useProfile } from '../hooks/useProfile'
 import { useAuthStore } from '../stores/authStore'
 import { ProfileHeader } from '../components/profile/ProfileHeader'
@@ -13,11 +13,19 @@ type TabType = 'stats' | 'history'
 export const ProfilePage = () => {
   const { userId } = useParams<{ userId: string }>()
   const navigate = useNavigate()
+  const location = useLocation()
   const { currentUser, fetchCurrentUser } = useAuthStore()
   const { profile: fetchedProfile, loading, error } = useProfile(userId)
   const [profile, setProfile] = useState<UserProfile | null>(null)
   const [activeTab, setActiveTab] = useState<TabType>('stats')
   const [isEditModalOpen, setIsEditModalOpen] = useState(false)
+  const profileBackPath =
+    typeof location.state === 'object' &&
+    location.state !== null &&
+    'from' in location.state &&
+    typeof location.state.from === 'string'
+      ? location.state.from
+      : '/home'
 
   // 現在のユーザー情報を取得
   useEffect(() => {
@@ -80,7 +88,7 @@ export const ProfilePage = () => {
         <ProfileHeader
           profile={profile}
           onEdit={() => setIsEditModalOpen(true)}
-          onBack={() => navigate('/home')}
+          onBack={() => navigate(profileBackPath)}
         />
 
         {/* タブナビゲーション */}

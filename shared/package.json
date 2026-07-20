@@ -16,6 +16,10 @@
     "./room-events.types": {
       "types": "./room-events.types.ts",
       "default": "./room-events.types.ts"
+    },
+    "./realtime-events.types": {
+      "types": "./realtime-events.types.ts",
+      "default": "./realtime-events.types.ts"
     }
   }
 }
