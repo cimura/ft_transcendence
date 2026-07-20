@@ -1,4 +1,4 @@
-import { ApiProperty } from '@nestjs/swagger';
+import { ApiProperty, OmitType } from '@nestjs/swagger';
 
 export class ProfileUserDto {
   @ApiProperty({
@@ -58,6 +58,24 @@ export class ProfileResponseDto {
     type: ProfileUserDto,
   })
   user: ProfileUserDto;
+}
+
+export class PublicProfileUserDto extends OmitType(ProfileUserDto, [
+  'email',
+] as const) {}
+
+export class PublicProfileResponseDto {
+  @ApiProperty({
+    example: 'Profile retrieved successfully.',
+    description: 'プロフィールを取得したことを示す通知文',
+  })
+  message: string;
+
+  @ApiProperty({
+    description: '公開ユーザー情報',
+    type: PublicProfileUserDto,
+  })
+  user: PublicProfileUserDto;
 }
 
 export class AvatarUpdateResponseDto {

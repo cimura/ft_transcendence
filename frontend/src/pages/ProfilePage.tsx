@@ -13,8 +13,12 @@ type TabType = 'stats' | 'history'
 export const ProfilePage = () => {
   const { userId } = useParams<{ userId: string }>()
   const navigate = useNavigate()
-  const { currentUser, fetchCurrentUser } = useAuthStore()
-  const { profile: fetchedProfile, loading, error } = useProfile(userId)
+  const { currentUser, fetchCurrentUser, error: authError } = useAuthStore()
+  const {
+    profile: fetchedProfile,
+    loading,
+    error,
+  } = useProfile(userId, currentUser?.id)
   const [profile, setProfile] = useState<UserProfile | null>(null)
   const [activeTab, setActiveTab] = useState<TabType>('stats')
   const [isEditModalOpen, setIsEditModalOpen] = useState(false)
@@ -47,7 +51,7 @@ export const ProfilePage = () => {
     setProfile(updatedProfile)
   }
 
-  if (loading) {
+  if (loading || (!currentUser && !authError)) {
     return (
       <div className="min-h-screen bg-black flex items-center justify-center">
         <div className="text-white/60 text-lg">プロフィールを読み込み中...</div>
@@ -55,10 +59,12 @@ export const ProfilePage = () => {
     )
   }
 
-  if (error) {
+  const pageError = error ?? authError
+
+  if (pageError) {
     return (
       <div className="min-h-screen bg-black flex items-center justify-center">
-        <div className="text-red-500 text-lg">エラー: {error}</div>
+        <div className="text-red-500 text-lg">エラー: {pageError}</div>
       </div>
     )
   }

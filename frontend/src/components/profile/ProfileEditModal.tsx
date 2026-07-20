@@ -1,8 +1,8 @@
-import { useState } from 'react'
+import { useCallback, useState } from 'react'
 import { Modal } from '../common/Modal'
 import { AvatarUpload } from './AvatarUpload'
 import { DefaultAvatarSelector } from './DefaultAvatarSelector'
-import { useUploadAvatar } from '../../hooks/useProfile'
+import { useUpdateProfile, useUploadAvatar } from '../../hooks/useProfile'
 import type { UserProfile } from '../../types/user'
 
 interface ProfileEditModalProps {
@@ -18,7 +18,7 @@ export const ProfileEditModal = ({
   profile,
   onSuccess,
 }: ProfileEditModalProps) => {
-  const [displayName, setDisplayName] = useState(profile.displayName || '')
+  const [username, setUsername] = useState(profile.username)
   const [selectedDefaultAvatar, setSelectedDefaultAvatar] = useState<
     string | null
   >(null)
@@ -30,64 +30,82 @@ export const ProfileEditModal = ({
     loading: avatarLoading,
     error: avatarError,
   } = useUploadAvatar()
+  const {
+    updateProfile,
+    loading: profileLoading,
+    error: profileError,
+  } = useUpdateProfile()
 
   const handleSave = async () => {
     try {
-      // アバターの更新
-      let newAvatarUrl: string | null = null
-      if (uploadedFile) {
-        // カスタム画像のアップロード
-        const updatedProfile = await uploadAvatar(uploadedFile)
-        if (!updatedProfile) return
-        newAvatarUrl = updatedProfile.avatarUrl || null
-      } else if (selectedDefaultAvatar) {
-        // デフォルトアバターの設定
-        newAvatarUrl = await setDefaultAvatar(selectedDefaultAvatar)
-        if (!newAvatarUrl) return
+      let updatedProfile = profile
+      const normalizedUsername = username.trim()
+
+      if (normalizedUsername !== profile.username) {
+        const profileResult = await updateProfile({
+          username: normalizedUsername,
+        })
+        if (!profileResult) return
+        updatedProfile = profileResult
+        // 後続のアバター更新が失敗しても、成功済みの変更を画面へ反映する
+        onSuccess(updatedProfile)
       }
 
-      // 成功時のコールバック
-      const updatedProfile: UserProfile = {
-        ...profile,
-        avatarUrl: newAvatarUrl || profile.avatarUrl,
+      // アバターの更新
+      if (uploadedFile) {
+        // カスタム画像のアップロード
+        const avatarResult = await uploadAvatar(uploadedFile)
+        if (!avatarResult) return
+        updatedProfile = avatarResult
+        onSuccess(updatedProfile)
+      } else if (selectedDefaultAvatar) {
+        // デフォルトアバターの設定
+        const newAvatarUrl = await setDefaultAvatar(selectedDefaultAvatar)
+        if (!newAvatarUrl) return
+        updatedProfile = { ...updatedProfile, avatarUrl: newAvatarUrl }
+        onSuccess(updatedProfile)
       }
-      onSuccess(updatedProfile)
+
+      setUsername(updatedProfile.username)
+      setSelectedDefaultAvatar(null)
+      setUploadedFile(null)
       onClose()
     } catch (error) {
       console.error('Failed to update profile:', error)
     }
   }
 
-  const handleClose = () => {
-    setDisplayName(profile.displayName || '')
+  const handleClose = useCallback(() => {
+    setUsername(profile.username)
     setSelectedDefaultAvatar(null)
     setUploadedFile(null)
     onClose()
-  }
+  }, [profile.username, onClose])
 
-  const isLoading = avatarLoading
-  const error = avatarError
+  const isLoading = profileLoading || avatarLoading
+  const error = profileError || avatarError
 
   return (
     <Modal isOpen={isOpen} onClose={handleClose}>
       <div className="bg-black/95 rounded-3xl border-2 border-white/30 p-8 max-w-2xl w-full max-h-[90vh] overflow-y-auto">
         <h2 className="text-3xl font-bold text-white mb-6">プロフィール編集</h2>
 
-        {/* DisplayName編集 */}
+        {/* ユーザー名編集 */}
         <div className="mb-6">
-          <label className="block text-white font-semibold mb-2">表示名</label>
+          <label className="block text-white font-semibold mb-2">
+            ユーザー名
+          </label>
           <input
             type="text"
-            value={displayName}
-            onChange={(e) => setDisplayName(e.target.value)}
-            maxLength={50}
+            value={username}
+            onChange={(e) => setUsername(e.target.value)}
             className="w-full px-4 py-2 bg-black/60 border-2 border-white/40
                      rounded-full text-white placeholder-white/40
                      focus:outline-none focus:border-white/60 transition-all"
-            placeholder="表示名を入力"
+            placeholder="ユーザー名を入力"
           />
           <p className="text-white/40 text-xs mt-1">
-            {displayName.length}/50文字
+            英数字、アンダースコア、ハイフンが使用できます
           </p>
         </div>
 
