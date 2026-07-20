@@ -23,6 +23,8 @@ import { SettingsMenu } from './pages/settings/SettingsMenu'
 import { AccountManagement } from './pages/settings/AccountManagement'
 import { useAuthStore } from './stores/authStore'
 import { NotificationsPage } from './pages/NotificationsPage'
+import { PrivacyPolicyPage } from './pages/legal/PrivacyPolicyPage'
+import { TermsOfServicePage } from './pages/legal/TermsOfServicePage'
 
 function App() {
   return (
@@ -36,6 +38,27 @@ function App() {
  * Renders application routes according to the user's authentication state.
  */
 function AppRoutes() {
+  return (
+    <Routes>
+      <Route path="/legal/privacy-policy" element={<PrivacyPolicyPage />} />
+      <Route path="/legal/terms-of-service" element={<TermsOfServicePage />} />
+      <Route
+        path="/privacy-policy"
+        element={<Navigate to="/legal/privacy-policy" replace />}
+      />
+      <Route
+        path="/terms-of-service"
+        element={<Navigate to="/legal/terms-of-service" replace />}
+      />
+      <Route path="*" element={<AuthenticatedRoutes />} />
+    </Routes>
+  )
+}
+
+/**
+ * Renders routes whose behavior depends on the user's authentication state.
+ */
+function AuthenticatedRoutes() {
   const navigate = useNavigate()
   const location = useLocation()
   const isLoggedIn = useAuthStore((state) => Boolean(state.accessToken))

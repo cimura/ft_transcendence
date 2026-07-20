@@ -49,7 +49,6 @@ export const ProfileEditModal = ({
       // 成功時のコールバック
       const updatedProfile: UserProfile = {
         ...profile,
-        displayName,
         avatarUrl: newAvatarUrl || profile.avatarUrl,
       }
       onSuccess(updatedProfile)

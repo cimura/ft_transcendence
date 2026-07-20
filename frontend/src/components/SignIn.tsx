@@ -3,6 +3,7 @@ import { useState } from 'react'
 import { signInApi, AuthApiError } from '../api/auth'
 import { useAuthStore } from '../stores/authStore'
 import type { LoginCredentials } from '../types/user'
+import { LegalLinks } from './legal/LegalLinks'
 
 interface SignInProps {
   onSignInSuccess: () => void
@@ -128,6 +129,7 @@ export default function SignIn({
             Sign up
           </button>
         </div>
+        <LegalLinks />
       </div>
     </div>
   )

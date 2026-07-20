@@ -145,6 +145,12 @@ export function disconnectPlayerFromRoom(
     return { success: false, isAllDisconnected: false };
   }
 
+  // 入力をリセット
+  const playerInput = room.playerInputs?.[playerId];
+  if (playerInput) {
+    playerInput.direction = null;
+  }
+
   // 切断時の時間を保存（タイムアウト判定のため）
   player.isDisconnected = true;
   room.playerConnections[playerId].clientId = '';

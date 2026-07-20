@@ -168,7 +168,7 @@ export const uploadAvatar = async (file: File): Promise<UserProfile> => {
     formData,
     {
       headers: {
-        'Content-Type': 'multipart/form-data',
+        'Content-Type': undefined,
       },
     }
   )
