@@ -12,6 +12,8 @@ const apiErrorMessages: Record<string, string> = {
   CURRENT_PASSWORD_REQUIRED: '現在のパスワードを入力してください。',
   CURRENT_PASSWORD_INVALID: '現在のパスワードが正しくありません。',
   USER_NOT_FOUND: 'ユーザーが見つかりません。',
+  ROOM_INVITATION_NO_LONGER_ALLOWED:
+    'フレンド関係が解除されたため、この招待には参加できません。',
 }
 
 const isValidationMessages = (message: unknown): message is string[] =>
