@@ -10,7 +10,7 @@ export const PrivacySettings = () => {
       <p className="mb-2 text-sm font-bold tracking-widest text-cyan-400/60">
         SECURITY LEVEL (公開範囲)
       </p>
-      
+
       <div className="grid gap-3">
         {privacyOptions.map((option) => (
           <button

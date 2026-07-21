@@ -79,7 +79,9 @@ export function FriendsListPage() {
         <div className="bg-black/50 backdrop-blur-md border-x border-cyan-500/30 px-8 py-6 space-y-4 min-h-[320px]">
           {loading ? (
             <div className="flex items-center justify-center py-12">
-              <div className="text-cyan-100/60 text-xl animate-pulse">読み込み中...</div>
+              <div className="text-cyan-100/60 text-xl animate-pulse">
+                読み込み中...
+              </div>
             </div>
           ) : error ? (
             <div className="flex items-center justify-center py-12">
@@ -87,7 +89,9 @@ export function FriendsListPage() {
             </div>
           ) : friends.length === 0 ? (
             <div className="flex items-center justify-center py-12">
-              <div className="text-cyan-100/50 text-xl tracking-widest">フレンドはいません</div>
+              <div className="text-cyan-100/50 text-xl tracking-widest">
+                フレンドはいません
+              </div>
             </div>
           ) : (
             displayedFriends.map((friend) => (
@@ -115,7 +119,8 @@ export function FriendsListPage() {
             {/* ページ表示 */}
             <div className="bg-black/40 border border-cyan-500/50 rounded-full px-8 py-3 shadow-[inset_0_0_15px_rgba(0,255,255,0.1)]">
               <span className="text-cyan-100 text-2xl font-bold tracking-widest">
-                {displayedCount} <span className="text-cyan-500/50">/</span> {friends.length}
+                {displayedCount} <span className="text-cyan-500/50">/</span>{' '}
+                {friends.length}
               </span>
             </div>
 

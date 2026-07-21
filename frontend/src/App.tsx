@@ -31,7 +31,7 @@ function App() {
   return (
     <BrowserRouter>
       <BackgroundVideo />
-      
+
       {/* コンテンツが背景の上に重なるように相対位置を指定 */}
       <div className="relative z-10 w-full h-full min-h-screen">
         <AppRoutes />

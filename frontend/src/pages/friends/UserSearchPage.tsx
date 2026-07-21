@@ -51,7 +51,9 @@ export function UserSearchPage() {
           {/* ローディング表示 */}
           {loading && (
             <div className="flex items-center justify-center py-12">
-              <div className="text-cyan-100/60 text-xl animate-pulse">検索中...</div>
+              <div className="text-cyan-100/60 text-xl animate-pulse">
+                検索中...
+              </div>
             </div>
           )}
 

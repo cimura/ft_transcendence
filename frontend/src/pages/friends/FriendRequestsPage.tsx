@@ -46,7 +46,9 @@ export function FriendRequestsPage() {
           {/* リクエストリスト */}
           {loading ? (
             <div className="flex items-center justify-center py-12">
-              <div className="text-cyan-100/60 text-xl animate-pulse">読み込み中...</div>
+              <div className="text-cyan-100/60 text-xl animate-pulse">
+                読み込み中...
+              </div>
             </div>
           ) : error ? (
             <div className="flex items-center justify-center py-12">

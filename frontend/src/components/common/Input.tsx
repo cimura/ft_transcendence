@@ -1,8 +1,8 @@
 // frontend/src/components/common/Input.tsx
-import React from 'react';
+import React from 'react'
 
 interface InputProps extends React.InputHTMLAttributes<HTMLInputElement> {
-  label: string;
+  label: string
 }
 
 const Input: React.FC<InputProps> = ({ label, ...props }) => {
@@ -22,7 +22,7 @@ const Input: React.FC<InputProps> = ({ label, ...props }) => {
         {...props}
       />
     </div>
-  );
-};
+  )
+}
 
-export default Input;
+export default Input

@@ -25,8 +25,7 @@ export class UpdateUserDto {
   @IsOptional()
   @IsString()
   @Matches(/^[a-zA-Z0-9_-]+$/, {
-    message:
-      'ユーザー名には英数字、アンダースコア、ハイフンのみ使用できます',
+    message: 'ユーザー名には英数字、アンダースコア、ハイフンのみ使用できます',
   })
   username?: string;
 

@@ -8,8 +8,8 @@ export function PlayerCard({ player }: Props) {
   return (
     <div
       className={`group flex items-center justify-between rounded-xl border p-4 transition-all duration-300 backdrop-blur-sm ${
-        player.isReady 
-          ? 'bg-cyan-900/20 border-cyan-400/50 shadow-[inset_0_0_15px_rgba(0,255,255,0.05)]' 
+        player.isReady
+          ? 'bg-cyan-900/20 border-cyan-400/50 shadow-[inset_0_0_15px_rgba(0,255,255,0.05)]'
           : 'bg-black/40 border-cyan-800/50 hover:border-cyan-500/50 hover:bg-cyan-950/30'
       }`}
     >
@@ -17,9 +17,13 @@ export function PlayerCard({ player }: Props) {
       <div className="flex items-center gap-4">
         {/* アバター */}
         <div className="relative">
-          <div className={`flex h-12 w-12 items-center justify-center rounded-full border-2 font-bold text-lg shadow-[0_0_10px_rgba(0,255,255,0.2)] ${
-            player.isReady ? 'bg-cyan-700/80 border-cyan-300 text-white' : 'bg-cyan-950 border-cyan-700 text-cyan-300'
-          }`}>
+          <div
+            className={`flex h-12 w-12 items-center justify-center rounded-full border-2 font-bold text-lg shadow-[0_0_10px_rgba(0,255,255,0.2)] ${
+              player.isReady
+                ? 'bg-cyan-700/80 border-cyan-300 text-white'
+                : 'bg-cyan-950 border-cyan-700 text-cyan-300'
+            }`}
+          >
             {player.username.charAt(0).toUpperCase()}
           </div>
           {/* 装飾のリング */}

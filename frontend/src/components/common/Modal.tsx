@@ -8,7 +8,13 @@ interface ModalProps {
   className?: string
 }
 
-export function Modal({ isOpen, onClose, title, children, className }: ModalProps) {
+export function Modal({
+  isOpen,
+  onClose,
+  title,
+  children,
+  className,
+}: ModalProps) {
   // close with esc
   useEffect(() => {
     const handleEsc = (e: KeyboardEvent) => {
@@ -32,7 +38,11 @@ export function Modal({ isOpen, onClose, title, children, className }: ModalProp
       onClick={onClose}
     >
       <div
-        className={className !== undefined ? className : "relative w-full max-w-md rounded-2xl border border-cyan-500/50 bg-black/60 backdrop-blur-md p-6 shadow-[0_0_30px_rgba(0,255,255,0.15)] text-cyan-100"}
+        className={
+          className !== undefined
+            ? className
+            : 'relative w-full max-w-md rounded-2xl border border-cyan-500/50 bg-black/60 backdrop-blur-md p-6 shadow-[0_0_30px_rgba(0,255,255,0.15)] text-cyan-100'
+        }
         onClick={(e) => e.stopPropagation()}
       >
         {title && (

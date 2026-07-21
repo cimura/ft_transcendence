@@ -80,7 +80,6 @@ export function NotificationsPage() {
   return (
     <div className="min-h-screen bg-transparent flex items-center justify-center p-4 relative">
       <div className="relative w-full max-w-4xl z-10 mt-12">
-        
         <button
           onClick={() => navigate(-1)}
           className="absolute -top-16 left-0 bg-black/40 backdrop-blur-md text-cyan-100 px-6 py-2 rounded-full border border-cyan-500/50 hover:bg-cyan-900/50 hover:border-cyan-300 hover:shadow-[0_0_15px_rgba(0,255,255,0.3)] transition-all"
@@ -104,7 +103,9 @@ export function NotificationsPage() {
 
           {loading ? (
             <div className="flex items-center justify-center py-12">
-              <div className="text-cyan-100/60 text-xl animate-pulse">受信中...</div>
+              <div className="text-cyan-100/60 text-xl animate-pulse">
+                受信中...
+              </div>
             </div>
           ) : error ? (
             <div className="flex items-center justify-center py-12">
@@ -112,7 +113,9 @@ export function NotificationsPage() {
             </div>
           ) : notifications.length === 0 ? (
             <div className="flex items-center justify-center py-12">
-              <div className="text-cyan-100/40 text-xl tracking-widest">NO NEW MESSAGES</div>
+              <div className="text-cyan-100/40 text-xl tracking-widest">
+                NO NEW MESSAGES
+              </div>
             </div>
           ) : (
             <div className="space-y-4">
@@ -145,7 +148,9 @@ export function NotificationsPage() {
                         </div>
                       )}
                       <div className="min-w-0">
-                        <p className="text-lg font-bold text-white tracking-wide">{title}</p>
+                        <p className="text-lg font-bold text-white tracking-wide">
+                          {title}
+                        </p>
                         <p className="text-sm text-cyan-200/80">{detail}</p>
                         <p className="mt-1 text-xs text-cyan-100/40 font-mono">
                           {formatDate(item.createdAt)}

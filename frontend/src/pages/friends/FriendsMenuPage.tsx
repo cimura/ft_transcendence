@@ -11,7 +11,6 @@ export function FriendsMenuPage() {
     // 変更点: 背景を透明に
     <div className="min-h-screen bg-transparent flex items-center justify-center p-4 relative">
       <div className="relative w-full max-w-2xl z-10">
-        
         {/* 戻るボタン: SF風の小さなパネルに */}
         <button
           onClick={() => navigate(-1)}
@@ -31,13 +30,14 @@ export function FriendsMenuPage() {
 
         {/* メニューボタン */}
         <div className="bg-black/50 backdrop-blur-md border-x border-b border-cyan-500/30 rounded-b-3xl px-8 py-12 space-y-6">
-          
           {/* フレンド一覧ボタン */}
           <button
             onClick={() => navigate('/friends/list')}
             className="group w-full bg-cyan-950/30 text-cyan-100 text-2xl font-bold py-6 rounded-tl-2xl rounded-br-2xl rounded-tr-sm rounded-bl-sm border border-cyan-500/40 hover:border-cyan-300 hover:bg-cyan-900/50 hover:shadow-[0_0_20px_rgba(0,255,255,0.4)] hover:-translate-y-1 transition-all duration-300"
           >
-            <span className="relative z-10 transition-all duration-300 group-hover:tracking-[0.2em]">フレンド一覧</span>
+            <span className="relative z-10 transition-all duration-300 group-hover:tracking-[0.2em]">
+              フレンド一覧
+            </span>
           </button>
 
           {/* フレンドリクエストボタン */}
@@ -45,7 +45,9 @@ export function FriendsMenuPage() {
             onClick={() => navigate('/friends/requests')}
             className="group w-full bg-cyan-950/30 text-cyan-100 text-2xl font-bold py-6 rounded-tr-2xl rounded-bl-2xl rounded-tl-sm rounded-br-sm border border-cyan-500/40 hover:border-cyan-300 hover:bg-cyan-900/50 hover:shadow-[0_0_20px_rgba(0,255,255,0.4)] hover:-translate-y-1 transition-all duration-300"
           >
-            <span className="relative z-10 transition-all duration-300 group-hover:tracking-[0.2em]">フレンドリクエスト</span>
+            <span className="relative z-10 transition-all duration-300 group-hover:tracking-[0.2em]">
+              フレンドリクエスト
+            </span>
           </button>
 
           {/* ユーザー検索ボタン */}
@@ -53,7 +55,9 @@ export function FriendsMenuPage() {
             onClick={() => navigate('/friends/search')}
             className="group w-full bg-cyan-950/30 text-cyan-100 text-2xl font-bold py-6 rounded-tl-2xl rounded-br-2xl rounded-tr-sm rounded-bl-sm border border-cyan-500/40 hover:border-cyan-300 hover:bg-cyan-900/50 hover:shadow-[0_0_20px_rgba(0,255,255,0.4)] hover:-translate-y-1 transition-all duration-300"
           >
-            <span className="relative z-10 transition-all duration-300 group-hover:tracking-[0.2em]">ユーザー検索</span>
+            <span className="relative z-10 transition-all duration-300 group-hover:tracking-[0.2em]">
+              ユーザー検索
+            </span>
           </button>
         </div>
       </div>

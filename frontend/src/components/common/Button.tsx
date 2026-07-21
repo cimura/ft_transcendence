@@ -15,7 +15,7 @@ export function Button({
   ...props
 }: ButtonProps) {
   const baseStyles =
-  'rounded-full font-bold tracking-wider transition-all duration-300 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-black disabled:cursor-not-allowed disabled:opacity-50 border border-transparent backdrop-blur-sm'
+    'rounded-full font-bold tracking-wider transition-all duration-300 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-black disabled:cursor-not-allowed disabled:opacity-50 border border-transparent backdrop-blur-sm'
   const variantStyles = {
     primary:
       // ネオンシアンの輝きを持つボタン

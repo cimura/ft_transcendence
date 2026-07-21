@@ -16,7 +16,6 @@ export const ProfileHeader = ({
   return (
     // 変更点: 半透明のパネル＋上部の角を斜めカット（Homeのボタンと同じ雰囲気）
     <div className="bg-black/50 backdrop-blur-md rounded-t-2xl border border-cyan-500/30 px-8 py-8 relative overflow-hidden">
-      
       {/* 背景の装飾的な光 */}
       <div className="absolute top-0 right-0 w-64 h-64 bg-cyan-600/10 rounded-full blur-3xl pointer-events-none" />
 
@@ -25,7 +24,7 @@ export const ProfileHeader = ({
         <div className="relative group">
           {/* アバターの後光エフェクト */}
           <div className="absolute inset-0 bg-cyan-500 rounded-full blur-md opacity-30 group-hover:opacity-60 transition-opacity duration-300" />
-          
+
           {profile.avatarUrl ? (
             <img
               src={profile.avatarUrl}
@@ -46,7 +45,9 @@ export const ProfileHeader = ({
           <h1 className="text-4xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-white to-cyan-200 mb-2 tracking-wide">
             {profile.displayName || profile.username}
           </h1>
-          <p className="text-cyan-400/80 font-medium mb-1 tracking-wider">@{profile.username}</p>
+          <p className="text-cyan-400/80 font-medium mb-1 tracking-wider">
+            @{profile.username}
+          </p>
           {profile.email && (
             <p className="text-cyan-100/40 text-sm">{profile.email}</p>
           )}

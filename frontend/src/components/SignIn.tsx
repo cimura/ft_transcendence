@@ -72,20 +72,19 @@ export default function SignIn({
   return (
     // 背景の gray-100 を削除し、文字色を基本白に
     <div className="min-h-screen flex items-center justify-center relative text-white">
-      
       {/* すりガラス風（グラスモーフィズム）のカードデザイン */}
       <div className="bg-black/40 backdrop-blur-md border border-cyan-500/30 p-8 rounded-xl shadow-[0_0_20px_rgba(0,255,255,0.15)] w-96 relative z-10">
         <h1 className="text-3xl font-bold mb-6 text-center tracking-wider text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 to-blue-500">
           SignIn
         </h1>
-        
+
         <form action={handleSignIn} className="space-y-5">
           {error && (
             <div className="bg-red-900/50 border border-red-500 text-red-200 px-4 py-3 rounded backdrop-blur-sm">
               {error}
             </div>
           )}
-          
+
           {/** Identifier (Email or Username) */}
           <div>
             <label
@@ -104,7 +103,7 @@ export default function SignIn({
               placeholder="Enter your ID"
             />
           </div>
-          
+
           {/** Password */}
           <div>
             <label
@@ -122,7 +121,7 @@ export default function SignIn({
               placeholder="••••••••"
             />
           </div>
-          
+
           {/** SignIn Button */}
           <button
             type="submit"
@@ -133,7 +132,7 @@ export default function SignIn({
             {loading ? 'Scanning...' : 'Enter System'}
           </button>
         </form>
-        
+
         <div className="mt-6 text-center text-sm text-cyan-200/70">
           Don't have an account?{' '}
           <button

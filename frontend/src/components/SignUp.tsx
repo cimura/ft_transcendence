@@ -79,20 +79,19 @@ export default function Signup({
   return (
     // 背景を透明にして文字色を白ベースに
     <div className="min-h-screen flex items-center justify-center relative text-white">
-      
       {/* すりガラス風のカードデザイン */}
       <div className="bg-black/40 backdrop-blur-md border border-cyan-500/30 p-8 rounded-xl shadow-[0_0_20px_rgba(0,255,255,0.15)] w-96 relative z-10">
         <h1 className="text-3xl font-bold mb-6 text-center tracking-wider text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 to-blue-500">
           Sign Up
         </h1>
-        
+
         <form action={handleSignup} className="space-y-5">
           {error && (
             <div className="bg-red-900/50 border border-red-500 text-red-200 px-4 py-3 rounded backdrop-blur-sm">
               {error}
             </div>
           )}
-          
+
           {/** Email */}
           <div>
             <label
@@ -117,7 +116,7 @@ export default function Signup({
               <p className="text-red-400 text-xs mt-1">{fieldErrors.email}</p>
             )}
           </div>
-          
+
           {/** Username */}
           <div>
             <label
@@ -145,7 +144,7 @@ export default function Signup({
               </p>
             )}
           </div>
-          
+
           {/** Password */}
           <div>
             <label
@@ -164,7 +163,7 @@ export default function Signup({
               placeholder="••••••••"
             />
           </div>
-          
+
           {/** Confirm Password */}
           <div>
             <label
@@ -183,7 +182,7 @@ export default function Signup({
               placeholder="••••••••"
             />
           </div>
-          
+
           {/** Signup Button */}
           <button
             type="submit"
@@ -193,7 +192,7 @@ export default function Signup({
             {loading ? 'Registering...' : 'Initialize Account'}
           </button>
         </form>
-        
+
         <div className="mt-6 text-center text-sm text-cyan-200/70">
           Already have an account?{' '}
           <button

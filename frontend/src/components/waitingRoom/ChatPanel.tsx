@@ -16,7 +16,8 @@ const statusLabel = {
 }
 
 const statusClassName = {
-  connecting: 'bg-yellow-400 shadow-[0_0_8px_rgba(250,204,21,0.8)] animate-pulse',
+  connecting:
+    'bg-yellow-400 shadow-[0_0_8px_rgba(250,204,21,0.8)] animate-pulse',
   connected: 'bg-emerald-400 shadow-[0_0_8px_rgba(52,211,153,0.8)]',
   disconnected: 'bg-red-500 shadow-[0_0_8px_rgba(239,68,68,0.8)]',
 }
@@ -57,7 +58,6 @@ export function ChatPanel({
 
   return (
     <aside className="flex h-[560px] min-h-[420px] flex-col overflow-hidden rounded-2xl border border-cyan-500/30 bg-black/50 backdrop-blur-md shadow-[0_0_30px_rgba(0,255,255,0.05)]">
-      
       {/* ヘッダー */}
       <div className="flex items-center justify-between border-b border-cyan-500/30 bg-cyan-950/20 px-5 py-4 relative">
         <div className="absolute top-0 left-0 w-full h-[1px] bg-gradient-to-r from-cyan-400 to-transparent opacity-50" />
@@ -65,7 +65,9 @@ export function ChatPanel({
           <h2 className="text-lg font-bold tracking-widest text-cyan-100 flex items-center gap-2">
             <span className="w-1.5 h-1.5 bg-cyan-400 rounded-full" /> COMMS LINK
           </h2>
-          <p className="text-[10px] font-mono text-cyan-500/60 mt-0.5 tracking-[0.2em]">CH // {roomId.slice(0,8)}</p>
+          <p className="text-[10px] font-mono text-cyan-500/60 mt-0.5 tracking-[0.2em]">
+            CH // {roomId.slice(0, 8)}
+          </p>
         </div>
         <div className="flex items-center gap-2 text-[10px] font-mono tracking-widest text-cyan-300">
           <span
@@ -121,7 +123,11 @@ export function ChatPanel({
                           {message.username}
                         </span>
                       )}
-                      <span className={isOwnMessage ? 'text-cyan-200/50' : 'text-cyan-700/50'}>
+                      <span
+                        className={
+                          isOwnMessage ? 'text-cyan-200/50' : 'text-cyan-700/50'
+                        }
+                      >
                         {formatMessageTime(message.createdAt)}
                       </span>
                     </div>
@@ -146,13 +152,15 @@ export function ChatPanel({
           メッセージ
         </label>
         <div className="flex gap-2 relative">
-          <span className="absolute left-3 top-1/2 -translate-y-1/2 text-cyan-600 font-mono text-sm">&gt;</span>
+          <span className="absolute left-3 top-1/2 -translate-y-1/2 text-cyan-600 font-mono text-sm">
+            &gt;
+          </span>
           <input
             id="chat-message"
             type="text"
             value={draft}
             onChange={(event) => setDraft(event.target.value)}
-            placeholder={accessToken ? "TRANSMIT MESSAGE..." : "LOGIN REQUIRED"}
+            placeholder={accessToken ? 'TRANSMIT MESSAGE...' : 'LOGIN REQUIRED'}
             disabled={!accessToken}
             className="min-w-0 flex-1 rounded-md border border-cyan-800 bg-cyan-950/20 pl-8 pr-3 py-2.5 text-sm text-cyan-100 font-mono placeholder-cyan-800/80 outline-none transition focus:border-cyan-400 focus:bg-cyan-950/40 focus:ring-1 focus:ring-cyan-400 disabled:opacity-50"
             maxLength={MAX_CHAT_MESSAGE_LENGTH}

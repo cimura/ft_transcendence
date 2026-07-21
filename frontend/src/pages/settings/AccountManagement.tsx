@@ -48,10 +48,18 @@ export const AccountManagement = () => {
         // ユーザー情報のディスプレイ部分（HUD風）
         <div className="relative rounded-xl border border-cyan-500/30 bg-black/40 backdrop-blur-sm p-6 overflow-hidden">
           <div className="absolute top-0 left-0 w-1 h-full bg-cyan-500 shadow-[0_0_10px_rgba(0,255,255,0.8)]" />
-          <p className="text-xs font-bold tracking-widest text-cyan-400/60 mb-1">USER ID / NAME</p>
-          <p className="text-2xl font-bold tracking-wider text-cyan-100 mb-4">{currentUser.username}</p>
-          <p className="text-xs font-bold tracking-widest text-cyan-400/60 mb-1">COMMUNICATION LINK</p>
-          <p className="text-cyan-200/80 font-mono text-sm">{currentUser.email}</p>
+          <p className="text-xs font-bold tracking-widest text-cyan-400/60 mb-1">
+            USER ID / NAME
+          </p>
+          <p className="text-2xl font-bold tracking-wider text-cyan-100 mb-4">
+            {currentUser.username}
+          </p>
+          <p className="text-xs font-bold tracking-widest text-cyan-400/60 mb-1">
+            COMMUNICATION LINK
+          </p>
+          <p className="text-cyan-200/80 font-mono text-sm">
+            {currentUser.email}
+          </p>
         </div>
       )}
 

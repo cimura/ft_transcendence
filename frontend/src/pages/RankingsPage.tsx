@@ -47,7 +47,6 @@ export function RankingsPage() {
   return (
     <div className="min-h-screen bg-transparent px-4 py-6 text-cyan-100 relative flex justify-center">
       <div className="w-full max-w-4xl relative z-10 mt-4">
-        
         <div className="mb-8 flex items-center justify-between">
           <button
             onClick={() => navigate('/home')}
@@ -110,11 +109,15 @@ export function RankingsPage() {
                     {item.draws}分
                   </span>
                 </span>
-                <span className="text-right font-bold text-cyan-200">{item.points}</span>
+                <span className="text-right font-bold text-cyan-200">
+                  {item.points}
+                </span>
                 <span className="hidden text-right sm:block text-cyan-100/80">
                   {item.winRate}%
                 </span>
-                <span className="hidden text-right sm:block text-cyan-100/80">{item.kills}</span>
+                <span className="hidden text-right sm:block text-cyan-100/80">
+                  {item.kills}
+                </span>
               </button>
             ))}
         </div>
