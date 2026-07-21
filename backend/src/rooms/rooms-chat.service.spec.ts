@@ -73,7 +73,7 @@ describe('RoomsChatService', () => {
     service = new RoomsChatService(prisma as unknown as PrismaService);
   });
 
-  it('escapes chat content and prunes messages beyond the latest 50', async () => {
+  it('prunes messages beyond the latest 50', async () => {
     const room = createRoom();
     prisma.gameRoom.findUnique.mockResolvedValue(room);
     prisma.roomMessage.findFirst.mockResolvedValue(null);
@@ -84,7 +84,7 @@ describe('RoomsChatService', () => {
           id: 'message-new',
           roomId: room.id,
           senderId: user.id,
-          content: '&lt;b&gt;hello&lt;/b&gt;',
+          content: '<b>hello</b>',
           createdAt: now,
           sender: user,
         }),
@@ -104,7 +104,7 @@ describe('RoomsChatService', () => {
     expect(tx.roomMessage.create).toHaveBeenCalledWith(
       expect.objectContaining({
         data: expect.objectContaining({
-          content: '&lt;b&gt;hello&lt;/b&gt;',
+          content: '<b>hello</b>',
         }),
       }),
     );
@@ -116,7 +116,7 @@ describe('RoomsChatService', () => {
     expect(tx.roomMessage.deleteMany).toHaveBeenCalledWith({
       where: { id: { in: ['message-old'] } },
     });
-    expect(result.content).toBe('&lt;b&gt;hello&lt;/b&gt;');
+    expect(result.content).toBe('<b>hello</b>');
   });
 
   it('rejects chat messages sent within the one second cooldown', async () => {

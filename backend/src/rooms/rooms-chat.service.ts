@@ -92,7 +92,7 @@ export class RoomsChatService {
         data: {
           roomId,
           senderId: userId,
-          content: this.escapeHtml(content),
+          content,
         },
         include: {
           sender: {
@@ -162,14 +162,5 @@ export class RoomsChatService {
 
   private userName(user: { email: string; displayName: string | null }) {
     return user.displayName ?? user.email;
-  }
-
-  private escapeHtml(value: string) {
-    return value
-      .replace(/&/g, '&amp;')
-      .replace(/</g, '&lt;')
-      .replace(/>/g, '&gt;')
-      .replace(/"/g, '&quot;')
-      .replace(/'/g, '&#039;');
   }
 }

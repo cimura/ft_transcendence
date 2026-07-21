@@ -2,7 +2,7 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { RoomsGateway } from './rooms.gateway';
 import { SocketAuthService } from '../websocket/socket-auth.service';
 import { RoomsChatService } from './rooms-chat.service';
-import type { RoomResponse } from './rooms.service';
+import type { RoomResponse } from './rooms.types';
 
 describe('RoomsGateway', () => {
   let gateway: RoomsGateway;
