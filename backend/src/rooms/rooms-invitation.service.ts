@@ -10,11 +10,10 @@ import { Prisma } from '../generated/prisma/client';
 import {
   FriendRequestStatus,
   RoomInvitationStatus,
-  RoomStatus,
 } from '../generated/prisma/enums';
 import { CreateRoomInvitationDto } from './dto/create-room-invitation.dto';
 import { RoomsService } from './rooms.service';
-import { RoomResponse } from './rooms.types';
+import { RoomResponse } from '../common/types/room.type';
 
 type InvitationStatusResponse = 'pending' | 'accepted' | 'declined' | 'expired';
 
@@ -35,31 +34,18 @@ export class RoomsInvitationService {
       throw new BadRequestException('You cannot invite yourself');
     }
 
-    const room = await this.prisma.gameRoom.findUnique({
-      where: { id: roomId },
-      include: {
-        participants: { select: { userId: true } },
-      },
-    });
+    const room = this.roomsService.getRoomOrThrow(roomId);
 
-    if (!room) {
-      throw new NotFoundException('Room not found');
-    }
-
-    if (room.status !== RoomStatus.WAITING) {
+    if (room.status !== 'WAITING') {
       throw new ConflictException('Only waiting rooms can be invited to');
     }
 
-    const inviter = room.participants.find(
-      (participant) => participant.userId === inviterId,
-    );
+    const inviter = room.participants[inviterId];
     if (!inviter) {
       throw new ForbiddenException('You are not a participant of this room');
     }
 
-    if (
-      room.participants.some((participant) => participant.userId === inviteeId)
-    ) {
+    if (room.participants[inviteeId]) {
       throw new ConflictException('Invitee is already in this room');
     }
 
@@ -93,11 +79,13 @@ export class RoomsInvitationService {
       },
       include: this.invitationInclude(),
     });
+
     if (existingInvitation) {
-      return this.toInvitationResponse(existingInvitation);
+      return this.toInvitationResponse(existingInvitation, room.name);
     }
 
-    let invitation: Parameters<typeof this.toInvitationResponse>[0];
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    let invitation: any;
     try {
       invitation = await this.prisma.roomInvitation.create({
         data: {
@@ -118,13 +106,13 @@ export class RoomsInvitationService {
           include: this.invitationInclude(),
         });
         if (pendingInvitation) {
-          return this.toInvitationResponse(pendingInvitation);
+          return this.toInvitationResponse(pendingInvitation, room.name);
         }
       }
       throw error;
     }
 
-    return this.toInvitationResponse(invitation);
+    return this.toInvitationResponse(invitation, room.name);
   }
 
   async acceptInvitation(
@@ -179,19 +167,15 @@ export class RoomsInvitationService {
         );
       }
 
-      // RoomsService のメソッドを利用して安全に参加処理を行う
-      acceptedRoomId = await this.roomsService.joinRoomWithinTransaction(
-        tx,
-        invitation.roomId,
-        userId,
-      );
+      acceptedRoomId = invitation.roomId;
     });
 
     if (!acceptedRoomId) {
       throw new NotFoundException('Room not found');
     }
 
-    return this.roomsService.findOne(acceptedRoomId);
+    // データベースでの招待状態の更新が成功してから、メモリ上のルームに参加させる
+    return this.roomsService.join(acceptedRoomId, userId);
   }
 
   async declineInvitation(invitationId: string, userId: string) {
@@ -252,40 +236,11 @@ export class RoomsInvitationService {
           avatarUrl: true,
         },
       },
-      room: {
-        select: {
-          id: true,
-          name: true,
-        },
-      },
     };
   }
 
-  private toInvitationResponse(invitation: {
-    id: string;
-    roomId: string;
-    inviterId: string;
-    inviteeId: string;
-    status: RoomInvitationStatus;
-    createdAt: Date;
-    updatedAt: Date;
-    inviter: {
-      id: string;
-      email: string;
-      displayName: string | null;
-      avatarUrl: string | null;
-    };
-    invitee: {
-      id: string;
-      email: string;
-      displayName: string | null;
-      avatarUrl: string | null;
-    };
-    room: {
-      id: string;
-      name: string;
-    };
-  }) {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  private toInvitationResponse(invitation: any, roomName: string) {
     return {
       id: invitation.id,
       roomId: invitation.roomId,
@@ -304,7 +259,10 @@ export class RoomsInvitationService {
         username: this.userName(invitation.invitee),
         avatarUrl: invitation.invitee.avatarUrl,
       },
-      room: invitation.room,
+      room: {
+        id: invitation.roomId,
+        name: roomName,
+      },
     };
   }
 

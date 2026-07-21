@@ -23,7 +23,7 @@ import {
   RoomServerToClientEvents,
   RoomSnapshot,
 } from '@ft_transcendence/shared/rooms-events.types';
-import type { RoomResponse } from './rooms.types';
+import type { RoomResponse } from '../common/types/room.type';
 
 interface ConnectionData {
   user: {

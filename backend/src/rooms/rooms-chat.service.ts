@@ -6,7 +6,7 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { PrismaService } from '../prisma.service';
-import { RoomStatus } from '../generated/prisma/enums';
+import { RoomsStateService } from './rooms-state.service';
 import { CreateRoomMessageDto } from './dto/create-room-message.dto';
 
 const MAX_MESSAGES_PER_ROOM = 50;
@@ -14,10 +14,13 @@ const MESSAGE_COOLDOWN_MS = 1000;
 
 @Injectable()
 export class RoomsChatService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly roomsState: RoomsStateService,
+  ) {}
 
   async findMessages(roomId: string, userId: string) {
-    await this.assertParticipant(roomId, userId);
+    this.assertParticipant(roomId, userId);
 
     const messages = await this.prisma.roomMessage.findMany({
       where: { roomId },
@@ -51,16 +54,14 @@ export class RoomsChatService {
     userId: string,
     dto: CreateRoomMessageDto,
   ) {
-    const room = await this.getRoomOrThrow(roomId);
-    const participant = room.participants.find(
-      (item) => item.userId === userId,
-    );
+    const room = this.getRoomOrThrow(roomId);
+    const participant = room.participants[userId];
 
     if (!participant) {
       throw new ForbiddenException('You are not a participant of this room');
     }
 
-    if (room.status !== RoomStatus.WAITING) {
+    if (room.status !== 'WAITING') {
       throw new ConflictException('Messages can only be sent in waiting rooms');
     }
 
@@ -133,30 +134,18 @@ export class RoomsChatService {
     };
   }
 
-  private async assertParticipant(roomId: string, userId: string) {
-    const room = await this.getRoomOrThrow(roomId);
-    const participant = room.participants.find(
-      (item) => item.userId === userId,
-    );
-    if (!participant) {
+  private assertParticipant(roomId: string, userId: string) {
+    const room = this.getRoomOrThrow(roomId);
+    if (!room.participants[userId]) {
       throw new ForbiddenException('You are not a participant of this room');
     }
   }
 
-  private async getRoomOrThrow(roomId: string) {
-    const room = await this.prisma.gameRoom.findUnique({
-      where: { id: roomId },
-      include: {
-        participants: {
-          select: { userId: true },
-        },
-      },
-    });
-
+  private getRoomOrThrow(roomId: string) {
+    const room = this.roomsState.getRoom(roomId);
     if (!room) {
       throw new NotFoundException('Room not found');
     }
-
     return room;
   }
 

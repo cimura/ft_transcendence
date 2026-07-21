@@ -13,10 +13,11 @@ import { Logger, UseFilters } from '@nestjs/common';
 import { Server } from 'socket.io';
 import { GameService } from './game.service';
 import { GameExceptionFilter } from './game-exception.filter';
+import { RoomsStateService } from '../rooms/rooms-state.service';
 import { SocketAuthService } from '../websocket/socket-auth.service';
 import { SocketPresenceService } from '../websocket/socket-presence.service';
 import { getSocketCorsOrigins } from '../websocket/socket-cors';
-import type { GameSocket } from './game.types';
+import type { GameSocket } from '../common/types/game.type';
 import type {
   ClientToServerEvents,
   ServerToClientEvents,
@@ -36,6 +37,7 @@ export class GameGateway
 
   constructor(
     private readonly gameService: GameService,
+    private readonly roomsState: RoomsStateService,
     private readonly socketAuthService: SocketAuthService,
     private readonly socketPresenceService: SocketPresenceService,
   ) {}
@@ -64,6 +66,10 @@ export class GameGateway
   ) {
     const user = client.data.user;
     if (!user) return;
+
+    if (!this.roomsState.getRoom(data.roomId)) {
+      throw new WsException('Room not found or already deleted');
+    }
 
     const initData = this.gameService.handleGameJoin(
       data.roomId,

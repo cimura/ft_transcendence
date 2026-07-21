@@ -1,4 +1,4 @@
-import { GameSession } from '../../game.types';
+import { GameSession } from '../../../common/types/game.type';
 import type {
   PlayerStats,
   PlayerRanking,

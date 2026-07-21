@@ -1,5 +1,5 @@
 import { ServerToClientEvents } from '@ft_transcendence/shared/game-events.types';
-import { GameSession } from '../../game.types';
+import { GameSession } from '../../../common/types/game.type';
 import { updatePlayerMovements } from '../mechanics/movement.logic';
 import { processExplosions, ExplosionResult } from '../mechanics/bomb.logic';
 import { processTimeouts } from '../session/timeout.logic';

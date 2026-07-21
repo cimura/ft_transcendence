@@ -1,4 +1,4 @@
-import { GameSession } from '../../game.types';
+import { GameSession } from '../../../common/types/game.type';
 import { DISCONNECT_TIMEOUT_MS } from '../../constants/game-constants';
 
 export interface TimeoutResult {

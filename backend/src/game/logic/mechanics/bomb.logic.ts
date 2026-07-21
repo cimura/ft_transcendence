@@ -1,4 +1,4 @@
-import { GameSession } from '../../game.types';
+import { GameSession } from '../../../common/types/game.type';
 import { getPlayersOverlappingTile } from './movement.logic';
 import type {
   GridPosition,

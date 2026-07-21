@@ -7,6 +7,7 @@ import { RoomsInvitationService } from './rooms-invitation.service';
 import { RoomsChatService } from './rooms-chat.service';
 import { RoomsGateway } from './rooms.gateway';
 import { AppWebsocketModule } from '../websocket/websocket.module';
+import { RoomsStateService } from './rooms-state.service';
 
 @Module({
   imports: [GamesModule, AppWebsocketModule],
@@ -17,6 +18,8 @@ import { AppWebsocketModule } from '../websocket/websocket.module';
     RoomsChatService,
     PrismaService,
     RoomsGateway,
+    RoomsStateService,
   ],
+  exports: [RoomsStateService],
 })
 export class RoomsModule {}

@@ -1,4 +1,4 @@
-import { GameSession } from '../../game.types';
+import { GameSession } from '../../../common/types/game.type';
 import { START_POSITIONS } from '../setup/map.logic';
 
 export const PLAYER_COLORS = [

@@ -1,6 +1,6 @@
 import { Catch, ArgumentsHost, Logger, ExceptionFilter } from '@nestjs/common';
 import { WsException } from '@nestjs/websockets';
-import { GameSocket } from './game.types';
+import { GameSocket } from '../common/types/game.type';
 
 @Catch()
 export class GameExceptionFilter implements ExceptionFilter {
