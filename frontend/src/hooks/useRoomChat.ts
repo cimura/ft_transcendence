@@ -58,37 +58,46 @@ export function useRoomChat(roomId: string, accessToken: string | null) {
       setError('チャットの接続が切断されました')
     })
 
-    socket.on('chat:message', (payload) => {
-      if (payload.roomId !== roomId) return
+    socket.on(
+      'chat:message',
+      (payload: Parameters<RoomServerToClientEvents['chat:message']>[0]) => {
+        if (payload.roomId !== roomId) return
 
-      appendMessage({
-        id: payload.id,
-        roomId: payload.roomId,
-        userId: payload.userId,
-        username: payload.username,
-        text: payload.text,
-        createdAt: payload.createdAt,
-      })
-    })
+        appendMessage({
+          id: payload.id,
+          roomId: payload.roomId,
+          userId: payload.userId,
+          username: payload.username,
+          text: payload.text,
+          createdAt: payload.createdAt,
+        })
+      }
+    )
 
-    socket.on('chat:history', (payload) => {
-      if (payload.roomId !== roomId) return
+    socket.on(
+      'chat:history',
+      (payload: Parameters<RoomServerToClientEvents['chat:history']>[0]) => {
+        if (payload.roomId !== roomId) return
 
-      const history = payload.messages.map((m) => ({
-        id: m.id,
-        roomId: m.roomId,
-        userId: m.userId,
-        username: m.username,
-        text: m.text,
-        createdAt: m.createdAt,
-      }))
+        const history = payload.messages.map((m) => ({
+          id: m.id,
+          roomId: m.roomId,
+          userId: m.userId,
+          username: m.username,
+          text: m.text,
+          createdAt: m.createdAt,
+        }))
 
-      setMessages(history)
-    })
+        setMessages(history)
+      }
+    )
 
-    socket.on('chat:error', (payload) => {
-      setError(payload.message ?? 'メッセージを送信できません')
-    })
+    socket.on(
+      'chat:error',
+      (payload: Parameters<RoomServerToClientEvents['chat:error']>[0]) => {
+        setError(payload.message ?? 'メッセージを送信できません')
+      }
+    )
 
     socket.connect()
 
