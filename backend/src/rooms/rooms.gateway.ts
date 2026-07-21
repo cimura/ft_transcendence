@@ -1,382 +1,197 @@
-// 1. define RoomsGateway
-// 2. log when a socket connects
-// 3. log when a socket disconnects
-
 import {
-  ConflictException,
-  ForbiddenException,
-  Logger,
-  NotFoundException,
-} from '@nestjs/common';
-import {
-  WebSocketGateway,
+  ConnectedSocket,
+  MessageBody,
   OnGatewayConnection,
   OnGatewayDisconnect,
   SubscribeMessage,
-  ConnectedSocket,
+  WebSocketGateway,
   WebSocketServer,
-  MessageBody,
-  Ack,
 } from '@nestjs/websockets';
-import { Socket, Server } from 'socket.io';
-import { RoomsService } from './rooms.service';
+import { Server, Socket } from 'socket.io';
+import { UsePipes, ValidationPipe, Logger } from '@nestjs/common';
 import { SocketAuthService } from '../websocket/socket-auth.service';
-import { SocketPresenceService } from '../websocket/socket-presence.service';
+import { RoomsChatService } from './rooms-chat.service';
 import { getSocketCorsOrigins } from '../websocket/socket-cors';
-import type {
+import {
+  RoomJoinDto,
+  ChatJoinDto,
+  ChatLeaveDto,
+  ChatMessageDto,
+} from './dto/events.dto';
+import {
   RoomClientToServerEvents,
   RoomServerToClientEvents,
-} from '@ft_transcendence/shared/room-events.types';
+  RoomSnapshot,
+} from '@ft_transcendence/shared/rooms-events.types';
+import type { RoomResponse } from './rooms.types';
 
-type ChatAck = (response: { ok: boolean; error?: string }) => void;
-
-type ChatPayload = {
-  roomId?: unknown;
-  text?: unknown;
-  content?: unknown;
-  message?: unknown;
-};
-
-type SocketChatMessage = Awaited<
-  ReturnType<RoomsService['createSocketMessage']>
->;
-
-type RoomsServerToClientEvents = RoomServerToClientEvents & {
-  'room:created': (room: Awaited<ReturnType<RoomsService['create']>>) => void;
-  'chat:history': (payload: {
-    roomId: string;
-    messages: SocketChatMessage[];
-  }) => void;
-  'chat:message': (message: SocketChatMessage) => void;
-  'chat:error': (payload: { message: string }) => void;
-};
-
-type RoomsSocketData = {
-  user?: {
+interface ConnectionData {
+  user: {
     id: string;
   };
-  chatRoomId?: string;
   roomId?: string;
-};
+}
 
 type RoomsSocket = Socket<
   RoomClientToServerEvents,
-  RoomsServerToClientEvents,
+  RoomServerToClientEvents,
   Record<string, never>,
-  RoomsSocketData
+  ConnectionData
 >;
 
 @WebSocketGateway({
-  namespace: '/rooms',
-  cors: { origin: getSocketCorsOrigins() },
+  namespace: 'rooms',
+  cors: {
+    origin: getSocketCorsOrigins(),
+    credentials: true,
+  },
 })
+@UsePipes(new ValidationPipe({ transform: true }))
 export class RoomsGateway implements OnGatewayConnection, OnGatewayDisconnect {
-  private readonly logger = new Logger(RoomsGateway.name);
   @WebSocketServer()
-  server: Server<RoomClientToServerEvents, RoomsServerToClientEvents>;
+  server!: Server<RoomClientToServerEvents, RoomServerToClientEvents>;
 
-  private readonly chatEventQueues = new Map<string, Promise<void>>();
+  private readonly logger = new Logger(RoomsGateway.name);
 
   constructor(
-    private readonly roomsService: RoomsService,
     private readonly socketAuthService: SocketAuthService,
-    private readonly socketPresenceService: SocketPresenceService,
+    private readonly roomsChatService: RoomsChatService,
   ) {}
 
   handleConnection(client: RoomsSocket) {
     const user = this.socketAuthService.authenticate(client);
     if (!user) {
       client.disconnect();
-      this.logger.warn(`rejected unauthenticated socket: ${client.id}`);
       return;
     }
-
     client.data.user = user;
-    this.logger.log(`connected: ${client.id}`);
+    this.logger.log(`Client connected: ${client.id} (user: ${user.id})`);
   }
+
   handleDisconnect(client: RoomsSocket) {
-    this.chatEventQueues.delete(client.id);
-    this.logger.log(`disconnected: ${client.id}`);
-
-    const roomId = client.data.roomId;
-    const userId = client.data.user?.id;
-    if (!roomId || !userId) return;
-
-    this.socketPresenceService.unregister({
-      namespace: 'rooms',
-      roomId,
-      userId,
-      socketId: client.id,
-    });
-    this.socketPresenceService.scheduleIfInactive(
-      { namespace: 'rooms', roomId, userId },
-      2000,
-      () => this.leaveRoomAfterDisconnect(roomId, userId),
-    );
-  }
-
-  private async leaveRoomAfterDisconnect(roomId: string, userId: string) {
-    try {
-      const result = await this.roomsService.leave(roomId, userId);
-      if ('id' in result) {
-        this.emitRoomUpdated(result);
-      } else {
-        this.emitRoomDeleted(result.roomId);
-      }
-    } catch (error) {
-      if (
-        error instanceof ConflictException ||
-        error instanceof ForbiddenException ||
-        error instanceof NotFoundException
-      ) {
-        return;
-      }
-      this.logger.error('failed to leave room on disconnect', error);
-    }
+    this.logger.log(`Client disconnected: ${client.id}`);
   }
 
   @SubscribeMessage('room:join')
-  async handleJoinRoom(
+  handleRoomJoin(
     @ConnectedSocket() client: RoomsSocket,
-    @MessageBody() data: { roomId?: string },
+    @MessageBody() dto: RoomJoinDto,
   ) {
-    if (!data.roomId) return;
-    const userId = client.data.user?.id;
-    if (!userId) {
-      client.emit('room:error', { message: 'Unauthenticated socket' });
-      client.disconnect();
-      return;
+    if (client.data.roomId) {
+      void client.leave(client.data.roomId);
     }
-
-    const previousRoomId = client.data.roomId;
-    try {
-      await client.join(data.roomId);
-    } catch (error) {
-      this.logger.error(
-        `failed to join room ${data.roomId}`,
-        error instanceof Error ? error.stack : String(error),
-      );
-      client.emit('room:error', { message: 'ルームへの参加に失敗しました' });
-      return;
-    }
-
-    if (previousRoomId && previousRoomId !== data.roomId) {
-      this.socketPresenceService.unregister({
-        namespace: 'rooms',
-        roomId: previousRoomId,
-        userId,
-        socketId: client.id,
-      });
-      this.socketPresenceService.scheduleIfInactive(
-        { namespace: 'rooms', roomId: previousRoomId, userId },
-        2000,
-        () => this.leaveRoomAfterDisconnect(previousRoomId, userId),
-      );
-      await client.leave(previousRoomId);
-    }
-
-    client.data.roomId = data.roomId;
-    this.socketPresenceService.register({
-      namespace: 'rooms',
-      roomId: data.roomId,
-      userId,
-      socketId: client.id,
-    });
-    this.logger.log(`room:join ${client.id} room=${data.roomId}`);
+    void client.join(dto.roomId);
+    client.data.roomId = dto.roomId;
+    this.logger.log(`Client ${client.id} joined room ${dto.roomId}`);
   }
 
   @SubscribeMessage('room:leave')
-  async handleLeaveRoom(@ConnectedSocket() client: RoomsSocket) {
-    const roomId = client.data.roomId;
-    const userId = client.data.user?.id;
-    if (!roomId) return;
-
-    if (userId) {
-      this.socketPresenceService.unregister({
-        namespace: 'rooms',
-        roomId,
-        userId,
-        socketId: client.id,
-      });
+  handleRoomLeave(@ConnectedSocket() client: RoomsSocket) {
+    if (client.data.roomId) {
+      void client.leave(client.data.roomId);
+      this.logger.log(`Client ${client.id} left room ${client.data.roomId}`);
+      client.data.roomId = undefined;
     }
-    await client.leave(roomId);
-    client.data.roomId = undefined;
-    this.logger.log(`room:leave ${client.id}`);
-  }
-  @SubscribeMessage('lobby:join')
-  async handleJoinLobby(@ConnectedSocket() client: Socket) {
-    await client.join('lobby');
-    const rooms = await this.roomsService.findAll('waiting');
-    client.emit('lobby:rooms', rooms);
-    this.logger.log(`lobby:join ${client.id}`);
-    this.logger.log(`sent lobby:rooms count=${rooms.length}`);
-  }
-  @SubscribeMessage('lobby:leave')
-  async handleLeaveLobby(@ConnectedSocket() client: Socket) {
-    await client.leave('lobby');
-    this.logger.log(`lobby:leave ${client.id}`);
   }
 
   @SubscribeMessage('chat:join')
-  async handleJoinChat(
-    @MessageBody() payload: ChatPayload,
+  async handleChatJoin(
     @ConnectedSocket() client: RoomsSocket,
+    @MessageBody() dto: ChatJoinDto,
   ) {
-    return this.runChatEvent(client, async () => {
-      try {
-        const userId = this.authenticate(client);
-        const roomId = this.getRoomId(payload);
-        const roomName = this.chatRoomName(roomId);
-        const previousRoomId = client.data.chatRoomId;
+    const roomId = dto.roomId;
+    const chatRoom = `chat:${roomId}`;
+    void client.join(chatRoom);
 
-        const messages = await this.roomsService.findSocketMessages(
-          roomId,
-          userId,
-        );
-
-        if (previousRoomId && previousRoomId !== roomId) {
-          await client.leave(this.chatRoomName(previousRoomId));
-        }
-
-        await client.join(roomName);
-        client.data.chatRoomId = roomId;
-        client.emit('chat:history', { roomId, messages });
-        this.logger.log(`chat:join ${client.id} room=${roomId}`);
-      } catch (error) {
-        this.emitChatError(client, error);
-      }
-    });
+    try {
+      const messages = await this.roomsChatService.findMessages(
+        roomId,
+        client.data.user.id,
+      );
+      client.emit('chat:history', {
+        roomId,
+        messages: messages.map((m) => ({
+          id: m.id,
+          roomId: m.roomId,
+          userId: m.senderId,
+          username: m.senderName,
+          text: m.content,
+          createdAt: m.createdAt.toISOString(),
+        })),
+      });
+    } catch {
+      client.emit('chat:error', { message: '履歴の取得に失敗しました' });
+    }
   }
 
   @SubscribeMessage('chat:leave')
-  async handleLeaveChat(
-    @MessageBody() payload: ChatPayload,
+  handleChatLeave(
     @ConnectedSocket() client: RoomsSocket,
+    @MessageBody() dto: ChatLeaveDto,
   ) {
-    return this.runChatEvent(client, async () => {
-      const roomId =
-        typeof payload?.roomId === 'string'
-          ? payload.roomId
-          : client.data.chatRoomId;
-
-      if (!roomId) return;
-
-      await client.leave(this.chatRoomName(roomId));
-
-      if (client.data.chatRoomId === roomId) {
-        client.data.chatRoomId = undefined;
-      }
-
-      this.logger.log(`chat:leave ${client.id} room=${roomId}`);
-    });
+    void client.leave(`chat:${dto.roomId}`);
   }
 
   @SubscribeMessage('chat:message')
   async handleChatMessage(
-    @MessageBody() payload: ChatPayload,
     @ConnectedSocket() client: RoomsSocket,
-    @Ack() ack?: ChatAck,
+    @MessageBody() dto: ChatMessageDto,
   ) {
-    return this.runChatEvent(client, async () => {
-      try {
-        const userId = this.authenticate(client);
-        const roomId = this.getRoomId(payload);
-        const text = this.getChatText(payload);
-        const roomName = this.chatRoomName(roomId);
-        const previousRoomId = client.data.chatRoomId;
-        const message = await this.roomsService.createSocketMessage(
-          roomId,
-          userId,
-          text,
-        );
+    try {
+      const message = await this.roomsChatService.createMessage(
+        dto.roomId,
+        client.data.user.id,
+        { content: dto.text },
+      );
 
-        if (previousRoomId !== roomId) {
-          if (previousRoomId) {
-            await client.leave(this.chatRoomName(previousRoomId));
-          }
+      const payload = {
+        id: message.id,
+        roomId: message.roomId,
+        userId: message.senderId,
+        username: message.senderName,
+        text: message.content,
+        createdAt: message.createdAt.toISOString(),
+      };
 
-          await client.join(roomName);
-          client.data.chatRoomId = roomId;
-        }
+      this.server.to(`chat:${dto.roomId}`).emit('chat:message', payload);
 
-        this.server.to(roomName).emit('chat:message', message);
-        ack?.({ ok: true });
-        this.logger.log(`chat:message ${client.id} room=${roomId}`);
-      } catch (error) {
-        const message = this.getErrorMessage(error);
-        this.emitChatError(client, error);
-        ack?.({ ok: false, error: message });
-      }
-    });
+      return { ok: true };
+    } catch (error: unknown) {
+      const errMsg =
+        error instanceof Error ? error.message : 'メッセージを送信できません';
+      return { ok: false, error: errMsg };
+    }
   }
 
-  emitRoomCreated(room: Awaited<ReturnType<RoomsService['create']>>) {
-    this.logger.log(`room:created ${room.id}`);
-    this.server.to('lobby').emit('room:created', room);
-  }
+  emitRoomUpdated(room: RoomResponse) {
+    const snapshot: RoomSnapshot = {
+      id: room.id,
+      gameId: room.gameId,
+      name: room.name,
+      hostId: room.hostId,
+      hostName: room.hostName,
+      players: room.players.map((p) => ({
+        userId: p.userId,
+        username: p.username,
+        avatarUrl: p.avatarUrl,
+        isReady: p.isReady,
+        isHost: p.isHost,
+        joinedAt: p.joinedAt.toISOString(),
+      })),
+      maxPlayers: room.maxPlayers,
+      status: room.status,
+      mode: room.mode,
+      settingsSnapshot: room.settingsSnapshot,
+      createdAt: room.createdAt.toISOString(),
+      updatedAt: room.updatedAt.toISOString(),
+      startedAt: room.startedAt?.toISOString(),
+      finishedAt: room.finishedAt?.toISOString(),
+    };
 
-  emitRoomUpdated(room: Awaited<ReturnType<RoomsService['join']>>) {
-    this.logger.log(`room:updated ${room.id}`);
-    this.server.to('lobby').emit('room:updated', room);
-    this.server.to(room.id).emit('room:updated', room);
+    this.server.to(room.id).emit('room:updated', snapshot);
   }
 
   emitRoomDeleted(roomId: string) {
-    this.logger.log(`room:deleted ${roomId}`);
-    this.server.to('lobby').emit('room:deleted', { roomId });
     this.server.to(roomId).emit('room:deleted', { roomId });
-  }
-
-  private authenticate(client: RoomsSocket) {
-    const user =
-      client.data.user ?? this.socketAuthService.authenticate(client);
-    if (!user) throw new Error('Authentication token is required');
-    client.data.user = user;
-    return user.id;
-  }
-
-  private getRoomId(payload: ChatPayload) {
-    if (typeof payload?.roomId !== 'string' || !payload.roomId.trim()) {
-      throw new Error('roomId is required');
-    }
-
-    return payload.roomId.trim();
-  }
-
-  private getChatText(payload: ChatPayload) {
-    const text = payload?.text ?? payload?.content ?? payload?.message;
-
-    if (typeof text !== 'string' || !text.trim()) {
-      throw new Error('Message content is required');
-    }
-
-    return text;
-  }
-
-  private chatRoomName(roomId: string) {
-    return `room:${roomId}`;
-  }
-
-  private runChatEvent(client: RoomsSocket, operation: () => Promise<void>) {
-    const previous = this.chatEventQueues.get(client.id) ?? Promise.resolve();
-    const current = previous.then(operation, operation);
-    const settled = current.catch(() => undefined);
-
-    this.chatEventQueues.set(client.id, settled);
-    void settled.then(() => {
-      if (this.chatEventQueues.get(client.id) === settled) {
-        this.chatEventQueues.delete(client.id);
-      }
-    });
-
-    return current;
-  }
-
-  private emitChatError(client: RoomsSocket, error: unknown) {
-    client.emit('chat:error', { message: this.getErrorMessage(error) });
-  }
-
-  private getErrorMessage(error: unknown) {
-    return error instanceof Error ? error.message : 'Chat request failed';
   }
 }

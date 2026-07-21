@@ -1,10 +1,5 @@
-import { ConflictException, ForbiddenException } from '@nestjs/common';
-import {
-  FriendRequestStatus,
-  RoomInvitationStatus,
-  RoomMode,
-  RoomStatus,
-} from '../generated/prisma/enums';
+import { ConflictException } from '@nestjs/common';
+import { RoomMode, RoomStatus } from '../generated/prisma/enums';
 import { PrismaService } from '../prisma.service';
 import { bombermanGame } from '../games/games.constants';
 import { GamesService } from '../games/games.service';
@@ -67,22 +62,6 @@ const createRoom = (
   ],
 });
 
-const createInvitation = () => ({
-  id: 'invitation-1',
-  roomId: 'room-1',
-  inviterId: user.id,
-  inviteeId: guest.id,
-  status: RoomInvitationStatus.PENDING,
-  createdAt: now,
-  updatedAt: now,
-  inviter: user,
-  invitee: guest,
-  room: {
-    id: 'room-1',
-    name: 'Test Room',
-  },
-});
-
 describe('RoomsService', () => {
   let service: RoomsService;
 
@@ -94,28 +73,11 @@ describe('RoomsService', () => {
       update: jest.fn(),
       delete: jest.fn(),
     },
-    user: {
-      findUnique: jest.fn(),
-    },
-    friendship: {
-      findFirst: jest.fn(),
-    },
-    roomInvitation: {
-      findFirst: jest.fn(),
-      create: jest.fn(),
-      findUnique: jest.fn(),
-      update: jest.fn(),
-      updateMany: jest.fn(),
-    },
     roomParticipant: {
       create: jest.fn(),
       update: jest.fn(),
       updateMany: jest.fn(),
       delete: jest.fn(),
-    },
-    roomMessage: {
-      findMany: jest.fn(),
-      findFirst: jest.fn(),
     },
     $transaction: jest.fn(),
   };
@@ -174,227 +136,6 @@ describe('RoomsService', () => {
         ],
       }),
     );
-  });
-
-  it('creates a pending room invitation for a friend', async () => {
-    const room = createRoom();
-    const invitation = createInvitation();
-    prisma.gameRoom.findUnique.mockResolvedValue(room);
-    prisma.user.findUnique.mockResolvedValue({ id: guest.id });
-    prisma.friendship.findFirst.mockResolvedValue({ id: 'friendship-1' });
-    prisma.roomInvitation.findFirst.mockResolvedValue(null);
-    prisma.roomInvitation.create.mockResolvedValue(invitation);
-
-    const result = await service.createInvitation(room.id, user.id, {
-      inviteeId: guest.id,
-    });
-
-    expect(prisma.friendship.findFirst).toHaveBeenCalledWith({
-      where: {
-        status: FriendRequestStatus.ACCEPTED,
-        OR: [
-          { requesterId: user.id, receiverId: guest.id },
-          { requesterId: guest.id, receiverId: user.id },
-        ],
-      },
-      select: { id: true },
-    });
-    expect(prisma.roomInvitation.create).toHaveBeenCalledWith({
-      data: {
-        roomId: room.id,
-        inviterId: user.id,
-        inviteeId: guest.id,
-      },
-      include: expect.any(Object),
-    });
-    expect(result).toEqual(
-      expect.objectContaining({
-        id: invitation.id,
-        status: 'pending',
-        room: {
-          id: room.id,
-          name: room.name,
-        },
-      }),
-    );
-  });
-
-  it('rejects room invitations to users who are not friends', async () => {
-    const room = createRoom();
-    prisma.gameRoom.findUnique.mockResolvedValue(room);
-    prisma.user.findUnique.mockResolvedValue({ id: guest.id });
-    prisma.friendship.findFirst.mockResolvedValue(null);
-
-    await expect(
-      service.createInvitation(room.id, user.id, { inviteeId: guest.id }),
-    ).rejects.toThrow(ForbiddenException);
-    expect(prisma.roomInvitation.create).not.toHaveBeenCalled();
-  });
-
-  it('accepts a pending invitation with guarded status update and locked room join', async () => {
-    const invitation = {
-      id: 'invitation-1',
-      roomId: 'room-1',
-      inviterId: user.id,
-      inviteeId: guest.id,
-      status: RoomInvitationStatus.PENDING,
-    };
-    const waitingRoom = createRoom({ maxPlayers: 2 });
-    const joinedRoom = createRoom({
-      maxPlayers: 2,
-      participants: [
-        {
-          userId: user.id,
-          isHost: true,
-          isReady: true,
-          joinedAt: now,
-          user,
-        },
-        {
-          userId: guest.id,
-          isHost: false,
-          isReady: false,
-          joinedAt: now,
-          user: guest,
-        },
-      ],
-    });
-    const tx = {
-      $queryRaw: jest.fn(),
-      roomInvitation: {
-        findUnique: jest.fn().mockResolvedValue(invitation),
-        updateMany: jest.fn().mockResolvedValue({ count: 1 }),
-      },
-      gameRoom: {
-        findUnique: jest.fn().mockResolvedValue(waitingRoom),
-      },
-      roomParticipant: {
-        create: jest.fn(),
-      },
-    };
-    tx.$queryRaw.mockResolvedValue([{ id: 'friendship-1' }]);
-    prisma.$transaction.mockImplementation(
-      async (callback: (transaction: typeof tx) => Promise<unknown>) =>
-        callback(tx),
-    );
-    prisma.gameRoom.findUnique.mockResolvedValue(joinedRoom);
-
-    const result = await service.acceptInvitation('invitation-1', guest.id);
-
-    expect(tx.roomInvitation.updateMany).toHaveBeenCalledWith({
-      where: {
-        id: 'invitation-1',
-        inviteeId: guest.id,
-        status: RoomInvitationStatus.PENDING,
-      },
-      data: { status: RoomInvitationStatus.ACCEPTED },
-    });
-    expect(tx.$queryRaw).toHaveBeenCalled();
-    expect(tx.roomParticipant.create).toHaveBeenCalledWith({
-      data: {
-        roomId: 'room-1',
-        userId: guest.id,
-        isHost: false,
-        isReady: false,
-      },
-    });
-    expect(result.id).toBe('room-1');
-  });
-
-  it('rejects a pending invitation after the friendship was deleted', async () => {
-    const invitation = {
-      id: 'invitation-1',
-      roomId: 'room-1',
-      inviterId: user.id,
-      inviteeId: guest.id,
-      status: RoomInvitationStatus.PENDING,
-    };
-    const tx = {
-      $queryRaw: jest.fn().mockResolvedValue([]),
-      roomInvitation: {
-        findUnique: jest.fn().mockResolvedValue(invitation),
-        updateMany: jest.fn(),
-      },
-      roomParticipant: {
-        create: jest.fn(),
-      },
-    };
-    prisma.$transaction.mockImplementation(
-      async (callback: (transaction: typeof tx) => Promise<unknown>) =>
-        callback(tx),
-    );
-
-    try {
-      await service.acceptInvitation(invitation.id, guest.id);
-      fail('Expected invitation acceptance to be rejected');
-    } catch (error) {
-      expect(error).toBeInstanceOf(ForbiddenException);
-      expect((error as ForbiddenException).getResponse()).toEqual({
-        code: 'ROOM_INVITATION_NO_LONGER_ALLOWED',
-        message:
-          'Cannot join this invitation because the friendship has been terminated.',
-      });
-    }
-
-    expect(tx.roomInvitation.updateMany).not.toHaveBeenCalled();
-    expect(tx.roomParticipant.create).not.toHaveBeenCalled();
-  });
-
-  it('rejects an invitation accept when the guarded status update loses the race', async () => {
-    const invitation = {
-      id: 'invitation-1',
-      roomId: 'room-1',
-      inviterId: user.id,
-      inviteeId: guest.id,
-      status: RoomInvitationStatus.PENDING,
-    };
-    const tx = {
-      $queryRaw: jest.fn().mockResolvedValue([{ id: 'friendship-1' }]),
-      roomInvitation: {
-        findUnique: jest.fn().mockResolvedValue(invitation),
-        updateMany: jest.fn().mockResolvedValue({ count: 0 }),
-      },
-    };
-    prisma.$transaction.mockImplementation(
-      async (callback: (transaction: typeof tx) => Promise<unknown>) =>
-        callback(tx),
-    );
-
-    await expect(
-      service.acceptInvitation('invitation-1', guest.id),
-    ).rejects.toThrow(ConflictException);
-  });
-
-  it('declines a pending invitation with a guarded status update', async () => {
-    prisma.roomInvitation.findUnique.mockResolvedValue({
-      inviteeId: guest.id,
-      status: RoomInvitationStatus.PENDING,
-    });
-    prisma.roomInvitation.updateMany.mockResolvedValue({ count: 1 });
-
-    const result = await service.declineInvitation('invitation-1', guest.id);
-
-    expect(prisma.roomInvitation.updateMany).toHaveBeenCalledWith({
-      where: {
-        id: 'invitation-1',
-        inviteeId: guest.id,
-        status: RoomInvitationStatus.PENDING,
-      },
-      data: { status: RoomInvitationStatus.DECLINED },
-    });
-    expect(result).toEqual({ message: 'Room invitation declined.' });
-  });
-
-  it('rejects an invitation decline when the guarded status update loses the race', async () => {
-    prisma.roomInvitation.findUnique.mockResolvedValue({
-      inviteeId: guest.id,
-      status: RoomInvitationStatus.PENDING,
-    });
-    prisma.roomInvitation.updateMany.mockResolvedValue({ count: 0 });
-
-    await expect(
-      service.declineInvitation('invitation-1', guest.id),
-    ).rejects.toThrow(ConflictException);
   });
 
   it('filters rooms by status for the room list', async () => {
@@ -787,63 +528,5 @@ describe('RoomsService', () => {
       ConflictException,
     );
     expect(prisma.gameRoom.update).not.toHaveBeenCalled();
-  });
-
-  it('escapes chat content and prunes messages beyond the latest 50', async () => {
-    const room = createRoom();
-    prisma.gameRoom.findUnique.mockResolvedValue(room);
-    prisma.roomMessage.findFirst.mockResolvedValue(null);
-
-    const tx = {
-      roomMessage: {
-        create: jest.fn().mockResolvedValue({
-          id: 'message-new',
-          roomId: room.id,
-          senderId: user.id,
-          content: '&lt;b&gt;hello&lt;/b&gt;',
-          createdAt: now,
-          sender: user,
-        }),
-        findMany: jest.fn().mockResolvedValue([{ id: 'message-old' }]),
-        deleteMany: jest.fn(),
-      },
-    };
-    prisma.$transaction.mockImplementation(
-      async (callback: (transaction: typeof tx) => Promise<unknown>) =>
-        callback(tx),
-    );
-
-    const result = await service.createMessage(room.id, user.id, {
-      content: '<b>hello</b>',
-    });
-
-    expect(tx.roomMessage.create).toHaveBeenCalledWith(
-      expect.objectContaining({
-        data: expect.objectContaining({
-          content: '&lt;b&gt;hello&lt;/b&gt;',
-        }),
-      }),
-    );
-    expect(tx.roomMessage.findMany).toHaveBeenCalledWith(
-      expect.objectContaining({
-        skip: 50,
-      }),
-    );
-    expect(tx.roomMessage.deleteMany).toHaveBeenCalledWith({
-      where: { id: { in: ['message-old'] } },
-    });
-    expect(result.content).toBe('&lt;b&gt;hello&lt;/b&gt;');
-  });
-
-  it('rejects chat messages sent within the one second cooldown', async () => {
-    prisma.gameRoom.findUnique.mockResolvedValue(createRoom());
-    prisma.roomMessage.findFirst.mockResolvedValue({
-      createdAt: new Date(),
-    });
-
-    await expect(
-      service.createMessage('room-1', user.id, { content: 'hello' }),
-    ).rejects.toThrow(ConflictException);
-    expect(prisma.$transaction).not.toHaveBeenCalled();
   });
 });

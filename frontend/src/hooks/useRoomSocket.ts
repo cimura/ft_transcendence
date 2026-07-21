@@ -6,7 +6,7 @@ import type {
   RoomClientToServerEvents,
   RoomServerToClientEvents,
   RoomSnapshot,
-} from '@ft_transcendence/shared/room-events.types'
+} from '@ft_transcendence/shared/rooms-events.types'
 
 const BACKEND_URL = import.meta.env.VITE_BACKEND_URL || window.location.origin
 const ROOMS_NAMESPACE = `${BACKEND_URL.replace(/\/$/, '')}/rooms`
