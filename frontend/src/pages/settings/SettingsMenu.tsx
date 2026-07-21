@@ -10,9 +10,6 @@ export const SettingsMenu = () => {
   const logout = useAuthStore((state) => state.logout)
   const [isLoggingOut, setIsLoggingOut] = useState(false)
 
-  const baseButtonClass =
-    'flex w-full items-center justify-between rounded-md border border-white/10 bg-white/5 px-6 py-4 text-left font-medium text-white transition-colors hover:bg-white/10'
-
   const handleLogout = async () => {
     setIsLoggingOut(true)
 

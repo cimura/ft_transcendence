@@ -5,6 +5,24 @@ import { useRoomStore } from '../stores/roomStore'
 import { createRoom } from '../api/rooms'
 import { useNotifications } from '../hooks/useNotifications'
 
+const signalBars = [
+  { height: '35%', opacity: 0.45 },
+  { height: '70%', opacity: 0.8 },
+  { height: '50%', opacity: 0.6 },
+  { height: '90%', opacity: 0.95 },
+  { height: '62%', opacity: 0.7 },
+  { height: '28%', opacity: 0.4 },
+  { height: '78%', opacity: 0.85 },
+  { height: '44%', opacity: 0.55 },
+  { height: '100%', opacity: 1 },
+  { height: '56%', opacity: 0.65 },
+  { height: '82%', opacity: 0.9 },
+  { height: '38%', opacity: 0.5 },
+  { height: '68%', opacity: 0.75 },
+  { height: '48%', opacity: 0.58 },
+  { height: '88%', opacity: 0.92 },
+]
+
 /**
  * Renders the home dashboard with navigation to profile, friends, lobby, notifications, rankings, and settings.
  */
@@ -82,13 +100,13 @@ export function Home() {
           </span>
         </div>
         <div className="flex gap-1 items-end h-4 opacity-80">
-          {[...Array(15)].map((_, i) => (
+          {signalBars.map((bar, i) => (
             <div
               key={i}
               className="w-1.5 bg-cyan-300"
               style={{
-                height: `${Math.random() * 100}%`,
-                opacity: Math.random(),
+                height: bar.height,
+                opacity: bar.opacity,
               }}
             />
           ))}
