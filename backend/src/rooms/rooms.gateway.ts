@@ -101,13 +101,13 @@ export class RoomsGateway implements OnGatewayConnection, OnGatewayDisconnect {
   ) {
     const roomId = dto.roomId;
     const chatRoom = `chat:${roomId}`;
-    void client.join(chatRoom);
 
     try {
       const messages = await this.roomsChatService.findMessages(
         roomId,
         client.data.user.id,
       );
+      void client.join(chatRoom);
       client.emit('chat:history', {
         roomId,
         messages: messages.map((m) => ({
