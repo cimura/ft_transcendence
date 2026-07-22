@@ -1,3 +1,4 @@
+import { Socket } from 'socket.io';
 import type {
   Direction,
   TileType,
@@ -5,6 +6,8 @@ import type {
   PlayerSnapshot,
   BombSnapshot,
   PlayerStats,
+  ClientToServerEvents,
+  ServerToClientEvents,
 } from '@ft_transcendence/shared/game-events.types';
 
 export interface PlayerConnection {
@@ -30,3 +33,19 @@ export interface GameSession {
   disconnectedAt: number;
   startedAt?: number;
 }
+
+// websocket client.dataに保持するもの
+export interface ConnectionData {
+  user: {
+    id: string;
+  };
+  roomId?: string;
+}
+
+// websocket clientの型
+export type GameSocket = Socket<
+  ClientToServerEvents,
+  ServerToClientEvents,
+  Record<string, never>,
+  ConnectionData
+>;

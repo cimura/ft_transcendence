@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { useNavigate, useOutletContext } from 'react-router-dom'
 import { useAuthStore } from '../../stores/authStore'
+import { LegalLinks } from '../../components/legal/LegalLinks'
 import type { SettingsOutletContext } from './Settings'
 
 export const SettingsMenu = () => {
@@ -32,18 +33,7 @@ export const SettingsMenu = () => {
         <span className="text-white/50">＞</span>
       </button>
 
-      <button
-        onClick={() => navigate('notifications')}
-        className={baseButtonClass}
-      >
-        <span>通知設定</span>
-        <span className="text-white/50">＞</span>
-      </button>
-
-      <button onClick={() => navigate('privacy')} className={baseButtonClass}>
-        <span>プライバシー</span>
-        <span className="text-white/50">＞</span>
-      </button>
+      <LegalLinks variant="menu" />
 
       <button
         onClick={handleLogout}

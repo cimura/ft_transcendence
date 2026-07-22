@@ -2,20 +2,25 @@ import { useState, useEffect } from 'react'
 import type { UserProfile } from '../types/user'
 import type { UpdateProfileDto } from '../types/profile'
 import * as profileApi from '../api/profile'
+import { getApiErrorMessage } from '../api/errors'
 
 /**
  * Custom hook for fetching user profile
  * @param userId User ID to fetch
+ * @param currentUserId Authenticated user ID
  * @returns Profile data, loading state, and error
  */
-export const useProfile = (userId: string | undefined) => {
+export const useProfile = (
+  userId: string | undefined,
+  currentUserId: string | undefined
+) => {
   const [profile, setProfile] = useState<UserProfile | null>(null)
   const [loading, setLoading] = useState<boolean>(false)
   const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
-    if (!userId) {
-      // userIdが未定義の場合は初期状態にリセット
+    if (!userId || !currentUserId) {
+      // 必要なユーザーIDが未取得の場合は初期状態にリセット
       // eslint-disable-next-line react-hooks/set-state-in-effect
       setProfile(null)
       return
@@ -25,17 +30,17 @@ export const useProfile = (userId: string | undefined) => {
       try {
         setLoading(true)
         setError(null)
-        const data = await profileApi.getProfile(userId)
+        const data = await profileApi.getProfile(userId, currentUserId)
         setProfile(data)
       } catch (err) {
-        setError(err instanceof Error ? err.message : 'Failed to fetch profile')
+        setError(getApiErrorMessage(err, 'プロフィールの取得に失敗しました。'))
       } finally {
         setLoading(false)
       }
     }
 
     fetchProfile()
-  }, [userId])
+  }, [userId, currentUserId])
 
   return { profile, loading, error }
 }
@@ -49,16 +54,15 @@ export const useUpdateProfile = () => {
   const [error, setError] = useState<string | null>(null)
 
   const updateProfile = async (
-    userId: string,
     data: UpdateProfileDto
   ): Promise<UserProfile | null> => {
     try {
       setLoading(true)
       setError(null)
-      const updated = await profileApi.updateProfile(userId, data)
+      const updated = await profileApi.updateProfile(data)
       return updated
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to update profile')
+      setError(getApiErrorMessage(err, 'プロフィールの更新に失敗しました。'))
       return null
     } finally {
       setLoading(false)
@@ -83,7 +87,9 @@ export const useUploadAvatar = () => {
       const userProfile = await profileApi.uploadAvatar(file)
       return userProfile
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to upload avatar')
+      setError(
+        getApiErrorMessage(err, 'アバターのアップロードに失敗しました。')
+      )
       return null
     } finally {
       setLoading(false)
@@ -101,7 +107,7 @@ export const useUploadAvatar = () => {
       return newAvatarUrl
     } catch (err) {
       setError(
-        err instanceof Error ? err.message : 'Failed to set default avatar'
+        getApiErrorMessage(err, 'デフォルトアバターの設定に失敗しました。')
       )
       return null
     } finally {

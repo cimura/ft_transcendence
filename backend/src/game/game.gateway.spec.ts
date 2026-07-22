@@ -1,4 +1,5 @@
 import { Test, TestingModule } from '@nestjs/testing';
+import { WsException } from '@nestjs/websockets';
 import { GameGateway } from './game.gateway';
 import { GameService } from './game.service';
 import { SocketAuthService } from '../websocket/socket-auth.service';
@@ -104,6 +105,8 @@ describe('GameGateway', () => {
         'socket-123',
       );
       expect(client.join).toHaveBeenCalledWith('room-1');
+
+      // ルームへの参加成功後に roomId が設定されているか
       expect(client.data.roomId).toBe('room-1');
 
       // クライアントへ初期化データを送っているか
@@ -124,6 +127,7 @@ describe('GameGateway', () => {
       // 旧ルームからの退出処理が呼ばれているか確認
       expect(client.leave).toHaveBeenCalledWith('room-old');
       expect(gameService.handleGameLeave).toHaveBeenCalledWith(
+        'room-old',
         'user-1',
         'socket-123',
       );
@@ -133,22 +137,51 @@ describe('GameGateway', () => {
       expect(client.data.roomId).toBe('room-new');
     });
 
-    it('参加処理(handleGameJoin)がエラーを投げた場合、game:error をemitすること', async () => {
+    it('参加処理(handleGameJoin)がエラーを投げた場合、例外をスローし以降の処理を行わないこと（例外フィルターに委譲）', async () => {
       const client = createMockSocket();
       client.data.user = { id: 'user-1' };
       const joinData = { roomId: 'room-1' };
 
+      // Serviceがエラーを投げる挙動をモック
       gameService.handleGameJoin.mockImplementation(() => {
         throw new Error('Room is full');
       });
 
-      await gateway.handleJoin(joinData, client);
+      // 例外がそのままスローされることを検証
+      await expect(gateway.handleJoin(joinData, client)).rejects.toThrow(
+        'Room is full',
+      );
 
-      // エラーイベントがクライアントに通知されているか
-      expect(client.emit).toHaveBeenCalledWith('game:error', {
-        message: 'Room is full',
-      });
-      expect(client.join).toHaveBeenCalledWith('room-1');
+      // 後続の処理が呼ばれていないこと（エラーハンドリングはFilterが担うため）
+      expect(client.join).not.toHaveBeenCalled();
+      expect(client.data.roomId).toBeUndefined(); // roomIdが更新されていないこと
+      expect(client.emit).not.toHaveBeenCalled();
+      expect(gameService.handleGameStart).not.toHaveBeenCalled();
+    });
+
+    it('client.join が失敗した場合、WsExceptionをスローし、roomIdが更新されないこと', async () => {
+      const client = createMockSocket();
+      client.data.user = { id: 'user-1' };
+      const joinData = { roomId: 'room-1' };
+      const initData = { phase: 'waiting' };
+
+      gameService.handleGameJoin.mockReturnValue(initData as any);
+      // joinが失敗する挙動をモック
+      client.join.mockRejectedValue(new Error('Socket join failed'));
+
+      // WsException に変換されてスローされることを検証
+      await expect(gateway.handleJoin(joinData, client)).rejects.toThrow(
+        WsException,
+      );
+      await expect(gateway.handleJoin(joinData, client)).rejects.toThrow(
+        'Socket join failed',
+      );
+
+      // 失敗した場合は client.data.roomId に値が代入されていないこと（不整合防止）
+      expect(client.data.roomId).toBeUndefined();
+
+      // 後続の処理が呼ばれていないこと
+      expect(client.emit).not.toHaveBeenCalled();
       expect(gameService.handleGameStart).not.toHaveBeenCalled();
     });
 
@@ -181,6 +214,7 @@ describe('GameGateway', () => {
 
       // userId と clientId を渡しているか
       expect(gameService.handleGameLeave).toHaveBeenCalledWith(
+        'room-1',
         'user-1',
         'socket-123',
       );
@@ -208,7 +242,6 @@ describe('GameGateway', () => {
         userId: 'user-1',
         socketId: 'socket-123',
       });
-      client.data.roomId = 'room-1';
 
       const inputData = { direction: 'up' as const, seq: 1 };
 
@@ -265,6 +298,7 @@ describe('GameGateway', () => {
 
       // userId と clientId を渡しているか
       expect(gameService.handleGameLeave).toHaveBeenCalledWith(
+        'room-1',
         'user-1',
         'socket-123',
       );

@@ -56,6 +56,43 @@ describe('UsersService', () => {
     expect(service).toBeDefined();
   });
 
+  it('returns a profile for the specified user', async () => {
+    const user = {
+      id: 'user-id',
+      username: 'user',
+      displayName: null,
+      avatarUrl: null,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    };
+    prisma.user.findUnique.mockResolvedValue(user);
+
+    await expect(service.profileById('user-id')).resolves.toEqual(user);
+    expect(prisma.user.findUnique).toHaveBeenCalledWith({
+      where: { id: 'user-id' },
+      select: {
+        id: true,
+        username: true,
+        displayName: true,
+        avatarUrl: true,
+        createdAt: true,
+        updatedAt: true,
+      },
+    });
+  });
+
+  it('throws when the specified profile does not exist', async () => {
+    prisma.user.findUnique.mockResolvedValue(null);
+
+    await expect(service.profileById('missing-user')).rejects.toMatchObject({
+      status: 404,
+      response: {
+        code: 'USER_NOT_FOUND',
+        message: 'User not found',
+      },
+    });
+  });
+
   it('cleans up uploaded image when avatar update fails', async () => {
     const uploadedImage = {
       id: 'image-id',

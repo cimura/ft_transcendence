@@ -130,43 +130,41 @@ export class GameService {
     }
   }
 
-  handleGameLeave(playerId: string, clientId: string) {
-    for (const room of this.rooms.values()) {
-      if (room.players[playerId]) {
-        if (room.playerConnections[playerId].clientId !== clientId) {
-          // 以前のソケットインスタンスの切断イベントは無視する
-          this.logger.debug(
-            `Ignored disconnect from different socket { roomId: '${room.roomId}', playerId: '${playerId}', socketId: '${clientId}' }`,
-          );
-          continue;
+  handleGameLeave(roomId: string, playerId: string, clientId: string) {
+    const room = this.rooms.get(roomId);
+    if (!room || !room.players[playerId]) return;
+    if (room.playerConnections[playerId].clientId !== clientId) {
+      // 以前のソケットインスタンスの切断イベントは無視する
+      this.logger.debug(
+        `Ignored disconnect from different socket { roomId: '${room.roomId}', playerId: '${playerId}', socketId: '${clientId}' }`,
+      );
+      return;
+    }
+
+    if (room.phase === 'waiting' || room.phase === 'ended') {
+      // 完全に room から削除
+      const result = removePlayerFromRoom(room, playerId);
+
+      if (result.success) {
+        this.logger.log(
+          `Player left { roomId: '${room.roomId}', playerId: '${playerId}' }`,
+        );
+        if (result.isEmpty) {
+          this.cleanupRoom(room.roomId);
         }
+      }
+    } else if (room.phase === 'countdown' || room.phase === 'playing') {
+      // 一時的な切断状態への移行
+      const result = disconnectPlayerFromRoom(room, playerId, Date.now());
 
-        if (room.phase === 'waiting' || room.phase === 'ended') {
-          // 完全に room から削除
-          const result = removePlayerFromRoom(room, playerId);
-
-          if (result.success) {
-            this.logger.log(
-              `Player left { roomId: '${room.roomId}', playerId: '${playerId}' }`,
-            );
-            if (result.isEmpty) {
-              this.cleanupRoom(room.roomId);
-            }
-          }
-        } else if (room.phase === 'countdown' || room.phase === 'playing') {
-          // 一時的な切断状態への移行
-          const result = disconnectPlayerFromRoom(room, playerId, Date.now());
-
-          if (result.success) {
-            this.logger.debug(
-              `Player disconnected { roomId: '${room.roomId}', playerId: '${playerId}' }`,
-            );
-            if (result.isAllDisconnected) {
-              this.logger.log(
-                `All players disconnected { roomId: '${room.roomId}' }`,
-              );
-            }
-          }
+      if (result.success) {
+        this.logger.debug(
+          `Player disconnected { roomId: '${room.roomId}', playerId: '${playerId}' }`,
+        );
+        if (result.isAllDisconnected) {
+          this.logger.log(
+            `All players disconnected { roomId: '${room.roomId}' }`,
+          );
         }
       }
     }
@@ -241,7 +239,9 @@ export class GameService {
       }
       // タイムアウトかどうか
       const connection = room.playerConnections[playerId];
-      if (!connection) return false;
+      if (!connection) {
+        return false;
+      }
       const isTimedOut =
         Date.now() - connection.lastActiveTime >= DISCONNECT_TIMEOUT_MS;
       if (isTimedOut) {

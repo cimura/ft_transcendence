@@ -8,7 +8,7 @@ import {
 } from '@nestjs/common';
 import { PrismaService } from '../prisma.service';
 import { UpdateUserDto } from './dto/update-user.dto';
-import { ProfileUserDto } from './dto/profile.dto';
+import { ProfileUserDto, PublicProfileUserDto } from './dto/profile.dto';
 import { UserSearchResponseDto } from './dto/users-response.dto';
 import { Prisma } from '../generated/prisma/client';
 import * as bcrypt from 'bcrypt';
@@ -31,6 +31,29 @@ export class UsersService {
       select: {
         id: true,
         email: true,
+        username: true,
+        displayName: true,
+        avatarUrl: true,
+        createdAt: true,
+        updatedAt: true,
+      },
+    });
+
+    if (!user) {
+      throw new NotFoundException({
+        code: 'USER_NOT_FOUND',
+        message: 'User not found',
+      });
+    }
+
+    return user;
+  }
+
+  async profileById(userId: string): Promise<PublicProfileUserDto> {
+    const user = await this.prisma.user.findUnique({
+      where: { id: userId },
+      select: {
+        id: true,
         username: true,
         displayName: true,
         avatarUrl: true,

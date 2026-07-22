@@ -252,6 +252,7 @@ export class RoomsService {
         select: {
           id: true,
           roomId: true,
+          inviterId: true,
           inviteeId: true,
           status: true,
         },
@@ -270,6 +271,12 @@ export class RoomsService {
           'Invitation has already been accepted or declined',
         );
       }
+
+      await this.assertCurrentFriendshipWithinTransaction(
+        tx,
+        invitation.inviterId,
+        invitation.inviteeId,
+      );
 
       const updateResult = await tx.roomInvitation.updateMany({
         where: {
@@ -337,6 +344,32 @@ export class RoomsService {
     }
 
     return { message: 'Room invitation declined.' };
+  }
+
+  private async assertCurrentFriendshipWithinTransaction(
+    tx: Prisma.TransactionClient,
+    inviterId: string,
+    inviteeId: string,
+  ) {
+    const friendships = await tx.$queryRaw<Array<{ id: string }>>`
+      SELECT "id"
+      FROM "Friendship"
+      WHERE "status"::text = ${FriendRequestStatus.ACCEPTED}
+        AND (
+          ("requesterId" = ${inviterId} AND "receiverId" = ${inviteeId})
+          OR
+          ("requesterId" = ${inviteeId} AND "receiverId" = ${inviterId})
+        )
+      FOR UPDATE
+    `;
+
+    if (friendships.length === 0) {
+      throw new ForbiddenException({
+        code: 'ROOM_INVITATION_NO_LONGER_ALLOWED',
+        message:
+          'Cannot join this invitation because the friendship has been terminated.',
+      });
+    }
   }
 
   async leave(roomId: string, userId: string) {

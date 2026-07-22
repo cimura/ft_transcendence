@@ -34,7 +34,7 @@ export const Settings = ({ onLogout }: SettingsProps) => {
           )}
 
           <h1 className="text-center text-2xl font-bold text-white sm:text-3xl">
-            {isTopLevel ? '設定' : '詳細設定'}
+            設定
           </h1>
 
           <div />
