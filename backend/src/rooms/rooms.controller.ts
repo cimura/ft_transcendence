@@ -23,6 +23,8 @@ import { CreateRoomMessageDto } from './dto/create-room-message.dto';
 import { QueryRoomsDto } from './dto/query-rooms.dto';
 import { ReadyRoomDto } from './dto/ready-room.dto';
 import { RoomsService } from './rooms.service';
+import { RoomsInvitationService } from './rooms-invitation.service';
+import { RoomsChatService } from './rooms-chat.service';
 import { RoomsGateway } from './rooms.gateway';
 
 @ApiTags('rooms')
@@ -32,6 +34,8 @@ import { RoomsGateway } from './rooms.gateway';
 export class RoomsController {
   constructor(
     private readonly roomsService: RoomsService,
+    private readonly roomsInvitationService: RoomsInvitationService,
+    private readonly roomsChatService: RoomsChatService,
     private readonly roomsGateway: RoomsGateway,
   ) {}
 
@@ -73,7 +77,11 @@ export class RoomsController {
     @Param('roomId') roomId: string,
     @Body() dto: CreateRoomInvitationDto,
   ) {
-    return this.roomsService.createInvitation(roomId, req.user.userId, dto);
+    return this.roomsInvitationService.createInvitation(
+      roomId,
+      req.user.userId,
+      dto,
+    );
   }
 
   @Put('invitations/:invitationId/accept')
@@ -83,7 +91,7 @@ export class RoomsController {
     @Request() req: UserRequest,
     @Param('invitationId') invitationId: string,
   ) {
-    const room = await this.roomsService.acceptInvitation(
+    const room = await this.roomsInvitationService.acceptInvitation(
       invitationId,
       req.user.userId,
     );
@@ -98,7 +106,10 @@ export class RoomsController {
     @Request() req: UserRequest,
     @Param('invitationId') invitationId: string,
   ) {
-    return this.roomsService.declineInvitation(invitationId, req.user.userId);
+    return this.roomsInvitationService.declineInvitation(
+      invitationId,
+      req.user.userId,
+    );
   }
 
   @Post(':roomId/leave')
@@ -146,7 +157,7 @@ export class RoomsController {
   @ApiOperation({ summary: 'チャットメッセージを取得' })
   @ApiResponse({ status: 200, description: '成功時' })
   findMessages(@Request() req: UserRequest, @Param('roomId') roomId: string) {
-    return this.roomsService.findMessages(roomId, req.user.userId);
+    return this.roomsChatService.findMessages(roomId, req.user.userId);
   }
 
   @Post(':roomId/messages')
@@ -157,6 +168,6 @@ export class RoomsController {
     @Param('roomId') roomId: string,
     @Body() dto: CreateRoomMessageDto,
   ) {
-    return this.roomsService.createMessage(roomId, req.user.userId, dto);
+    return this.roomsChatService.createMessage(roomId, req.user.userId, dto);
   }
 }

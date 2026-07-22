@@ -1,77 +1,20 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { io, Socket } from 'socket.io-client'
 import type { ChatConnectionStatus, ChatMessage } from '../types/chat'
+import type {
+  RoomClientToServerEvents,
+  RoomServerToClientEvents,
+} from '@ft_transcendence/shared/rooms-events.types'
 
 const BACKEND_URL = import.meta.env.VITE_BACKEND_URL || window.location.origin
-
-type ChatAck = {
-  ok?: boolean
-  error?: string
-}
-
-interface SendChatMessagePayload {
-  roomId: string
-  text: string
-}
-
-const isRecord = (value: unknown): value is Record<string, unknown> =>
-  typeof value === 'object' && value !== null
-
-const getString = (
-  value: Record<string, unknown>,
-  key: string
-): string | undefined => {
-  const field = value[key]
-  return typeof field === 'string' ? field : undefined
-}
-
-const createMessageId = () => {
-  if (typeof crypto !== 'undefined' && 'randomUUID' in crypto) {
-    return crypto.randomUUID()
-  }
-
-  return `${Date.now()}-${Math.random().toString(16).slice(2)}`
-}
-
-const normalizeChatMessage = (
-  payload: unknown,
-  fallbackRoomId: string
-): ChatMessage | null => {
-  if (!isRecord(payload)) return null
-
-  const nestedUser = isRecord(payload.user) ? payload.user : undefined
-  const nestedSender = isRecord(payload.sender) ? payload.sender : undefined
-  const text =
-    getString(payload, 'text') ??
-    getString(payload, 'message') ??
-    getString(payload, 'content')
-
-  if (!text?.trim()) return null
-
-  const createdAt =
-    getString(payload, 'createdAt') ??
-    getString(payload, 'timestamp') ??
-    new Date().toISOString()
-
-  return {
-    id: getString(payload, 'id') ?? createMessageId(),
-    roomId: getString(payload, 'roomId') ?? fallbackRoomId,
-    userId:
-      getString(payload, 'userId') ??
-      (nestedUser ? getString(nestedUser, 'id') : undefined) ??
-      (nestedSender ? getString(nestedSender, 'id') : undefined),
-    username:
-      getString(payload, 'username') ??
-      (nestedUser ? getString(nestedUser, 'username') : undefined) ??
-      (nestedSender ? getString(nestedSender, 'username') : undefined) ??
-      'Unknown',
-    text: text.trim(),
-    createdAt,
-  }
-}
+// RoomsGatewayの名前空間に合わせて接続先URLを構成
+const ROOMS_NAMESPACE = `${BACKEND_URL.replace(/\/$/, '')}/rooms`
 
 export function useRoomChat(roomId: string, accessToken: string | null) {
-  const socketRef = useRef<Socket | null>(null)
+  const socketRef = useRef<Socket<
+    RoomServerToClientEvents,
+    RoomClientToServerEvents
+  > | null>(null)
   const [messages, setMessages] = useState<ChatMessage[]>([])
   const [connectionStatus, setConnectionStatus] =
     useState<ChatConnectionStatus>('connecting')
@@ -83,7 +26,6 @@ export function useRoomChat(roomId: string, accessToken: string | null) {
       if (currentMessages.some((current) => current.id === message.id)) {
         return currentMessages
       }
-
       return [...currentMessages, message]
     })
   }, [])
@@ -93,9 +35,9 @@ export function useRoomChat(roomId: string, accessToken: string | null) {
       return
     }
 
-    const socket = io(BACKEND_URL, {
+    const socket = io(ROOMS_NAMESPACE, {
       autoConnect: false,
-      auth: { token: accessToken },
+      auth: { token: `Bearer ${accessToken}` },
     })
     socketRef.current = socket
 
@@ -116,38 +58,46 @@ export function useRoomChat(roomId: string, accessToken: string | null) {
       setError('チャットの接続が切断されました')
     })
 
-    socket.on('chat:message', (payload: unknown) => {
-      const message = normalizeChatMessage(payload, roomId)
-      if (!message || message.roomId !== roomId) return
+    socket.on(
+      'chat:message',
+      (payload: Parameters<RoomServerToClientEvents['chat:message']>[0]) => {
+        if (payload.roomId !== roomId) return
 
-      appendMessage(message)
-    })
-
-    socket.on('chat:history', (payload: unknown) => {
-      if (!isRecord(payload)) return
-
-      const historyRoomId = getString(payload, 'roomId')
-      const historyMessages = payload.messages
-      if (historyRoomId !== roomId || !Array.isArray(historyMessages)) return
-
-      const history = historyMessages
-        .map((item) => normalizeChatMessage(item, roomId))
-        .filter(
-          (message): message is ChatMessage =>
-            message !== null && message.roomId === roomId
-        )
-
-      setMessages(history)
-    })
-
-    socket.on('chat:error', (payload: unknown) => {
-      if (isRecord(payload)) {
-        setError(getString(payload, 'message') ?? 'メッセージを送信できません')
-        return
+        appendMessage({
+          id: payload.id,
+          roomId: payload.roomId,
+          userId: payload.userId,
+          username: payload.username,
+          text: payload.text,
+          createdAt: payload.createdAt,
+        })
       }
+    )
 
-      setError('メッセージを送信できません')
-    })
+    socket.on(
+      'chat:history',
+      (payload: Parameters<RoomServerToClientEvents['chat:history']>[0]) => {
+        if (payload.roomId !== roomId) return
+
+        const history = payload.messages.map((m) => ({
+          id: m.id,
+          roomId: m.roomId,
+          userId: m.userId,
+          username: m.username,
+          text: m.text,
+          createdAt: m.createdAt,
+        }))
+
+        setMessages(history)
+      }
+    )
+
+    socket.on(
+      'chat:error',
+      (payload: Parameters<RoomServerToClientEvents['chat:error']>[0]) => {
+        setError(payload.message ?? 'メッセージを送信できません')
+      }
+    )
 
     socket.connect()
 
@@ -183,12 +133,7 @@ export function useRoomChat(roomId: string, accessToken: string | null) {
         return false
       }
 
-      const message: SendChatMessagePayload = {
-        roomId,
-        text: trimmedText,
-      }
-
-      socket.emit('chat:message', message, (ack?: ChatAck) => {
+      socket.emit('chat:message', { roomId, text: trimmedText }, (ack) => {
         if (ack?.ok === false) {
           setError(ack.error ?? 'メッセージを送信できません')
         }
