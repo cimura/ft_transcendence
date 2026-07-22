@@ -13,12 +13,18 @@ type TabType = 'stats' | 'history'
 export const ProfilePage = () => {
   const { userId } = useParams<{ userId: string }>()
   const navigate = useNavigate()
-  const { currentUser, fetchCurrentUser, error: authError } = useAuthStore()
+  const {
+    currentUser,
+    fetchCurrentUser,
+    setCurrentUser,
+    error: authError,
+  } = useAuthStore()
+  const currentUserId = currentUser?.id
   const {
     profile: fetchedProfile,
     loading,
     error,
-  } = useProfile(userId, currentUser?.id)
+  } = useProfile(userId, currentUserId)
   const [profile, setProfile] = useState<UserProfile | null>(null)
   const [activeTab, setActiveTab] = useState<TabType>('stats')
   const [isEditModalOpen, setIsEditModalOpen] = useState(false)
@@ -32,12 +38,12 @@ export const ProfilePage = () => {
 
   // プロフィール情報にisCurrentUserフラグを追加
   useEffect(() => {
-    if (fetchedProfile && currentUser) {
+    if (fetchedProfile && currentUserId) {
       // 取得したプロフィールに現在のユーザー情報を追加
       // eslint-disable-next-line react-hooks/set-state-in-effect
       setProfile({
         ...fetchedProfile,
-        isCurrentUser: fetchedProfile.id === currentUser.id,
+        isCurrentUser: fetchedProfile.id === currentUserId,
       })
     } else if (fetchedProfile) {
       setProfile({
@@ -45,10 +51,20 @@ export const ProfilePage = () => {
         isCurrentUser: false,
       })
     }
-  }, [fetchedProfile, currentUser])
+  }, [fetchedProfile, currentUserId])
 
   const handleProfileUpdate = (updatedProfile: UserProfile) => {
     setProfile(updatedProfile)
+    if (currentUser && updatedProfile.id === currentUser.id) {
+      setCurrentUser({
+        ...currentUser,
+        username: updatedProfile.username,
+        displayName: updatedProfile.displayName,
+        avatarUrl: updatedProfile.avatarUrl,
+        email: updatedProfile.email ?? currentUser.email,
+        updatedAt: updatedProfile.updatedAt,
+      })
+    }
   }
 
   if (loading || (!currentUser && !authError)) {
