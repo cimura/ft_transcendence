@@ -23,13 +23,19 @@ import { SettingsMenu } from './pages/settings/SettingsMenu'
 import { AccountManagement } from './pages/settings/AccountManagement'
 import { useAuthStore } from './stores/authStore'
 import { NotificationsPage } from './pages/NotificationsPage'
+import BackgroundVideo from './components/common/BackgroundVideo'
 import { PrivacyPolicyPage } from './pages/legal/PrivacyPolicyPage'
 import { TermsOfServicePage } from './pages/legal/TermsOfServicePage'
 
 function App() {
   return (
     <BrowserRouter>
-      <AppRoutes />
+      <BackgroundVideo />
+
+      {/* コンテンツが背景の上に重なるように相対位置を指定 */}
+      <div className="relative z-10 w-full h-full min-h-screen">
+        <AppRoutes />
+      </div>
     </BrowserRouter>
   )
 }
