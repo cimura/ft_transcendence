@@ -22,7 +22,7 @@ const Input: React.FC<InputProps> = ({ label, id, ...props }) => {
         className="
             px-4 py-3 
             bg-transparent text-lime 
-            border border-galactic-border
+            border border-galactic-panelBorder
             focus:outline-none focus:border-lime focus:shadow-[0_0_8px_rgba(176,255,0,0.3)]
             transition-all duration-300
           "
