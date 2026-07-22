@@ -19,9 +19,9 @@ export const ProfileHeader = ({
       {/* 背景の装飾的な光 */}
       <div className="absolute top-0 right-0 w-64 h-64 bg-cyan-600/10 rounded-full blur-3xl pointer-events-none" />
 
-      <div className="flex items-start gap-8 relative z-10">
+      <div className="flex flex-col sm:flex-row items-start gap-8 relative z-10">
         {/* アバター */}
-        <div className="relative group">
+        <div className="relative group shrink-0">
           {/* アバターの後光エフェクト */}
           <div className="absolute inset-0 bg-cyan-500 rounded-full blur-md opacity-30 group-hover:opacity-60 transition-opacity duration-300" />
 
@@ -41,22 +41,24 @@ export const ProfileHeader = ({
         </div>
 
         {/* ユーザー情報 */}
-        <div className="flex-1 pt-2">
-          <h1 className="text-4xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-white to-cyan-200 mb-2 tracking-wide">
+        <div className="min-w-0 flex-1 pt-2">
+          <h1 className="break-words text-4xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-white to-cyan-200 mb-2 tracking-wide">
             {profile.displayName || profile.username}
           </h1>
-          <p className="text-cyan-400/80 font-medium mb-1 tracking-wider">
+          <p className="break-words text-cyan-400/80 font-medium mb-1 tracking-wider">
             @{profile.username}
           </p>
           {profile.email && (
-            <p className="text-cyan-100/40 text-sm">{profile.email}</p>
+            <p className="break-words text-cyan-100/40 text-sm">
+              {profile.email}
+            </p>
           )}
         </div>
 
         {/* アクションボタン */}
 
         {/* アクションボタン */}
-        <div className="flex gap-4 pt-4">
+        <div className="flex flex-wrap gap-4 pt-4">
           {/* 戻るボタン */}
           {onBack && (
             <button

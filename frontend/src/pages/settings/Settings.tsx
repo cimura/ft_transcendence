@@ -26,7 +26,7 @@ export const Settings = ({ onLogout }: SettingsProps) => {
           <div className="relative border-b border-cyan-500/30 px-8 py-6">
             <div className="absolute top-0 inset-x-0 h-[1px] bg-gradient-to-r from-transparent via-cyan-400 to-transparent opacity-50" />
 
-            <div className="flex items-center justify-between">
+            <div className="flex flex-col items-start gap-4 sm:flex-row sm:items-center sm:justify-between">
               {isRootSettings ? (
                 // トップメニュー時は「閉じる」ボタン（Homeへ戻る）
                 <button
@@ -56,12 +56,9 @@ export const Settings = ({ onLogout }: SettingsProps) => {
               )}
 
               {/* タイトル（中央配置） */}
-              <h1 className="absolute left-1/2 -translate-x-1/2 text-2xl font-bold tracking-widest text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 to-blue-500 drop-shadow-[0_0_8px_rgba(0,255,255,0.3)]">
+              <h1 className="min-w-0 text-2xl font-bold tracking-widest text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 to-blue-500 drop-shadow-[0_0_8px_rgba(0,255,255,0.3)] sm:text-right">
                 {isRootSettings ? 'SYSTEM SETTINGS' : '設定'}
               </h1>
-
-              {/* レイアウト調整用の空要素 */}
-              <div className="w-[88px]"></div>
             </div>
           </div>
 
