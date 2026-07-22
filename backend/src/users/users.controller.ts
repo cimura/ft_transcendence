@@ -13,7 +13,6 @@ import {
   HttpCode,
   HttpStatus,
   Query,
-  Param,
   BadRequestException,
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
@@ -59,20 +58,6 @@ export class UsersController {
     const user = await this.usersService.profile(req.user.userId);
     return {
       message: 'This is a protected route. You are authenticated.',
-      user,
-    };
-  }
-
-  @Get(':userId/profile')
-  @ApiOperation({ summary: '指定ユーザーのプロフィールの取得' })
-  @ApiOkResponse({ description: '成功時', type: ProfileResponseDto })
-  @ApiNotFoundResponse({ description: 'ユーザーが存在しない時' })
-  async userProfile(
-    @Param('userId') userId: string,
-  ): Promise<ProfileResponseDto> {
-    const user = await this.usersService.profile(userId);
-    return {
-      message: 'Profile retrieved successfully.',
       user,
     };
   }

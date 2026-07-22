@@ -137,7 +137,7 @@ describe('GameGateway', () => {
       expect(client.data.roomId).toBe('room-new');
     });
 
-    it('参加処理(handleGameJoin)がエラーを投げた場合、例外をスローし以降の処理を行わないこと（例外フィルターに委譲）', async () => {
+    it('参加処理(handleGameJoin)がエラーを投げた場合、ソケットを退出させて例外フィルターに委譲すること', async () => {
       const client = createMockSocket();
       client.data.user = { id: 'user-1' };
       const joinData = { roomId: 'room-1' };
@@ -152,8 +152,9 @@ describe('GameGateway', () => {
         'Room is full',
       );
 
-      // 後続の処理が呼ばれていないこと（エラーハンドリングはFilterが担うため）
-      expect(client.join).not.toHaveBeenCalled();
+      // ゲーム状態を確定する前にソケットへ参加し、失敗時は退出すること
+      expect(client.join).toHaveBeenCalledWith('room-1');
+      expect(client.leave).toHaveBeenCalledWith('room-1');
       expect(client.data.roomId).toBeUndefined(); // roomIdが更新されていないこと
       expect(client.emit).not.toHaveBeenCalled();
       expect(gameService.handleGameStart).not.toHaveBeenCalled();
@@ -182,7 +183,26 @@ describe('GameGateway', () => {
 
       // 後続の処理が呼ばれていないこと
       expect(client.emit).not.toHaveBeenCalled();
+      expect(gameService.handleGameJoin).not.toHaveBeenCalled();
       expect(gameService.handleGameStart).not.toHaveBeenCalled();
+    });
+
+    it('同じルームへの再参加処理が失敗した場合、既存のルームから退出しないこと', async () => {
+      const client = createMockSocket();
+      client.data.user = { id: 'user-1' };
+      client.data.roomId = 'room-1';
+
+      gameService.handleGameJoin.mockImplementation(() => {
+        throw new Error('Cannot rejoin the room');
+      });
+
+      await expect(
+        gateway.handleJoin({ roomId: 'room-1' }, client),
+      ).rejects.toThrow('Cannot rejoin the room');
+
+      expect(client.join).toHaveBeenCalledWith('room-1');
+      expect(client.leave).not.toHaveBeenCalled();
+      expect(client.data.roomId).toBe('room-1');
     });
 
     it('client.data.userが存在しない場合、処理を中断すること', async () => {

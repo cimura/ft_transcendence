@@ -17,10 +17,7 @@ export class SignUpRequestDto {
     example: 'example@example.com',
     description: 'ユーザーのメールアドレス (ユニーク)',
   })
-  @IsEmail(
-    {},
-    { message: 'Eメールアドレスを正しく入力してください' },
-  )
+  @IsEmail({}, { message: 'Eメールアドレスを正しく入力してください' })
   @IsNotEmpty({ message: 'Eメールアドレスを入力してください' })
   email: string;
 
@@ -30,8 +27,7 @@ export class SignUpRequestDto {
   })
   @IsNotEmpty({ message: 'ユーザー名を入力してください.' })
   @Matches(/^[a-zA-Z0-9_-]+$/, {
-    message:
-      'ユーザー名には英数字、アンダースコア、ハイフンのみ使用できます',
+    message: 'ユーザー名には英数字、アンダースコア、ハイフンのみ使用できます',
   })
   username: string;
 
