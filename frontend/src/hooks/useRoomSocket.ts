@@ -6,7 +6,7 @@ import type {
   RoomClientToServerEvents,
   RoomServerToClientEvents,
   RoomSnapshot,
-} from '@ft_transcendence/shared/room-events.types'
+} from '@ft_transcendence/shared/rooms-events.types'
 
 const BACKEND_URL = import.meta.env.VITE_BACKEND_URL || window.location.origin
 const ROOMS_NAMESPACE = `${BACKEND_URL.replace(/\/$/, '')}/rooms`
@@ -66,13 +66,19 @@ export function useRoomSocket(roomId?: string) {
       upsertRoom(room)
     })
 
-    socket.on('room:deleted', ({ roomId }: { roomId: string }) => {
-      removeRoom(roomId)
-    })
+    socket.on(
+      'room:deleted',
+      ({ roomId }: Parameters<RoomServerToClientEvents['room:deleted']>[0]) => {
+        removeRoom(roomId)
+      }
+    )
 
-    socket.on('room:error', ({ message }: { message: string }) => {
-      console.error('[RoomSocket] error:', message)
-    })
+    socket.on(
+      'room:error',
+      ({ message }: Parameters<RoomServerToClientEvents['room:error']>[0]) => {
+        console.error('[RoomSocket] error:', message)
+      }
+    )
 
     socket.connect()
 
