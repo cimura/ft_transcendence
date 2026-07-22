@@ -23,6 +23,14 @@ const signalBars = [
   { height: '88%', opacity: 0.92 },
 ]
 
+type HomeNavItem = {
+  id: string
+  label: string
+  sub: string
+  path: string
+  badge?: number
+}
+
 /**
  * Renders the home dashboard with navigation to profile, friends, lobby, notifications, rankings, and settings.
  */
@@ -32,6 +40,27 @@ export function Home() {
   const { setCurrentRoom, upsertRoom } = useRoomStore()
   const [isCreatingRoom, setIsCreatingRoom] = useState(false)
   const { notifications } = useNotifications()
+  const navItems: HomeNavItem[] = [
+    {
+      id: 'notifications',
+      label: '通知',
+      sub: 'ALERTS',
+      path: '/notifications',
+      badge: notifications.length,
+    },
+    {
+      id: 'rankings',
+      label: 'ランキング',
+      sub: 'RANKING',
+      path: '/rankings',
+    },
+    {
+      id: 'settings',
+      label: '設定',
+      sub: 'SETTINGS',
+      path: '/settings',
+    },
+  ]
 
   useEffect(() => {
     if (!currentUser) {
@@ -228,27 +257,7 @@ export function Home() {
         </div>
 
         <div className="flex w-full justify-center gap-6 px-10">
-          {[
-            {
-              id: 'notifications',
-              label: '通知',
-              sub: 'ALERTS',
-              path: '/notifications',
-              badge: notifications.length,
-            },
-            {
-              id: 'rankings',
-              label: 'ランキング',
-              sub: 'RANKING',
-              path: '/rankings',
-            },
-            {
-              id: 'settings',
-              label: '設定',
-              sub: 'SETTINGS',
-              path: '/settings',
-            },
-          ].map((item) => (
+          {navItems.map((item) => (
             <button
               key={item.id}
               onClick={() => navigate(item.path)}
