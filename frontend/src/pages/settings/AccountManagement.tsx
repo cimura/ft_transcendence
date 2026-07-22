@@ -64,13 +64,19 @@ export const AccountManagement = () => {
       )}
 
       {!currentUser && loading && (
-        <div className="rounded-xl border border-cyan-500/30 bg-black/40 p-6 text-sm text-cyan-100/60 animate-pulse text-center">
+        <div
+          role="status"
+          className="rounded-xl border border-cyan-500/30 bg-black/40 p-6 text-sm text-cyan-100/60 animate-pulse text-center"
+        >
           スキャン中...
         </div>
       )}
 
       {!currentUser && error && (
-        <div className="rounded-xl border border-red-500/40 bg-red-950/30 p-6 backdrop-blur-sm">
+        <div
+          role="alert"
+          className="rounded-xl border border-red-500/40 bg-red-950/30 p-6 backdrop-blur-sm"
+        >
           <p className="text-sm font-bold tracking-wider text-red-300">
             [ERROR] アカウント情報の取得に失敗しました
           </p>
@@ -86,7 +92,10 @@ export const AccountManagement = () => {
       )}
 
       {success && (
-        <div className="rounded-xl border border-green-500/40 bg-green-950/30 p-4 text-sm font-bold tracking-wider text-green-300 shadow-[0_0_15px_rgba(0,255,0,0.1)]">
+        <div
+          role="status"
+          className="rounded-xl border border-green-500/40 bg-green-950/30 p-4 text-sm font-bold tracking-wider text-green-300 shadow-[0_0_15px_rgba(0,255,0,0.1)]"
+        >
           {success}
         </div>
       )}
