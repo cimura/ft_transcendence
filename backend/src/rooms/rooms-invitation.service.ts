@@ -17,6 +17,17 @@ import { RoomResponse } from '../common/types/room.type';
 
 type InvitationStatusResponse = 'pending' | 'accepted' | 'declined' | 'expired';
 
+type InvitationPayload = Prisma.RoomInvitationGetPayload<{
+  include: {
+    inviter: {
+      select: { id: true; displayName: true; email: true; avatarUrl: true };
+    };
+    invitee: {
+      select: { id: true; displayName: true; email: true; avatarUrl: true };
+    };
+  };
+}>;
+
 @Injectable()
 export class RoomsInvitationService {
   constructor(
@@ -84,8 +95,7 @@ export class RoomsInvitationService {
       return this.toInvitationResponse(existingInvitation, room.name);
     }
 
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    let invitation: any;
+    let invitation: InvitationPayload;
     try {
       invitation = await this.prisma.roomInvitation.create({
         data: {
@@ -239,8 +249,10 @@ export class RoomsInvitationService {
     };
   }
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  private toInvitationResponse(invitation: any, roomName: string) {
+  private toInvitationResponse(
+    invitation: InvitationPayload,
+    roomName: string,
+  ) {
     return {
       id: invitation.id,
       roomId: invitation.roomId,

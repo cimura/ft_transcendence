@@ -17,7 +17,6 @@ const guest = {
   displayName: 'Guest',
   avatarUrl: null,
 };
-const now = new Date();
 
 describe('RoomsInvitationService', () => {
   let service: RoomsInvitationService;
@@ -118,7 +117,10 @@ describe('RoomsInvitationService', () => {
         updateMany: jest.fn().mockResolvedValue({ count: 1 }),
       },
     };
-    prisma.$transaction.mockImplementation(async (cb) => cb(tx));
+    prisma.$transaction.mockImplementation(
+      async (callback: (transaction: typeof tx) => Promise<unknown>) =>
+        await callback(tx),
+    );
 
     const expectedJoinedRoomResponse = {
       id: 'room-1',

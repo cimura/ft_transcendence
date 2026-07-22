@@ -77,7 +77,10 @@ describe('RoomsChatService', () => {
         deleteMany: jest.fn(),
       },
     };
-    prisma.$transaction.mockImplementation(async (cb) => cb(tx));
+    prisma.$transaction.mockImplementation(
+      async (callback: (transaction: typeof tx) => Promise<unknown>) =>
+        await callback(tx),
+    );
 
     const result = await service.createMessage(room.id, user.id, {
       content: '<b>hello</b>',

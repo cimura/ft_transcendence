@@ -170,7 +170,7 @@ export class RoomsService {
       room.updatedAt = new Date();
     }
 
-    return { deleted: false as const, roomId };
+    return this.toRoomResponse(room);
   }
 
   setReady(roomId: string, userId: string, isReady: boolean): RoomResponse {

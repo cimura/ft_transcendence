@@ -5,12 +5,16 @@ import {
 } from '../generated/prisma/enums';
 import { PrismaService } from '../prisma.service';
 import { NotificationResponseDto } from './dto/notification-response.dto';
+import { RoomsStateService } from '../rooms/rooms-state.service';
 
 const NOTIFICATION_QUERY_LIMIT = 50;
 
 @Injectable()
 export class NotificationsService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly roomsState: RoomsStateService,
+  ) {}
 
   async findAll(userId: string): Promise<NotificationResponseDto[]> {
     const [friendRequests, roomInvitations] = await Promise.all([
@@ -44,12 +48,6 @@ export class NotificationsService {
               avatarUrl: true,
             },
           },
-          room: {
-            select: {
-              id: true,
-              name: true,
-            },
-          },
         },
         orderBy: { createdAt: 'desc' },
         take: NOTIFICATION_QUERY_LIMIT,
@@ -68,21 +66,26 @@ export class NotificationsService {
         },
         friendRequestId: request.id,
       })),
-      ...roomInvitations.map((invitation) => ({
-        id: invitation.id,
-        type: 'room_invitation' as const,
-        createdAt: invitation.createdAt.toISOString(),
-        actor: {
-          id: invitation.inviter.id,
-          username: invitation.inviter.username,
-          avatarUrl: invitation.inviter.avatarUrl,
-        },
-        room: {
-          id: invitation.room.id,
-          name: invitation.room.name,
-        },
-        invitationId: invitation.id,
-      })),
+      ...roomInvitations.map((invitation) => {
+        const room = this.roomsState.getRoom(invitation.roomId);
+
+        return {
+          id: invitation.id,
+          type: 'room_invitation' as const,
+          createdAt: invitation.createdAt.toISOString(),
+          actor: {
+            id: invitation.inviter.id,
+            username: invitation.inviter.username,
+            avatarUrl: invitation.inviter.avatarUrl,
+          },
+          room: {
+            id: invitation.roomId,
+            // ルームが既に解散されている場合は代替テキストを設定
+            name: room ? room.name : 'Unknown Room',
+          },
+          invitationId: invitation.id,
+        };
+      }),
     ];
 
     return notifications.sort(

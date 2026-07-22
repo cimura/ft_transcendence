@@ -181,7 +181,6 @@ export class RoomsGateway implements OnGatewayConnection, OnGatewayDisconnect {
       maxPlayers: room.maxPlayers,
       status: room.status,
       mode: room.mode,
-      settingsSnapshot: room.settingsSnapshot,
       createdAt: room.createdAt.toISOString(),
       updatedAt: room.updatedAt.toISOString(),
       startedAt: room.startedAt?.toISOString(),
