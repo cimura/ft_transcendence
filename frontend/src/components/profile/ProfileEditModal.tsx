@@ -86,10 +86,15 @@ export const ProfileEditModal = ({
   const isLoading = profileLoading || avatarLoading
   const error = profileError || avatarError
 
+  const handleModalClose = useCallback(() => {
+    if (isLoading) return
+    handleClose()
+  }, [isLoading, handleClose])
+
   return (
     <Modal
       isOpen={isOpen}
-      onClose={handleClose}
+      onClose={handleModalClose}
       className="w-full max-w-2xl bg-transparent p-0"
     >
       <div
@@ -192,7 +197,7 @@ export const ProfileEditModal = ({
           </span>
           <div className="flex gap-4 justify-end items-center h-full py-2">
             <button
-              onClick={handleClose}
+              onClick={handleModalClose}
               disabled={isLoading}
               className="h-full px-8 bg-transparent text-cyan-400 font-bold tracking-widest border border-cyan-700 hover:bg-cyan-950/50 hover:border-cyan-400 hover:text-cyan-200 transition-all disabled:opacity-50 flex items-center justify-center"
               style={{
