@@ -1,7 +1,6 @@
 import { useNavigate, useParams } from 'react-router-dom'
 import { useRoomStore } from '../stores/roomStore'
 import { useEffect, useState } from 'react'
-import { Button } from '../components/common/Button'
 import { PlayerCard } from '../components/waitingRoom/PlayerCard'
 import { ChatPanel } from '../components/waitingRoom/ChatPanel'
 import { GameMapPreview } from '../components/game/preview/GameMapPreview'
@@ -114,7 +113,6 @@ export function WaitingRoom() {
     : currentRoom.players.length === currentRoom.maxPlayers
   const canStart = isHost && allReady && hasEnoughPlayers
 
-  // toggle ready/unready
   const handleToggleReady = async () => {
     try {
       const room = await setRoomReady(currentRoom.id, !isReady)
@@ -125,7 +123,6 @@ export function WaitingRoom() {
     }
   }
 
-  // start game
   const handleStartGame = async () => {
     try {
       const room = await startRoom(currentRoom.id)
@@ -137,19 +134,15 @@ export function WaitingRoom() {
     }
   }
 
-  // leave room
   const handleLeaveRoom = async () => {
     console.log('部屋を退出')
-
     try {
       const result = await leaveRoom(currentRoom.id)
-
       if (result.deleted) {
         removeRoom(result.roomId)
       } else {
         upsertRoom(result)
       }
-
       setCurrentRoom(null)
       navigate('/home')
     } catch (error) {
@@ -162,137 +155,212 @@ export function WaitingRoom() {
         navigate('/home')
         return
       }
-
       console.error('Failed to leave room:', error)
     }
   }
 
   return (
-    <div className="min-h-screen bg-gray-100">
-      {/* ヘッダー */}
-      <header className="bg-white shadow">
-        <div className="mx-auto max-w-4xl px-4 py-6 sm:px-6">
+    // 変更点: 背景を透過にし、HUD風のフォントに変更
+    <div className="min-h-screen bg-transparent text-cyan-100 font-sans relative">
+      {/* うっすらとした背景グリッド */}
+      <div className="absolute inset-0 bg-[linear-gradient(rgba(0,255,255,0.02)_1px,transparent_1px),linear-gradient(90deg,rgba(0,255,255,0.02)_1px,transparent_1px)] bg-[size:30px_30px] pointer-events-none" />
+
+      {/* ヘッダー: コマンドセンター風 */}
+      <header className="bg-black/50 backdrop-blur-md border-b border-cyan-500/30 relative z-10 shadow-[0_4px_30px_rgba(0,255,255,0.1)]">
+        <div className="mx-auto max-w-7xl px-4 py-4 sm:px-6">
           <div className="flex items-center justify-between">
-            <div>
-              <h1 className="text-3xl font-bold text-gray-900">
-                {currentRoom.name}
-              </h1>
-              <p className="mt-1 text-sm text-gray-600">
-                ホスト: {currentRoom.hostName}
-              </p>
+            <div className="flex items-center gap-6">
+              <div className="w-12 h-12 rounded-full border-2 border-cyan-400 flex items-center justify-center shadow-[0_0_15px_rgba(0,255,255,0.4)]">
+                <span className="animate-ping w-4 h-4 bg-cyan-400 rounded-full"></span>
+              </div>
+              <div>
+                <h1 className="text-3xl font-bold tracking-widest text-transparent bg-clip-text bg-gradient-to-r from-cyan-300 to-blue-500 drop-shadow-[0_0_8px_rgba(0,255,255,0.3)]">
+                  {currentRoom.name}
+                </h1>
+                <p className="mt-1 text-xs font-mono text-cyan-500 tracking-[0.2em]">
+                  HOST_LINK //{' '}
+                  <span className="text-cyan-200">{currentRoom.hostName}</span>
+                </p>
+              </div>
             </div>
-            <Button variant="danger" size="sm" onClick={handleLeaveRoom}>
-              退出
-            </Button>
+            <button
+              onClick={handleLeaveRoom}
+              className="group relative px-6 py-2 rounded-full border border-red-500/50 bg-red-950/40 text-red-300 font-bold tracking-widest overflow-hidden transition-all hover:bg-red-900/60 hover:text-white hover:border-red-400 hover:shadow-[0_0_20px_rgba(255,0,0,0.5)]"
+            >
+              <div className="absolute inset-0 bg-red-500/20 translate-y-full group-hover:translate-y-0 transition-transform duration-300 ease-out" />
+              <span className="relative z-10 text-sm">EMERGENCY EXIT</span>
+            </button>
           </div>
         </div>
       </header>
 
       {/* メインコンテンツ */}
-      <main className="mx-auto max-w-7xl px-4 py-8 sm:px-6">
-        {/* プレイヤー一覧 */}
-        <div className="grid gap-6 lg:grid-cols-[360px_minmax(0,1fr)] xl:grid-cols-[320px_minmax(0,1fr)_360px]">
-          <section>
-            <div className="mb-6">
-              <h2 className="mb-4 text-xl font-bold text-gray-900">
-                プレイヤー ({currentRoom.players.length} /{' '}
-                {currentRoom.maxPlayers})
-              </h2>
+      <main className="relative z-10 mx-auto max-w-7xl px-4 py-8 sm:px-6">
+        <div className="grid gap-6 lg:grid-cols-[360px_minmax(0,1fr)] xl:grid-cols-[340px_minmax(0,1fr)_360px]">
+          {/* 左側: プレイヤーリスト & アクション */}
+          <section className="flex flex-col gap-6">
+            <div className="rounded-2xl border border-cyan-500/30 bg-black/40 backdrop-blur-md p-5 shadow-[0_0_20px_rgba(0,255,255,0.05)]">
+              <div className="flex items-center justify-between mb-4 border-b border-cyan-500/20 pb-2">
+                <h2 className="text-lg font-bold tracking-widest text-cyan-200">
+                  SQUAD{' '}
+                  <span className="text-xs text-cyan-500 font-mono ml-2">
+                    [{currentRoom.players.length}/{currentRoom.maxPlayers}]
+                  </span>
+                </h2>
+                <span className="flex h-2 w-2 relative">
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-cyan-400 opacity-75"></span>
+                  <span className="relative inline-flex rounded-full h-2 w-2 bg-cyan-500"></span>
+                </span>
+              </div>
+
               <div className="space-y-3">
                 {currentRoom.players.map((player) => (
                   <PlayerCard key={player.userId} player={player} />
                 ))}
+
                 {/* 空きスロット */}
                 {Array.from({
                   length: currentRoom.maxPlayers - currentRoom.players.length,
                 }).map((_, i) => (
                   <div
                     key={`empty-${i}`}
-                    className="flex items-center justify-center rounded-lg border-2 border-dashed border-gray-300 bg-gray-50 p-4"
+                    className="flex items-center justify-center rounded-lg border border-dashed border-cyan-800/50 bg-cyan-950/20 p-4 transition-all hover:bg-cyan-900/30"
                   >
-                    <span className="text-gray-400">空きスロット</span>
+                    <span className="text-cyan-600/60 font-mono text-sm tracking-[0.2em]">
+                      WAITING FOR SIGNAL...
+                    </span>
                   </div>
                 ))}
               </div>
             </div>
 
-            {/* アクションボタン */}
-            <div className="flex gap-4">
+            {/* アクションボタン (Ready / Start) */}
+            <div className="w-full">
               {!isHost && (
-                <Button
-                  variant={isReady ? 'secondary' : 'primary'}
-                  size="lg"
+                <button
                   onClick={handleToggleReady}
-                  className="flex-1"
+                  className={`w-full relative overflow-hidden rounded-xl border py-4 font-bold tracking-widest transition-all duration-300 hover:-translate-y-1 ${
+                    isReady
+                      ? 'border-emerald-400 bg-emerald-900/40 text-emerald-100 shadow-[0_0_20px_rgba(16,185,129,0.4)] hover:bg-emerald-800/60'
+                      : 'border-yellow-500/60 bg-yellow-900/40 text-yellow-100 shadow-[0_0_15px_rgba(234,179,8,0.2)] hover:border-yellow-400 hover:bg-yellow-800/50 hover:shadow-[0_0_25px_rgba(234,179,8,0.4)]'
+                  }`}
                 >
-                  {isReady ? 'Unready' : 'Ready'}
-                </Button>
+                  <span className="relative z-10">
+                    {isReady
+                      ? 'READY TO LAUNCH'
+                      : 'STANDBY (クリックで準備完了)'}
+                  </span>
+                </button>
               )}
+
               {isHost && (
-                <Button
-                  variant="primary"
-                  size="lg"
+                <button
                   onClick={handleStartGame}
                   disabled={!canStart}
-                  className="flex-1"
+                  className={`w-full relative overflow-hidden rounded-xl border py-4 font-bold tracking-[0.2em] transition-all duration-300 ${
+                    canStart
+                      ? 'border-cyan-400 bg-cyan-600/40 text-white shadow-[0_0_30px_rgba(0,255,255,0.5)] hover:bg-cyan-500/60 hover:shadow-[0_0_40px_rgba(0,255,255,0.7)] hover:-translate-y-1 hover:scale-[1.02]'
+                      : 'border-cyan-900/50 bg-black/40 text-cyan-700/50 cursor-not-allowed'
+                  }`}
                 >
-                  {canStart ? 'ゲーム開始' : '全員の準備を待っています...'}
-                </Button>
+                  <span className="relative z-10">
+                    {canStart
+                      ? 'LAUNCH SEQUENCE INITIATE'
+                      : 'WAITING FOR ALL CREW...'}
+                  </span>
+                  {canStart && (
+                    <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent -translate-x-full animate-[shimmer_2s_infinite]" />
+                  )}
+                </button>
               )}
             </div>
-
-            {/* ヒント */}
-            {isHost && (!allReady || !hasEnoughPlayers) && (
-              <p className="mt-4 text-center text-sm text-gray-500">
-                満員になり、全員が Ready になるとゲームを開始できます
-              </p>
-            )}
 
             {isHost && currentRoom.status === 'waiting' && (
               <RoomInviteSection currentRoom={currentRoom} />
             )}
           </section>
 
-          <section className="rounded-lg bg-white p-4 shadow">
-            <h2 className="text-xl font-bold text-gray-900">ゲーム情報</h2>
-            <div className="mt-4">
-              <p className="mb-2 text-sm font-semibold text-gray-500">
-                ステージイメージ
-              </p>
-              <GameMapPreview />
+          {/* 中央: マップ・ゲーム情報 */}
+          <section className="rounded-2xl border border-cyan-500/30 bg-black/40 p-6 backdrop-blur-md shadow-[0_0_30px_rgba(0,255,255,0.05)] relative overflow-hidden flex flex-col">
+            <div className="absolute top-0 right-0 w-32 h-32 bg-cyan-600/10 rounded-full blur-3xl pointer-events-none" />
+
+            <h2 className="text-xl font-bold tracking-widest text-cyan-100 flex items-center gap-3">
+              <span className="w-1 h-6 bg-cyan-400 rounded-full shadow-[0_0_10px_rgba(0,255,255,0.8)]" />
+              MISSION BRIEFING
+            </h2>
+
+            <div className="mt-6 flex-1 flex flex-col">
+              <div className="flex justify-between items-end mb-2">
+                <p className="text-xs font-mono tracking-widest text-cyan-400/80">
+                  TACTICAL MAP PREVIEW
+                </p>
+                <p className="text-[10px] font-mono text-cyan-600">
+                  RENDER_MODE: VIRTUAL
+                </p>
+              </div>
+
+              {/* マッププレビュー枠 */}
+              <div className="rounded-xl border border-cyan-500/40 p-1 bg-black/60 shadow-[inset_0_0_20px_rgba(0,255,255,0.1)] flex-1 min-h-[250px] relative">
+                <GameMapPreview />
+                {/* 走査線エフェクト */}
+                <div className="absolute inset-0 pointer-events-none bg-[linear-gradient(transparent_50%,rgba(0,255,255,0.05)_50%)] bg-[size:100%_4px]" />
+              </div>
             </div>
-            <div className="mt-4 grid gap-4 sm:grid-cols-2">
-              <div className="rounded-md bg-gray-50 p-4">
-                <p className="text-sm font-semibold text-gray-500">ゲーム</p>
-                <p className="mt-1 text-lg font-bold text-gray-900">
+
+            <div className="mt-6 grid gap-4 sm:grid-cols-2">
+              <div className="rounded-lg border border-cyan-900/50 bg-cyan-950/20 p-4 transition-colors hover:border-cyan-500/50 hover:bg-cyan-900/30">
+                <p className="text-[10px] font-mono tracking-widest text-cyan-500">
+                  PROTOCOL
+                </p>
+                <p className="mt-1 text-lg font-bold text-cyan-100 tracking-wider">
                   ボンバーマン
                 </p>
               </div>
-              <div className="rounded-md bg-gray-50 p-4">
-                <p className="text-sm font-semibold text-gray-500">勝利条件</p>
-                <p className="mt-1 text-gray-900">
-                  爆弾で相手を倒し、最後まで生き残る
+              <div className="rounded-lg border border-cyan-900/50 bg-cyan-950/20 p-4 transition-colors hover:border-cyan-500/50 hover:bg-cyan-900/30">
+                <p className="text-[10px] font-mono tracking-widest text-cyan-500">
+                  OBJECTIVE
+                </p>
+                <p className="mt-1 text-sm font-medium text-cyan-100">
+                  爆弾で相手を排除し、最後まで生存せよ
                 </p>
               </div>
-              <div className="rounded-md bg-gray-50 p-4">
-                <p className="text-sm font-semibold text-gray-500">操作</p>
-                <p className="mt-1 text-gray-900">
-                  WASD / 矢印キーで移動、Spaceで爆弾設置
+              <div className="rounded-lg border border-cyan-900/50 bg-cyan-950/20 p-4 transition-colors hover:border-cyan-500/50 hover:bg-cyan-900/30">
+                <p className="text-[10px] font-mono tracking-widest text-cyan-500">
+                  CONTROLS
+                </p>
+                <p className="mt-1 text-sm font-medium text-cyan-100 font-sans">
+                  <kbd className="px-1.5 py-0.5 rounded bg-cyan-900/50 border border-cyan-600 text-cyan-300 mx-0.5">
+                    WASD
+                  </kbd>{' '}
+                  / 矢印で移動
+                  <br />
+                  <kbd className="px-1.5 py-0.5 rounded bg-cyan-900/50 border border-cyan-600 text-cyan-300 mx-0.5 mt-1 inline-block">
+                    Space
+                  </kbd>{' '}
+                  で爆弾設置
                 </p>
               </div>
-              <div className="rounded-md bg-gray-50 p-4">
-                <p className="text-sm font-semibold text-gray-500">人数</p>
-                <p className="mt-1 text-gray-900">
-                  最大 {currentRoom.maxPlayers} 人
+              <div className="rounded-lg border border-cyan-900/50 bg-cyan-950/20 p-4 transition-colors hover:border-cyan-500/50 hover:bg-cyan-900/30">
+                <p className="text-[10px] font-mono tracking-widest text-cyan-500">
+                  CAPACITY
+                </p>
+                <p className="mt-1 text-lg font-bold text-cyan-100">
+                  MAX {currentRoom.maxPlayers} UNITS
                 </p>
               </div>
             </div>
-            <div className="mt-4 rounded-md border border-amber-200 bg-amber-50 p-4 text-sm text-amber-800">
-              ゲーム画面は現在フロントエンド確認用の仮実装です。
-              バックエンド接続後は、全員の準備完了とゲーム開始イベントに合わせて遷移します。
+
+            <div className="mt-6 rounded-lg border border-yellow-500/40 bg-yellow-900/20 p-4 text-xs tracking-wide text-yellow-200/90 shadow-[0_0_10px_rgba(234,179,8,0.1)] flex items-start gap-3">
+              <span className="text-yellow-400 animate-pulse">⚠️</span>
+              <p>
+                ゲーム画面は現在フロントエンド確認用の仮想環境です。
+                <br />
+                全員の準備完了後、本番環境(バックエンド)へ移行します。
+              </p>
             </div>
           </section>
 
+          {/* 右側: チャットパネル */}
           <ChatPanel
             roomId={roomId}
             currentUser={currentUser}
@@ -323,26 +391,33 @@ function RoomInviteSection({ currentRoom }: { currentRoom: GameRoom }) {
         (friend) => friend.id === selectedInviteeId
       )
       setInviteMessage(
-        `${invitedFriend?.username ?? 'フレンド'} に招待を送りました`
+        `${invitedFriend?.username ?? 'TARGET'} へ通信リンクを送信しました`
       )
       setSelectedInviteeId('')
     } catch (error) {
-      setInviteError(getApiErrorMessage(error, '招待の送信に失敗しました'))
+      setInviteError(getApiErrorMessage(error, '通信の送信に失敗しました'))
     } finally {
       setInviteLoading(false)
     }
   }
 
   return (
-    <div className="mt-6 rounded-lg bg-white p-4 shadow">
-      <h3 className="text-lg font-bold text-gray-900">フレンドを招待</h3>
-      <div className="mt-3 flex gap-3">
+    <div className="rounded-xl border border-cyan-500/30 bg-black/40 p-5 backdrop-blur-sm relative overflow-hidden">
+      <div className="absolute top-0 right-0 w-16 h-16 border-t border-r border-cyan-500/20 rounded-tr-xl pointer-events-none" />
+
+      <h3 className="text-xs font-bold tracking-widest text-cyan-400 mb-3 flex items-center gap-2">
+        <span className="w-1.5 h-1.5 bg-cyan-400 rounded-full" />
+        INVITE OPERATOR
+      </h3>
+      <div className="flex gap-2">
         <select
           value={selectedInviteeId}
           onChange={(event) => setSelectedInviteeId(event.target.value)}
-          className="min-w-0 flex-1 rounded-md border border-gray-300 px-3 py-2 text-gray-900"
+          className="min-w-0 flex-1 rounded-md border border-cyan-700 bg-cyan-950/30 px-3 py-2 text-sm text-cyan-100 outline-none focus:border-cyan-400 focus:ring-1 focus:ring-cyan-400 transition-colors"
         >
-          <option value="">フレンドを選択</option>
+          <option value="" className="bg-gray-900 text-cyan-500/50">
+            対象を選択
+          </option>
           {friends
             .filter(
               (friend) =>
@@ -351,25 +426,33 @@ function RoomInviteSection({ currentRoom }: { currentRoom: GameRoom }) {
                 )
             )
             .map((friend) => (
-              <option key={friend.id} value={friend.id}>
+              <option
+                key={friend.id}
+                value={friend.id}
+                className="bg-gray-900 text-cyan-100"
+              >
                 {friend.username}
               </option>
             ))}
         </select>
-        <Button
-          variant="primary"
-          size="sm"
+        <button
           onClick={handleInviteFriend}
           disabled={!selectedInviteeId || inviteLoading}
+          className="px-4 py-2 rounded-md bg-cyan-700/50 border border-cyan-500 text-cyan-50 text-sm font-bold tracking-wider hover:bg-cyan-600/80 hover:shadow-[0_0_10px_rgba(0,255,255,0.4)] disabled:opacity-50 disabled:cursor-not-allowed transition-all"
         >
-          招待
-        </Button>
+          送信
+        </button>
       </div>
       {inviteMessage && (
-        <p className="mt-2 text-sm text-green-700">{inviteMessage}</p>
+        <p className="mt-3 text-xs tracking-wider text-emerald-400 flex items-center gap-1">
+          <span className="w-1 h-1 bg-emerald-400 rounded-full animate-pulse" />{' '}
+          {inviteMessage}
+        </p>
       )}
       {inviteError && (
-        <p className="mt-2 text-sm text-red-700">{inviteError}</p>
+        <p className="mt-3 text-xs tracking-wider text-red-400 flex items-center gap-1">
+          <span className="w-1 h-1 bg-red-400 rounded-full" /> {inviteError}
+        </p>
       )}
     </div>
   )

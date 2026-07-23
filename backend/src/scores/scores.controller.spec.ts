@@ -7,6 +7,7 @@ describe('ScoresController', () => {
   let scoresService: {
     getMatchHistory: jest.Mock;
     getRankings: jest.Mock;
+    getUserStats: jest.Mock;
   };
 
   beforeEach(async () => {
@@ -18,8 +19,16 @@ describe('ScoresController', () => {
         page: 1,
       }),
       getRankings: jest.fn().mockResolvedValue({ data: [] }),
+      getUserStats: jest.fn().mockResolvedValue({
+        totalGames: 0,
+        wins: 0,
+        losses: 0,
+        draws: 0,
+        kills: 0,
+        winRate: 0,
+        maxWinStreak: 0,
+      }),
     };
-
     const module: TestingModule = await Test.createTestingModule({
       controllers: [ScoresController],
       providers: [
@@ -55,5 +64,11 @@ describe('ScoresController', () => {
     await controller.getRankings({ limit: 50 });
 
     expect(scoresService.getRankings).toHaveBeenCalledWith(50);
+  });
+
+  it('passes user ID to the statistics service', async () => {
+    await controller.getUserStats('user-1');
+
+    expect(scoresService.getUserStats).toHaveBeenCalledWith('user-1');
   });
 });

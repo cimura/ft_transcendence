@@ -1,4 +1,5 @@
 import { Test, TestingModule } from '@nestjs/testing';
+import { NotFoundException } from '@nestjs/common';
 import { ScoresService } from './scores.service';
 import { PrismaService } from '../prisma.service';
 import { MatchResult } from '../generated/prisma/enums';
@@ -8,6 +9,9 @@ describe('ScoresService', () => {
   let prisma: {
     $transaction: jest.Mock;
     $queryRaw: jest.Mock;
+    user: {
+      findUnique: jest.Mock;
+    };
     match: {
       create: jest.Mock;
     };
@@ -21,6 +25,9 @@ describe('ScoresService', () => {
     prisma = {
       $transaction: jest.fn(),
       $queryRaw: jest.fn(),
+      user: {
+        findUnique: jest.fn(),
+      },
       match: {
         create: jest.fn(),
       },
@@ -41,6 +48,57 @@ describe('ScoresService', () => {
     }).compile();
 
     service = module.get<ScoresService>(ScoresService);
+  });
+
+  it('aggregates user statistics from match results', async () => {
+    const userId = 'user-1';
+
+    prisma.user.findUnique.mockResolvedValue({ id: userId });
+    prisma.matchParticipant.findMany.mockResolvedValue([
+      { result: MatchResult.WIN, kills: 2 },
+      { result: MatchResult.WIN, kills: 3 },
+      { result: MatchResult.DRAW, kills: null },
+      { result: MatchResult.WIN, kills: 1 },
+      { result: MatchResult.LOSS, kills: 0 },
+    ]);
+
+    await expect(service.getUserStats(userId)).resolves.toEqual({
+      totalGames: 5,
+      wins: 3,
+      losses: 1,
+      draws: 1,
+      kills: 6,
+      winRate: 60,
+      maxWinStreak: 2,
+    });
+  });
+
+  it('returns zero statistics for an existing user without matches', async () => {
+    const userId = 'user-without-matches';
+
+    prisma.user.findUnique.mockResolvedValue({ id: userId });
+    prisma.matchParticipant.findMany.mockResolvedValue([]);
+
+    await expect(service.getUserStats(userId)).resolves.toEqual({
+      totalGames: 0,
+      wins: 0,
+      losses: 0,
+      draws: 0,
+      kills: 0,
+      winRate: 0,
+      maxWinStreak: 0,
+    });
+  });
+
+  it('throws NotFoundException when the user does not exist', async () => {
+    const userId = 'unknown-user';
+
+    prisma.user.findUnique.mockResolvedValue(null);
+
+    await expect(service.getUserStats(userId)).rejects.toThrow(
+      NotFoundException,
+    );
+    expect(prisma.matchParticipant.findMany).not.toHaveBeenCalled();
   });
 
   it('maps match participants to paginated match history', async () => {
