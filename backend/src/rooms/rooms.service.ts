@@ -114,14 +114,17 @@ export class RoomsService {
       return this.toRoomResponse(room);
     }
 
-    const currentPlayers = Object.keys(room.participants).length;
-    if (currentPlayers >= room.maxPlayers) {
-      throw new ConflictException('Room is full');
-    }
-
-    // ユーザー情報の取得
+    // await を伴うユーザー取得を先に行う
     const user = await this.prisma.user.findUnique({ where: { id: userId } });
     if (!user) throw new NotFoundException('User not found');
+
+    // await 後に同期的に再チェックしてから追加し、同時 join による定員超過を防ぐ
+    if (room.participants[userId]) {
+      return this.toRoomResponse(room);
+    }
+    if (Object.keys(room.participants).length >= room.maxPlayers) {
+      throw new ConflictException('Room is full');
+    }
 
     const participant: RoomParticipant = {
       userId,
