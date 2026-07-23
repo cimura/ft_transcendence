@@ -59,26 +59,28 @@ export class GameService {
 
     if (session.phase === 'waiting') {
       const result = addPlayerToRoom(session, playerId, clientId, username);
-      if (result.success) {
-        this.server.to(session.roomId).emit('game:state', {
-          players: session.players,
-          bombs: session.bombs,
-        });
-        this.logger.log(
-          `Player joined { roomId: '${session.roomId}', playerId: '${playerId}' }`,
-        );
+      if (!result.success) {
+        throw new WsException('Cannot join the room');
       }
+      this.server.to(session.roomId).emit('game:state', {
+        players: session.players,
+        bombs: session.bombs,
+      });
+      this.logger.log(
+        `Player joined { roomId: '${session.roomId}', playerId: '${playerId}' }`,
+      );
     } else if (session.phase === 'countdown' || session.phase === 'playing') {
       const result = reconnectPlayerToRoom(session, playerId, clientId);
-      if (result.success) {
-        this.server.to(roomId).emit('game:state', {
-          players: session.players,
-          bombs: session.bombs,
-        });
-        this.logger.debug(
-          `Player reconnected { roomId: '${session.roomId}', playerId: '${playerId}' }`,
-        );
+      if (!result.success) {
+        throw new WsException('Cannot join the room');
       }
+      this.server.to(roomId).emit('game:state', {
+        players: session.players,
+        bombs: session.bombs,
+      });
+      this.logger.debug(
+        `Player reconnected { roomId: '${session.roomId}', playerId: '${playerId}' }`,
+      );
     }
 
     return {
