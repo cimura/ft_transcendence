@@ -118,11 +118,21 @@ export class RoomsService {
     const user = await this.prisma.user.findUnique({ where: { id: userId } });
     if (!user) throw new NotFoundException('User not found');
 
+    const currentRoom = this.getRoomOrThrow(roomId);
+    if (currentRoom.status !== 'WAITING') {
+      throw new ConflictException('Only waiting rooms can be joined');
+    }
+    if (currentRoom.mode === 'LOCAL_CPU' && currentRoom.hostId !== userId) {
+      throw new ConflictException('Local CPU rooms cannot be joined');
+    }
+
     // await 後に同期的に再チェックしてから追加し、同時 join による定員超過を防ぐ
-    if (room.participants[userId]) {
+    if (currentRoom.participants[userId]) {
       return this.toRoomResponse(room);
     }
-    if (Object.keys(room.participants).length >= room.maxPlayers) {
+    if (
+      Object.keys(currentRoom.participants).length >= currentRoom.maxPlayers
+    ) {
       throw new ConflictException('Room is full');
     }
 
