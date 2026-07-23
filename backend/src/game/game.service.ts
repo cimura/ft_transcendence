@@ -265,21 +265,25 @@ export class GameService {
 
   private onGameTick(session: GameSession) {
     const now = Date.now();
-    const result = advanceGameTick(session, now);
+    try {
+      const result = advanceGameTick(session, now);
 
-    for (const exp of result.explosions) {
-      this.server.to(session.roomId).emit('bomb:explode', { ...exp });
-    }
+      for (const exp of result.explosions) {
+        this.server.to(session.roomId).emit('bomb:explode', { ...exp });
+      }
 
-    this.server.to(session.roomId).emit('game:state', {
-      players: session.players,
-      bombs: session.bombs,
-    });
+      this.server.to(session.roomId).emit('game:state', {
+        players: session.players,
+        bombs: session.bombs,
+      });
 
-    if (result.isGameEnded && result.endResult) {
-      this.server.to(session.roomId).emit('game:end', result.endResult);
-      void this.recordMatchResult(session, now, result.endResult);
-      this.cleanupRoom(session.roomId);
+      if (result.isGameEnded && result.endResult) {
+        this.server.to(session.roomId).emit('game:end', result.endResult);
+        void this.recordMatchResult(session, now, result.endResult);
+        this.cleanupRoom(session.roomId);
+      }
+    } catch (error) {
+      this.handleGameError(session.roomId, error, 'Game tick failed.');
     }
   }
 
