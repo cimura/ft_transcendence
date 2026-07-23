@@ -205,6 +205,60 @@ describe('GameGateway', () => {
       expect(client.data.roomId).toBe('room-1');
     });
 
+    it('旧ルームからの退出に失敗した場合、新ルームを巻き戻して旧ルームを復元すること', async () => {
+      const client = createMockSocket();
+      client.data.user = { id: 'user-1' };
+      client.data.roomId = 'room-old';
+      gameService.handleGameJoin.mockReturnValue({ phase: 'waiting' } as any);
+      client.leave.mockImplementation((roomId: string) => {
+        if (roomId === 'room-old') {
+          return Promise.reject(new Error('Old room leave failed'));
+        }
+        return Promise.resolve();
+      });
+
+      await expect(
+        gateway.handleJoin({ roomId: 'room-new' }, client),
+      ).rejects.toThrow('Old room leave failed');
+
+      expect(client.leave).toHaveBeenNthCalledWith(1, 'room-old');
+      expect(client.leave).toHaveBeenNthCalledWith(2, 'room-new');
+      expect(gameService.handleGameLeave).toHaveBeenCalledWith(
+        'room-old',
+        'user-1',
+        'socket-123',
+      );
+      expect(gameService.handleGameLeave).toHaveBeenCalledWith(
+        'room-new',
+        'user-1',
+        'socket-123',
+      );
+      expect(gameService.handleGameJoin).toHaveBeenLastCalledWith(
+        'room-old',
+        'user-1',
+        'socket-123',
+      );
+      expect(client.data.roomId).toBe('room-old');
+    });
+
+    it('参加失敗時のSocket room rollbackも失敗しても元の参加エラーを維持すること', async () => {
+      const client = createMockSocket();
+      client.data.user = { id: 'user-1' };
+      client.join.mockResolvedValue(undefined);
+      client.leave.mockRejectedValue(new Error('Rollback leave failed'));
+      gameService.handleGameJoin.mockImplementation(() => {
+        throw new Error('Game join failed');
+      });
+
+      await expect(
+        gateway.handleJoin({ roomId: 'room-new' }, client),
+      ).rejects.toThrow('Game join failed');
+
+      expect(client.join).toHaveBeenCalledWith('room-new');
+      expect(client.leave).toHaveBeenCalledWith('room-new');
+      expect(client.data.roomId).toBeUndefined();
+    });
+
     it('client.data.userが存在しない場合、処理を中断すること', async () => {
       const client = createMockSocket(); // userを設定しない
       const joinData = { roomId: 'room-1' };

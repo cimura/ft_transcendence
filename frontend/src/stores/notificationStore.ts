@@ -17,6 +17,23 @@ interface NotificationStore {
 const toErrorMessage = (error: unknown) =>
   error instanceof Error ? error.message : 'Failed to fetch notifications'
 
+const mergeNotifications = (
+  base: NotificationItem[],
+  additions: NotificationItem[]
+) => {
+  const byId = new Map(
+    base.map((notification) => [notification.id, notification])
+  )
+
+  for (const notification of additions) {
+    byId.set(notification.id, notification)
+  }
+
+  return [...byId.values()].sort(
+    (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+  )
+}
+
 export const useNotificationStore = create<NotificationStore>((set, get) => ({
   notifications: [],
   loading: false,
@@ -27,7 +44,12 @@ export const useNotificationStore = create<NotificationStore>((set, get) => ({
     try {
       set({ loading: true, error: null })
       const notifications = await getNotifications()
-      set({ notifications, loading: false, loaded: true })
+      set((state) => ({
+        // 通知ソケットがfetch中に受信した通知を失わないように統合する。
+        notifications: mergeNotifications(notifications, state.notifications),
+        loading: false,
+        loaded: true,
+      }))
     } catch (error) {
       set({
         error: toErrorMessage(error),
@@ -57,13 +79,7 @@ export const useNotificationStore = create<NotificationStore>((set, get) => ({
       }
 
       return {
-        notifications: [
-          notification as NotificationItem,
-          ...state.notifications,
-        ].sort(
-          (a, b) =>
-            new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
-        ),
+        notifications: mergeNotifications(state.notifications, [notification]),
         loaded: true,
       }
     }),

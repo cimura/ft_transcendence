@@ -84,14 +84,34 @@ export class GameGateway
       );
     } catch (error) {
       if (previousRoomId !== data.roomId) {
-        await client.leave(data.roomId);
+        try {
+          await client.leave(data.roomId);
+        } catch (rollbackError) {
+          this.logger.error(
+            `Failed to rollback socket room join { roomId: '${data.roomId}', userId: '${user.id}' }`,
+            rollbackError instanceof Error
+              ? rollbackError.stack
+              : String(rollbackError),
+          );
+        }
       }
       throw error;
     }
 
     if (previousRoomId && previousRoomId !== data.roomId) {
       this.cleanupPlayerConnection(previousRoomId, user.id, client.id);
-      await client.leave(previousRoomId);
+      try {
+        await client.leave(previousRoomId);
+      } catch (error) {
+        await this.rollbackRoomTransition(
+          client,
+          previousRoomId,
+          data.roomId,
+          user.id,
+          client.id,
+        );
+        throw error;
+      }
     }
 
     client.data.roomId = data.roomId;
@@ -105,6 +125,43 @@ export class GameGateway
 
     client.emit('game:init', initData);
     this.gameService.handleGameStart(data.roomId);
+  }
+
+  private async rollbackRoomTransition(
+    client: GameSocket,
+    previousRoomId: string,
+    nextRoomId: string,
+    userId: string,
+    clientId: string,
+  ) {
+    // 新しいゲーム状態とSocket.IO roomへの参加を取り消す。
+    this.cleanupPlayerConnection(nextRoomId, userId, clientId);
+    try {
+      await client.leave(nextRoomId);
+    } catch (error) {
+      this.logger.error(
+        `Failed to rollback new socket room { roomId: '${nextRoomId}', userId: '${userId}' }`,
+        error instanceof Error ? error.stack : String(error),
+      );
+    }
+
+    // 旧ルームのゲーム状態とpresenceを復元する。旧roomからのleaveに
+    // 失敗しているため、Socket.IO上では旧roomに残ったままになる。
+    try {
+      this.gameService.handleGameJoin(previousRoomId, userId, clientId);
+      this.socketPresenceService.register({
+        namespace: 'game',
+        roomId: previousRoomId,
+        userId,
+        socketId: clientId,
+      });
+      client.data.roomId = previousRoomId;
+    } catch (error) {
+      this.logger.error(
+        `Failed to restore previous game room { roomId: '${previousRoomId}', userId: '${userId}' }`,
+        error instanceof Error ? error.stack : String(error),
+      );
+    }
   }
 
   @SubscribeMessage('game:leave')
