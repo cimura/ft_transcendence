@@ -1,36 +1,24 @@
 import { ConflictException } from '@nestjs/common';
-import { PrismaService } from '../prisma.service';
 import { RoomsChatService } from './rooms-chat.service';
-import { RoomsStateService } from './rooms-state.service';
-import type { Room } from '../common/types/room.type';
+import {
+  RoomsStateService,
+  MAX_MESSAGES_PER_ROOM,
+} from './rooms-state.service';
+import type { Room, RoomMessage } from '../common/types/room.type';
 
 const user = {
   id: 'user-host',
-  email: 'host@example.com',
-  displayName: 'Host',
+  username: 'Host',
   avatarUrl: null,
 };
-const now = new Date();
 
 describe('RoomsChatService', () => {
   let service: RoomsChatService;
   let roomsState: RoomsStateService;
 
-  const prisma = {
-    roomMessage: {
-      findMany: jest.fn(),
-      findFirst: jest.fn(),
-    },
-    $transaction: jest.fn(),
-  };
-
   beforeEach(() => {
-    jest.clearAllMocks();
     roomsState = new RoomsStateService();
-    service = new RoomsChatService(
-      prisma as unknown as PrismaService,
-      roomsState,
-    );
+    service = new RoomsChatService(roomsState);
   });
 
   const setupRoom = (): Room => {
@@ -45,13 +33,14 @@ describe('RoomsChatService', () => {
       participants: {
         [user.id]: {
           userId: user.id,
-          username: 'Host',
-          avatarUrl: null,
+          username: user.username,
+          avatarUrl: user.avatarUrl,
           isHost: true,
           isReady: true,
           joinedAt: new Date(),
         },
       },
+      messages: [],
       createdAt: new Date(),
       updatedAt: new Date(),
     };
@@ -59,47 +48,59 @@ describe('RoomsChatService', () => {
     return room;
   };
 
-  it('prunes messages beyond the latest 50', async () => {
+  it('creates a message and stores it in the room state', async () => {
     const room = setupRoom();
-    prisma.roomMessage.findFirst.mockResolvedValue(null);
-
-    const tx = {
-      roomMessage: {
-        create: jest.fn().mockResolvedValue({
-          id: 'message-new',
-          roomId: room.id,
-          senderId: user.id,
-          content: '<b>hello</b>',
-          createdAt: now,
-          sender: user,
-        }),
-        findMany: jest.fn().mockResolvedValue([{ id: 'message-old' }]),
-        deleteMany: jest.fn(),
-      },
-    };
-    prisma.$transaction.mockImplementation(
-      async (callback: (transaction: typeof tx) => Promise<unknown>) =>
-        await callback(tx),
-    );
 
     const result = await service.createMessage(room.id, user.id, {
-      content: '<b>hello</b>',
+      content: 'hello',
     });
 
-    expect(tx.roomMessage.create).toHaveBeenCalled();
-    expect(tx.roomMessage.deleteMany).toHaveBeenCalledWith({
-      where: { id: { in: ['message-old'] } },
+    expect(result.content).toBe('hello');
+    expect(result.senderName).toBe(user.username);
+    expect(roomsState.getRoomMessages(room.id)).toEqual([result]);
+  });
+
+  it('prunes messages beyond the latest 50', async () => {
+    const room = setupRoom();
+    const old = new Date(Date.now() - 10_000);
+
+    for (let i = 0; i < MAX_MESSAGES_PER_ROOM; i++) {
+      const message: RoomMessage = {
+        id: `seed-${i}`,
+        roomId: room.id,
+        senderId: 'other-user',
+        senderName: 'Other',
+        senderAvatarUrl: null,
+        content: `seed ${i}`,
+        createdAt: old,
+      };
+      roomsState.addRoomMessage(room.id, message);
+    }
+
+    const result = await service.createMessage(room.id, user.id, {
+      content: 'newest',
     });
-    expect(result.content).toBe('<b>hello</b>');
+
+    const messages = roomsState.getRoomMessages(room.id);
+    expect(messages).toHaveLength(MAX_MESSAGES_PER_ROOM);
+    expect(messages[messages.length - 1]).toEqual(result);
+    expect(messages.find((m) => m.id === 'seed-0')).toBeUndefined();
   });
 
   it('rejects chat messages sent within the one second cooldown', async () => {
-    setupRoom();
-    prisma.roomMessage.findFirst.mockResolvedValue({ createdAt: new Date() }); // cooldown is active
+    const room = setupRoom();
+    roomsState.addRoomMessage(room.id, {
+      id: 'previous',
+      roomId: room.id,
+      senderId: user.id,
+      senderName: user.username,
+      senderAvatarUrl: user.avatarUrl,
+      content: 'first',
+      createdAt: new Date(),
+    });
 
     await expect(
-      service.createMessage('room-1', user.id, { content: 'hello' }),
+      service.createMessage(room.id, user.id, { content: 'second' }),
     ).rejects.toThrow(ConflictException);
-    expect(prisma.$transaction).not.toHaveBeenCalled();
   });
 });

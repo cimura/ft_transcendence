@@ -13,6 +13,16 @@ export interface RoomParticipant {
   joinedAt: Date;
 }
 
+export interface RoomMessage {
+  id: string;
+  roomId: string;
+  senderId: string;
+  senderName: string;
+  senderAvatarUrl: string | null;
+  content: string;
+  createdAt: Date;
+}
+
 export interface Room {
   id: string;
   gameId: string;
@@ -23,6 +33,7 @@ export interface Room {
   mode: RoomMode;
 
   participants: Record<string, RoomParticipant>;
+  messages: RoomMessage[];
 
   createdAt: Date;
   updatedAt: Date;

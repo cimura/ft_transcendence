@@ -84,6 +84,7 @@ export class RoomsService {
       participants: {
         [userId]: hostParticipant,
       },
+      messages: [],
       createdAt: new Date(),
       updatedAt: new Date(),
     };

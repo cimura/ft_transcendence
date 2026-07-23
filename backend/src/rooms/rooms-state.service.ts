@@ -1,9 +1,12 @@
 import { Injectable } from '@nestjs/common';
 import type {
   Room,
+  RoomMessage,
   RoomParticipant,
   RoomStatus,
 } from '../common/types/room.type';
+
+export const MAX_MESSAGES_PER_ROOM = 50;
 
 @Injectable()
 export class RoomsStateService {
@@ -63,6 +66,22 @@ export class RoomsStateService {
     if (!room || !room.participants[userId]) return false;
 
     room.participants[userId].isReady = isReady;
+    room.updatedAt = new Date();
+    return true;
+  }
+
+  getRoomMessages(roomId: string): RoomMessage[] {
+    return this.rooms.get(roomId)?.messages ?? [];
+  }
+
+  addRoomMessage(roomId: string, message: RoomMessage): boolean {
+    const room = this.rooms.get(roomId);
+    if (!room) return false;
+
+    room.messages.push(message);
+    if (room.messages.length > MAX_MESSAGES_PER_ROOM) {
+      room.messages.splice(0, room.messages.length - MAX_MESSAGES_PER_ROOM);
+    }
     room.updatedAt = new Date();
     return true;
   }

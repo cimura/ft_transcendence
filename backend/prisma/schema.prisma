@@ -20,8 +20,7 @@ model User {
   sentFriendRequests      Friendship[]       @relation("FriendRequester")
   receivedFriendRequests  Friendship[]       @relation("FriendReceiver")
   matchParticipants       MatchParticipant[]
-  
-  roomMessages            RoomMessage[]
+
   sentRoomInvitations     RoomInvitation[]   @relation("RoomInvitationInviter")
   receivedRoomInvitations RoomInvitation[]   @relation("RoomInvitationInvitee")
 }
@@ -86,19 +85,6 @@ model MatchParticipant {
   @@unique([matchId, userId])
   @@index([userId])
   @@index([matchId])
-}
-
-model RoomMessage {
-  id        String   @id @default(uuid())
-  roomId    String
-  senderId  String
-  content   String
-  createdAt DateTime @default(now())
-
-  sender User     @relation(fields: [senderId], references: [id], onDelete: Cascade)
-
-  @@index([roomId, createdAt])
-  @@index([senderId])
 }
 
 enum RoomInvitationStatus {
