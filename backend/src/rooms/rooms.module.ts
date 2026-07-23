@@ -5,6 +5,7 @@ import { RoomsController } from './rooms.controller';
 import { RoomsService } from './rooms.service';
 import { RoomsInvitationService } from './rooms-invitation.service';
 import { RoomsChatService } from './rooms-chat.service';
+import { RoomsLobbyService } from './rooms-lobby.service';
 import { RoomsGateway } from './rooms.gateway';
 import { AppWebsocketModule } from '../websocket/websocket.module';
 import { RoomsStateService } from './rooms-state.service';
@@ -16,6 +17,7 @@ import { RoomsStateService } from './rooms-state.service';
     RoomsService,
     RoomsInvitationService,
     RoomsChatService,
+    RoomsLobbyService,
     PrismaService,
     RoomsGateway,
     RoomsStateService,
