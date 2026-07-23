@@ -117,10 +117,10 @@ describe('RoomsService', () => {
 
   it('throws NotFoundException if the room is deleted while the user lookup is in flight', async () => {
     setupRoom();
-    prisma.user.findUnique.mockImplementation(async () => {
+    prisma.user.findUnique.mockImplementation(() => {
       // ユーザー取得のawait中に部屋が削除されたケースを再現
       roomsState.deleteRoom('room-1');
-      return guest;
+      return Promise.resolve(guest);
     });
 
     await expect(service.join('room-1', guest.id)).rejects.toThrow(
@@ -130,10 +130,10 @@ describe('RoomsService', () => {
 
   it('throws ConflictException if the room stops waiting while the user lookup is in flight', async () => {
     setupRoom();
-    prisma.user.findUnique.mockImplementation(async () => {
+    prisma.user.findUnique.mockImplementation(() => {
       // ユーザー取得のawait中に対戦開始等で状態が変わったケースを再現
       roomsState.updateRoomStatus('room-1', 'PLAYING');
-      return guest;
+      return Promise.resolve(guest);
     });
 
     await expect(service.join('room-1', guest.id)).rejects.toThrow(
@@ -143,7 +143,7 @@ describe('RoomsService', () => {
 
   it('throws ConflictException if the room fills up while the user lookup is in flight', async () => {
     setupRoom({ maxPlayers: 2 });
-    prisma.user.findUnique.mockImplementation(async () => {
+    prisma.user.findUnique.mockImplementation(() => {
       // ユーザー取得のawait中に別の参加者が定員を埋めたケースを再現
       roomsState.addParticipant('room-1', {
         userId: 'other-user',
@@ -153,7 +153,7 @@ describe('RoomsService', () => {
         isReady: false,
         joinedAt: new Date(),
       });
-      return guest;
+      return Promise.resolve(guest);
     });
 
     const promise = service.join('room-1', guest.id);
@@ -163,7 +163,7 @@ describe('RoomsService', () => {
 
   it('returns the current room without duplicating if the user already joined while the lookup was in flight', async () => {
     setupRoom();
-    prisma.user.findUnique.mockImplementation(async () => {
+    prisma.user.findUnique.mockImplementation(() => {
       // ユーザー取得のawait中に同一ユーザーの多重ログイン等で先に参加済みになったケースを再現
       roomsState.addParticipant('room-1', {
         userId: guest.id,
@@ -173,7 +173,7 @@ describe('RoomsService', () => {
         isReady: false,
         joinedAt: new Date(),
       });
-      return guest;
+      return Promise.resolve(guest);
     });
 
     const result = await service.join('room-1', guest.id);
