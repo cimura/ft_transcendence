@@ -27,7 +27,7 @@ export default function Signup({
     const confirmPassword = formData.get('confirmPassword') as string
 
     if (password !== confirmPassword) {
-      setError('Passwords do not match')
+      setError('パスワードが一致しません。')
       return
     }
 
@@ -56,10 +56,11 @@ export default function Signup({
         if (err.type === 'CONFLICT') {
           const newFieldErrors: { email?: string; username?: string } = {}
           if (err.fields.includes('email')) {
-            newFieldErrors.email = 'This email is already registered.'
+            newFieldErrors.email =
+              'このメールアドレスはすでに登録されています。'
           }
           if (err.fields.includes('username')) {
-            newFieldErrors.username = 'This username is already taken.'
+            newFieldErrors.username = 'このユーザー名はすでに使用されています。'
           }
           setFieldErrors(newFieldErrors)
           return

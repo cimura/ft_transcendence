@@ -82,7 +82,7 @@ export class GameGateway
       client.data.roomId = data.roomId;
     } catch (error) {
       throw new WsException(
-        error instanceof Error ? error.message : 'Cannot join the room',
+        error instanceof Error ? error.message : 'ルームに参加できません。',
       );
     }
 

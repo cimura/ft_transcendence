@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
 import { searchUsers } from '../../api/friend'
+import { getApiErrorMessage } from '../../api/errors'
 import { useFriendStore } from '../../stores/friendStore'
 import type { SearchResult } from '../../types/friend'
 
@@ -31,7 +32,7 @@ export function useUserSearch() {
         const searchResults = await searchUsers(query)
         setResults(searchResults)
       } catch (err) {
-        setError(err instanceof Error ? err.message : 'Search failed')
+        setError(getApiErrorMessage(err, 'ユーザー検索に失敗しました。'))
         setResults([])
       } finally {
         setLoading(false)

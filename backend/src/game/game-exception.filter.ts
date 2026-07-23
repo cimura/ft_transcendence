@@ -9,7 +9,7 @@ export class GameExceptionFilter implements ExceptionFilter {
   catch(exception: unknown, host: ArgumentsHost) {
     const client = host.switchToWs().getClient<GameSocket>();
 
-    let message = 'An unexpected error occurred';
+    let message = '予期しないエラーが発生しました。';
 
     if (exception instanceof WsException) {
       const errorData = exception.getError();
