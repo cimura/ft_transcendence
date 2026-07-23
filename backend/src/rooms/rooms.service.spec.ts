@@ -1,4 +1,4 @@
-import { ConflictException } from '@nestjs/common';
+import { ConflictException, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../prisma.service';
 import { bombermanGame } from '../games/games.constants';
 import { GamesService } from '../games/games.service';
@@ -113,6 +113,73 @@ describe('RoomsService', () => {
     const result = await service.join('room-1', user.id);
 
     expect(result.players.length).toBe(1);
+  });
+
+  it('throws NotFoundException if the room is deleted while the user lookup is in flight', async () => {
+    setupRoom();
+    prisma.user.findUnique.mockImplementation(async () => {
+      // ユーザー取得のawait中に部屋が削除されたケースを再現
+      roomsState.deleteRoom('room-1');
+      return guest;
+    });
+
+    await expect(service.join('room-1', guest.id)).rejects.toThrow(
+      NotFoundException,
+    );
+  });
+
+  it('throws ConflictException if the room stops waiting while the user lookup is in flight', async () => {
+    setupRoom();
+    prisma.user.findUnique.mockImplementation(async () => {
+      // ユーザー取得のawait中に対戦開始等で状態が変わったケースを再現
+      roomsState.updateRoomStatus('room-1', 'PLAYING');
+      return guest;
+    });
+
+    await expect(service.join('room-1', guest.id)).rejects.toThrow(
+      ConflictException,
+    );
+  });
+
+  it('throws ConflictException if the room fills up while the user lookup is in flight', async () => {
+    setupRoom({ maxPlayers: 2 });
+    prisma.user.findUnique.mockImplementation(async () => {
+      // ユーザー取得のawait中に別の参加者が定員を埋めたケースを再現
+      roomsState.addParticipant('room-1', {
+        userId: 'other-user',
+        username: 'Other',
+        avatarUrl: null,
+        isHost: false,
+        isReady: false,
+        joinedAt: new Date(),
+      });
+      return guest;
+    });
+
+    const promise = service.join('room-1', guest.id);
+    await expect(promise).rejects.toThrow(ConflictException);
+    await expect(promise).rejects.toThrow('Room is full');
+  });
+
+  it('returns the current room without duplicating if the user already joined while the lookup was in flight', async () => {
+    setupRoom();
+    prisma.user.findUnique.mockImplementation(async () => {
+      // ユーザー取得のawait中に同一ユーザーの多重ログイン等で先に参加済みになったケースを再現
+      roomsState.addParticipant('room-1', {
+        userId: guest.id,
+        username: 'Guest',
+        avatarUrl: null,
+        isHost: false,
+        isReady: false,
+        joinedAt: new Date(),
+      });
+      return guest;
+    });
+
+    const result = await service.join('room-1', guest.id);
+
+    expect(result.players.length).toBe(2);
+    expect(roomsState.getRoom('room-1')?.participants[guest.id]).toBeDefined();
   });
 
   it('removes a participant on leave and transfers host ownership', () => {
