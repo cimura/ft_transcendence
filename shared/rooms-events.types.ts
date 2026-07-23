@@ -49,6 +49,8 @@ export interface ChatErrorPayload {
 export interface RoomClientToServerEvents {
   "room:join": (data: { roomId: string }) => void;
   "room:leave": () => void;
+  "lobby:join": () => void;
+  "lobby:leave": () => void;
   "chat:join": (data: { roomId: string }) => void;
   "chat:leave": (data: { roomId: string }) => void;
   "chat:message": (
@@ -58,9 +60,11 @@ export interface RoomClientToServerEvents {
 }
 
 export interface RoomServerToClientEvents {
+  "room:created": (room: RoomSnapshot) => void;
   "room:updated": (room: RoomSnapshot) => void;
   "room:deleted": (data: { roomId: string }) => void;
   "room:error": (data: { message: string }) => void;
+  "lobby:rooms": (rooms: RoomSnapshot[]) => void;
   "chat:message": (data: ChatMessagePayload) => void;
   "chat:history": (data: ChatHistoryPayload) => void;
   "chat:error": (data: ChatErrorPayload) => void;
