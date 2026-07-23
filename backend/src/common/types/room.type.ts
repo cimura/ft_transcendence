@@ -23,6 +23,25 @@ export interface RoomMessage {
   createdAt: Date;
 }
 
+// 招待作成時点のユーザー情報のスナップショット(RoomMessage の senderName と同じ発想の非正規化)
+export interface RoomInvitationUserSnapshot {
+  id: string;
+  username: string; // User.username カラム(通知の actor.username 用)
+  displayName: string | null; // REST レスポンスの username = displayName ?? email 用
+  email: string;
+  avatarUrl: string | null;
+}
+
+export interface RoomInvitation {
+  id: string;
+  roomId: string;
+  inviterId: string;
+  inviteeId: string;
+  inviter: RoomInvitationUserSnapshot;
+  invitee: RoomInvitationUserSnapshot;
+  createdAt: Date;
+}
+
 export interface Room {
   id: string;
   gameId: string;
@@ -34,6 +53,8 @@ export interface Room {
 
   participants: Record<string, RoomParticipant>;
   messages: RoomMessage[];
+  // key: inviteeId(存在すれば pending。accept/decline で削除される)
+  invitations: Record<string, RoomInvitation>;
 
   createdAt: Date;
   updatedAt: Date;

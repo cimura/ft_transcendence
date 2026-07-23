@@ -1,3 +1,4 @@
+import { randomUUID } from 'crypto';
 import {
   BadRequestException,
   ConflictException,
@@ -6,33 +7,24 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { PrismaService } from '../prisma.service';
-import { Prisma } from '../generated/prisma/client';
-import {
-  FriendRequestStatus,
-  RoomInvitationStatus,
-} from '../generated/prisma/enums';
+import { FriendRequestStatus } from '../generated/prisma/enums';
 import { CreateRoomInvitationDto } from './dto/create-room-invitation.dto';
 import { RoomsService } from './rooms.service';
-import { RoomResponse } from '../common/types/room.type';
+import { RoomsStateService } from './rooms-state.service';
+import type {
+  RoomInvitation,
+  RoomInvitationUserSnapshot,
+  RoomResponse,
+} from '../common/types/room.type';
 
 type InvitationStatusResponse = 'pending' | 'accepted' | 'declined' | 'expired';
-
-type InvitationPayload = Prisma.RoomInvitationGetPayload<{
-  include: {
-    inviter: {
-      select: { id: true; displayName: true; email: true; avatarUrl: true };
-    };
-    invitee: {
-      select: { id: true; displayName: true; email: true; avatarUrl: true };
-    };
-  };
-}>;
 
 @Injectable()
 export class RoomsInvitationService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly roomsService: RoomsService,
+    private readonly roomsState: RoomsStateService,
   ) {}
 
   async createInvitation(
@@ -60,12 +52,23 @@ export class RoomsInvitationService {
       throw new ConflictException('Invitee is already in this room');
     }
 
-    const invitee = await this.prisma.user.findUnique({
-      where: { id: inviteeId },
-      select: { id: true },
+    const users = await this.prisma.user.findMany({
+      where: { id: { in: [inviterId, inviteeId] } },
+      select: {
+        id: true,
+        username: true,
+        displayName: true,
+        email: true,
+        avatarUrl: true,
+      },
     });
-    if (!invitee) {
+    const inviterUser = users.find((u) => u.id === inviterId);
+    const inviteeUser = users.find((u) => u.id === inviteeId);
+    if (!inviteeUser) {
       throw new NotFoundException('Invitee not found');
+    }
+    if (!inviterUser) {
+      throw new NotFoundException('Inviter not found');
     }
 
     const friendship = await this.prisma.friendship.findFirst({
@@ -82,185 +85,123 @@ export class RoomsInvitationService {
       throw new ForbiddenException('Only friends can be invited');
     }
 
-    const existingInvitation = await this.prisma.roomInvitation.findFirst({
-      where: {
-        roomId,
-        inviteeId,
-        status: RoomInvitationStatus.PENDING,
-      },
-      include: this.invitationInclude(),
-    });
+    // await の間にルームが解散/変化し得るため、書き込み直前に同期で再確認する
+    const currentRoom = this.roomsService.getRoomOrThrow(roomId);
+    if (currentRoom.status !== 'WAITING') {
+      throw new ConflictException('Only waiting rooms can be invited to');
+    }
+    if (currentRoom.participants[inviteeId]) {
+      throw new ConflictException('Invitee is already in this room');
+    }
 
+    const existingInvitation = currentRoom.invitations[inviteeId];
     if (existingInvitation) {
-      return this.toInvitationResponse(existingInvitation, room.name);
+      return this.toInvitationResponse(existingInvitation, currentRoom.name);
     }
 
-    let invitation: InvitationPayload;
-    try {
-      invitation = await this.prisma.roomInvitation.create({
-        data: {
-          roomId,
-          inviterId,
-          inviteeId,
-        },
-        include: this.invitationInclude(),
-      });
-    } catch (error) {
-      if (this.isUniqueConstraintError(error)) {
-        const pendingInvitation = await this.prisma.roomInvitation.findFirst({
-          where: {
-            roomId,
-            inviteeId,
-            status: RoomInvitationStatus.PENDING,
-          },
-          include: this.invitationInclude(),
-        });
-        if (pendingInvitation) {
-          return this.toInvitationResponse(pendingInvitation, room.name);
-        }
-      }
-      throw error;
-    }
+    const invitation: RoomInvitation = {
+      id: randomUUID(),
+      roomId,
+      inviterId,
+      inviteeId,
+      inviter: this.toSnapshot(inviterUser),
+      invitee: this.toSnapshot(inviteeUser),
+      createdAt: new Date(),
+    };
+    this.roomsState.addInvitation(roomId, invitation);
 
-    return this.toInvitationResponse(invitation, room.name);
+    return this.toInvitationResponse(invitation, currentRoom.name);
   }
 
   async acceptInvitation(
     invitationId: string,
     userId: string,
   ): Promise<RoomResponse> {
-    let acceptedRoomId: string | undefined;
-
-    await this.prisma.$transaction(async (tx) => {
-      const invitation = await tx.roomInvitation.findUnique({
-        where: { id: invitationId },
-        select: {
-          id: true,
-          roomId: true,
-          inviterId: true,
-          inviteeId: true,
-          status: true,
-        },
-      });
-
-      if (!invitation) {
-        throw new NotFoundException('Invitation not found');
-      }
-
-      if (invitation.inviteeId !== userId) {
-        throw new ForbiddenException('Logged-in user is not the invitee');
-      }
-
-      if (invitation.status !== RoomInvitationStatus.PENDING) {
-        throw new ConflictException(
-          'Invitation has already been accepted or declined',
-        );
-      }
-
-      await this.assertCurrentFriendshipWithinTransaction(
-        tx,
-        invitation.inviterId,
-        invitation.inviteeId,
-      );
-
-      const updateResult = await tx.roomInvitation.updateMany({
-        where: {
-          id: invitationId,
-          inviteeId: userId,
-          status: RoomInvitationStatus.PENDING,
-        },
-        data: { status: RoomInvitationStatus.ACCEPTED },
-      });
-      if (updateResult.count === 0) {
-        throw new ConflictException(
-          'Invitation has already been accepted or declined',
-        );
-      }
-
-      acceptedRoomId = invitation.roomId;
-    });
-
-    if (!acceptedRoomId) {
-      throw new NotFoundException('Room not found');
-    }
-
-    // データベースでの招待状態の更新が成功してから、メモリ上のルームに参加させる
-    return this.roomsService.join(acceptedRoomId, userId);
-  }
-
-  async declineInvitation(invitationId: string, userId: string) {
-    const invitation = await this.prisma.roomInvitation.findUnique({
-      where: { id: invitationId },
-      select: {
-        inviteeId: true,
-        status: true,
-      },
-    });
-
-    if (!invitation) {
+    const found = this.roomsState.getInvitation(invitationId);
+    if (!found) {
       throw new NotFoundException('Invitation not found');
     }
+    const { room, invitation } = found;
 
     if (invitation.inviteeId !== userId) {
       throw new ForbiddenException('Logged-in user is not the invitee');
     }
 
-    if (invitation.status !== RoomInvitationStatus.PENDING) {
-      throw new ConflictException(
-        'Invitation has already been accepted or declined',
-      );
+    await this.assertCurrentFriendship(
+      invitation.inviterId,
+      invitation.inviteeId,
+    );
+
+    // join が満員・PLAYING 等で失敗した場合に招待を無駄に消費しないよう、成功後に削除する
+    const response = await this.roomsService.join(room.id, userId);
+    this.roomsState.removeInvitation(room.id, userId);
+
+    return response;
+  }
+
+  // eslint-disable-next-line @typescript-eslint/require-await -- 内部処理は同期化されたが、呼び出し元の非同期シグネチャを維持するため async のまま
+  async declineInvitation(invitationId: string, userId: string) {
+    const found = this.roomsState.getInvitation(invitationId);
+    if (!found) {
+      throw new NotFoundException('Invitation not found');
+    }
+    const { room, invitation } = found;
+
+    if (invitation.inviteeId !== userId) {
+      throw new ForbiddenException('Logged-in user is not the invitee');
     }
 
-    const updateResult = await this.prisma.roomInvitation.updateMany({
-      where: {
-        id: invitationId,
-        inviteeId: userId,
-        status: RoomInvitationStatus.PENDING,
-      },
-      data: { status: RoomInvitationStatus.DECLINED },
-    });
-    if (updateResult.count === 0) {
-      throw new ConflictException(
-        'Invitation has already been accepted or declined',
-      );
-    }
+    this.roomsState.removeInvitation(room.id, userId);
 
     return { message: 'Room invitation declined.' };
   }
 
-  private invitationInclude() {
+  private async assertCurrentFriendship(inviterId: string, inviteeId: string) {
+    const friendship = await this.prisma.friendship.findFirst({
+      where: {
+        status: FriendRequestStatus.ACCEPTED,
+        OR: [
+          { requesterId: inviterId, receiverId: inviteeId },
+          { requesterId: inviteeId, receiverId: inviterId },
+        ],
+      },
+      select: { id: true },
+    });
+
+    if (!friendship) {
+      throw new ForbiddenException({
+        code: 'ROOM_INVITATION_NO_LONGER_ALLOWED',
+        message:
+          'Cannot join this invitation because the friendship has been terminated.',
+      });
+    }
+  }
+
+  private toSnapshot(user: {
+    id: string;
+    username: string;
+    displayName: string | null;
+    email: string;
+    avatarUrl: string | null;
+  }): RoomInvitationUserSnapshot {
     return {
-      inviter: {
-        select: {
-          id: true,
-          displayName: true,
-          email: true,
-          avatarUrl: true,
-        },
-      },
-      invitee: {
-        select: {
-          id: true,
-          displayName: true,
-          email: true,
-          avatarUrl: true,
-        },
-      },
+      id: user.id,
+      username: user.username,
+      displayName: user.displayName,
+      email: user.email,
+      avatarUrl: user.avatarUrl,
     };
   }
 
-  private toInvitationResponse(
-    invitation: InvitationPayload,
-    roomName: string,
-  ) {
+  private toInvitationResponse(invitation: RoomInvitation, roomName: string) {
     return {
       id: invitation.id,
       roomId: invitation.roomId,
       inviterId: invitation.inviterId,
       inviteeId: invitation.inviteeId,
-      status: this.toInvitationStatusResponse(invitation.status),
+      status: 'pending' as InvitationStatusResponse,
       createdAt: invitation.createdAt,
-      updatedAt: invitation.updatedAt,
+      updatedAt: invitation.createdAt,
       inviter: {
         id: invitation.inviter.id,
         username: this.userName(invitation.inviter),
@@ -276,48 +217,6 @@ export class RoomsInvitationService {
         name: roomName,
       },
     };
-  }
-
-  private toInvitationStatusResponse(
-    status: RoomInvitationStatus,
-  ): InvitationStatusResponse {
-    if (status === RoomInvitationStatus.PENDING) return 'pending';
-    if (status === RoomInvitationStatus.ACCEPTED) return 'accepted';
-    if (status === RoomInvitationStatus.DECLINED) return 'declined';
-    return 'expired';
-  }
-
-  private isUniqueConstraintError(error: unknown) {
-    return (
-      error instanceof Prisma.PrismaClientKnownRequestError &&
-      error.code === 'P2002'
-    );
-  }
-
-  private async assertCurrentFriendshipWithinTransaction(
-    tx: Prisma.TransactionClient,
-    inviterId: string,
-    inviteeId: string,
-  ) {
-    const friendships = await tx.$queryRaw<Array<{ id: string }>>`
-      SELECT "id"
-      FROM "Friendship"
-      WHERE "status"::text = ${FriendRequestStatus.ACCEPTED}
-        AND (
-          ("requesterId" = ${inviterId} AND "receiverId" = ${inviteeId})
-          OR
-          ("requesterId" = ${inviteeId} AND "receiverId" = ${inviterId})
-        )
-      FOR UPDATE
-    `;
-
-    if (friendships.length === 0) {
-      throw new ForbiddenException({
-        code: 'ROOM_INVITATION_NO_LONGER_ALLOWED',
-        message:
-          'Cannot join this invitation because the friendship has been terminated.',
-      });
-    }
   }
 
   private userName(user: { email: string; displayName: string | null }) {

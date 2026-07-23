@@ -67,6 +67,8 @@ describe('GameService', () => {
           joinedAt: new Date(),
         },
       },
+      messages: [],
+      invitations: {},
       createdAt: new Date(),
       updatedAt: new Date(),
     };

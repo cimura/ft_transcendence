@@ -9,20 +9,17 @@ datasource db {
 }
 
 model User {
-  id                      String             @id @default(uuid())
-  email                   String             @unique
-  username                String             @unique
-  passwordHash            String
-  displayName             String?
-  avatarUrl               String?
-  createdAt               DateTime           @default(now())
-  updatedAt               DateTime           @updatedAt
-  sentFriendRequests      Friendship[]       @relation("FriendRequester")
-  receivedFriendRequests  Friendship[]       @relation("FriendReceiver")
-  matchParticipants       MatchParticipant[]
-
-  sentRoomInvitations     RoomInvitation[]   @relation("RoomInvitationInviter")
-  receivedRoomInvitations RoomInvitation[]   @relation("RoomInvitationInvitee")
+  id                     String             @id @default(uuid())
+  email                  String             @unique
+  username               String             @unique
+  passwordHash           String
+  displayName            String?
+  avatarUrl              String?
+  createdAt              DateTime           @default(now())
+  updatedAt              DateTime           @updatedAt
+  sentFriendRequests     Friendship[]       @relation("FriendRequester")
+  receivedFriendRequests Friendship[]       @relation("FriendReceiver")
+  matchParticipants      MatchParticipant[]
 }
 
 enum FriendRequestStatus {
@@ -85,31 +82,4 @@ model MatchParticipant {
   @@unique([matchId, userId])
   @@index([userId])
   @@index([matchId])
-}
-
-enum RoomInvitationStatus {
-  PENDING
-  ACCEPTED
-  DECLINED
-  EXPIRED
-}
-
-model RoomInvitation {
-  id        String               @id @default(uuid())
-  roomId    String
-  inviterId String
-  inviteeId String
-  status    RoomInvitationStatus @default(PENDING)
-  createdAt DateTime             @default(now())
-  updatedAt DateTime             @updatedAt
-
-  inviter User     @relation("RoomInvitationInviter", fields: [inviterId], references: [id], onDelete: Cascade)
-  invitee User     @relation("RoomInvitationInvitee", fields: [inviteeId], references: [id], onDelete: Cascade)
-
-  @@index([roomId])
-  @@index([inviterId])
-  @@index([inviteeId])
-  @@index([status])
-  @@index([inviteeId, status, createdAt])
-  @@unique([roomId, inviteeId, status])
 }

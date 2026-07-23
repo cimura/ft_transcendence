@@ -1,6 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import type {
   Room,
+  RoomInvitation,
   RoomMessage,
   RoomParticipant,
   RoomStatus,
@@ -44,6 +45,8 @@ export class RoomsStateService {
     if (!room) return false;
 
     room.participants[participant.userId] = participant;
+    // 別経路(招待以外)で入室した場合も含め、招待済みなら消費しておく
+    delete room.invitations[participant.userId];
     room.updatedAt = new Date();
     return true;
   }
@@ -84,5 +87,52 @@ export class RoomsStateService {
     }
     room.updatedAt = new Date();
     return true;
+  }
+
+  addInvitation(roomId: string, invitation: RoomInvitation): boolean {
+    const room = this.rooms.get(roomId);
+    if (!room) return false;
+
+    room.invitations[invitation.inviteeId] = invitation;
+    room.updatedAt = new Date();
+    return true;
+  }
+
+  removeInvitation(roomId: string, inviteeId: string): boolean {
+    const room = this.rooms.get(roomId);
+    if (!room) return false;
+
+    delete room.invitations[inviteeId];
+    room.updatedAt = new Date();
+    return true;
+  }
+
+  // invitationId から招待とそれが属するルームを探す(全ルーム走査)
+  getInvitation(
+    invitationId: string,
+  ): { room: Room; invitation: RoomInvitation } | undefined {
+    for (const room of this.rooms.values()) {
+      const invitation = Object.values(room.invitations).find(
+        (candidate) => candidate.id === invitationId,
+      );
+      if (invitation) {
+        return { room, invitation };
+      }
+    }
+    return undefined;
+  }
+
+  // 特定ユーザー宛の招待を全ルームから収集する(通知用)
+  getInvitationsForInvitee(
+    inviteeId: string,
+  ): Array<{ room: Room; invitation: RoomInvitation }> {
+    const results: Array<{ room: Room; invitation: RoomInvitation }> = [];
+    for (const room of this.rooms.values()) {
+      const invitation = room.invitations[inviteeId];
+      if (invitation) {
+        results.push({ room, invitation });
+      }
+    }
+    return results;
   }
 }

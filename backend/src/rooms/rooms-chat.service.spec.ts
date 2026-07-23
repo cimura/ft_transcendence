@@ -41,6 +41,7 @@ describe('RoomsChatService', () => {
         },
       },
       messages: [],
+      invitations: {},
       createdAt: new Date(),
       updatedAt: new Date(),
     };
