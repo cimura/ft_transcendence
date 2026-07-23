@@ -81,9 +81,13 @@ export class GameGateway
       await client.join(data.roomId);
       client.data.roomId = data.roomId;
     } catch (error) {
-      throw new WsException(
-        error instanceof Error ? error.message : 'ルームに参加できません。',
+      this.logger.warn(
+        `Failed to join Socket.IO room { roomId: '${data.roomId}', socketId: '${client.id}' }: ${
+          error instanceof Error ? error.message : String(error)
+        }`,
+        error instanceof Error ? error.stack : undefined,
       );
+      throw new WsException('ルームに参加できません。');
     }
 
     this.socketPresenceService.register({
