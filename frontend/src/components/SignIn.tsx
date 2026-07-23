@@ -1,4 +1,3 @@
-import axios from 'axios'
 import { useState } from 'react'
 import { signInApi, AuthApiError } from '../api/auth'
 import { useAuthStore } from '../stores/authStore'
@@ -10,16 +9,13 @@ interface SignInProps {
   onSwitchToSignup: () => void
 }
 
-const isBackendUnavailable = (error: unknown) =>
-  axios.isAxiosError(error) && !error.response
-
 export default function SignIn({
   onSignInSuccess,
   onSwitchToSignup,
 }: SignInProps) {
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
-  const { setCurrentUser, setAccessToken } = useAuthStore()
+  const { setAccessToken } = useAuthStore()
 
   const handleSignIn = async (formData: FormData) => {
     const identifier = formData.get('identifier') as string
@@ -40,25 +36,6 @@ export default function SignIn({
       console.log('SignIn successful!')
       onSignInSuccess()
     } catch (err) {
-      const shouldUseMockAuth = import.meta.env.DEV && isBackendUnavailable(err)
-
-      if (shouldUseMockAuth) {
-        setCurrentUser({
-          id: 'current-user-id',
-          email: identifier,
-          username: 'current_user',
-          displayName: 'Current User',
-          avatarUrl: '/avatars/default-1.svg',
-          isGuest: false,
-          createdAt: new Date('2024-01-01'),
-          updatedAt: new Date(),
-        })
-        setAccessToken(null)
-        console.warn('SignIn backend unavailable. Using mock auth.', err)
-        onSignInSuccess()
-        return
-      }
-
       if (err instanceof AuthApiError) {
         setError(err.message)
       } else {
