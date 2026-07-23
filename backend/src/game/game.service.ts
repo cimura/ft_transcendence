@@ -126,7 +126,7 @@ export class GameService {
         .emit('game:countdown', { seconds: GAME_COUNTDOWN_SEC, startsAt });
       this.logger.log(`Countdown started { roomId: '${room.roomId}' }`);
     } catch (error) {
-      this.handleGameError(roomId, error, 'Failed to start countdown.');
+      this.handleGameError(roomId, error, 'ゲームの開始に失敗しました。');
     }
   }
 
