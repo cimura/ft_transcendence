@@ -30,7 +30,6 @@ export function FriendRequestCard({
             <p className="text-white font-semibold text-lg">
               {request.requester.username}
             </p>
-            <p className="text-white/50 text-sm">{request.requester.email}</p>
           </div>
         </div>
 

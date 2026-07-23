@@ -20,13 +20,6 @@ export class ProfileUserDto {
   username: string;
 
   @ApiProperty({
-    example: 'Bob',
-    description: '表示名 (被りOK)',
-    nullable: true,
-  })
-  displayName: string | null;
-
-  @ApiProperty({
     example: 'http://...',
     description: 'プロフィール画像のURL',
     nullable: true,

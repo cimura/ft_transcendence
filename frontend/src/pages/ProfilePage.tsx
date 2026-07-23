@@ -59,7 +59,6 @@ export const ProfilePage = () => {
       setCurrentUser({
         ...currentUser,
         username: updatedProfile.username,
-        displayName: updatedProfile.displayName,
         avatarUrl: updatedProfile.avatarUrl,
         email: updatedProfile.email ?? currentUser.email,
         updatedAt: updatedProfile.updatedAt,

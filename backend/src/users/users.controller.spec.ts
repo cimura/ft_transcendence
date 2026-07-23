@@ -37,7 +37,6 @@ describe('UsersController', () => {
     const user = {
       id: 'user-id',
       username: 'user',
-      displayName: null,
       avatarUrl: null,
       createdAt: new Date(),
       updatedAt: new Date(),

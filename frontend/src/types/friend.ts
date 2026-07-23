@@ -5,7 +5,6 @@
 export interface Friend {
   id: string
   username: string
-  email: string
   avatarUrl?: string
   isOnline: boolean
   status: FriendStatus
@@ -29,7 +28,6 @@ export interface FriendRequest {
 export interface User {
   id: string
   username: string
-  email: string
   avatarUrl?: string
 }
 

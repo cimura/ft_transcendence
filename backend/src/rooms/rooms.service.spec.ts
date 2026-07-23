@@ -9,14 +9,14 @@ import type { Room } from '../common/types/room.type';
 const user = {
   id: 'user-host',
   email: 'host@example.com',
-  displayName: 'Host',
+  username: 'Host',
   avatarUrl: null,
 };
 
 const guest = {
   id: 'user-guest',
   email: 'guest@example.com',
-  displayName: 'Guest',
+  username: 'Guest',
   avatarUrl: null,
 };
 

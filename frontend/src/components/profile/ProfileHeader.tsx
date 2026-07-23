@@ -28,7 +28,7 @@ export const ProfileHeader = ({
           {profile.avatarUrl ? (
             <img
               src={profile.avatarUrl}
-              alt={profile.displayName || profile.username}
+              alt={profile.username}
               className="relative w-28 h-28 rounded-full border-2 border-cyan-400 object-cover shadow-[0_0_15px_rgba(0,255,255,0.2)]"
             />
           ) : (
@@ -43,11 +43,8 @@ export const ProfileHeader = ({
         {/* ユーザー情報 */}
         <div className="min-w-0 flex-1 pt-2">
           <h1 className="break-words text-4xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-white to-cyan-200 mb-2 tracking-wide">
-            {profile.displayName || profile.username}
+            {profile.username}
           </h1>
-          <p className="break-words text-cyan-400/80 font-medium mb-1 tracking-wider">
-            @{profile.username}
-          </p>
           {profile.email && (
             <p className="break-words text-cyan-100/40 text-sm">
               {profile.email}

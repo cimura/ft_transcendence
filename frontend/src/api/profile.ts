@@ -6,7 +6,6 @@ interface BackendProfileUser {
   id: string
   email?: string
   username: string
-  displayName: string | null
   avatarUrl: string | null
   createdAt: string
   updatedAt: string
@@ -29,7 +28,6 @@ const toUserProfile = (
   id: user.id,
   email: user.email,
   username: user.username,
-  displayName: user.displayName ?? undefined,
   avatarUrl: user.avatarUrl ?? undefined,
   isGuest: false,
   createdAt: new Date(user.createdAt),

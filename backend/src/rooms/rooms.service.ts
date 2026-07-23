@@ -66,7 +66,7 @@ export class RoomsService {
 
     const hostParticipant: RoomParticipant = {
       userId,
-      username: user.displayName ?? user.email,
+      username: user.username,
       avatarUrl: user.avatarUrl,
       isHost: true,
       isReady: true,
@@ -128,7 +128,7 @@ export class RoomsService {
 
     const participant: RoomParticipant = {
       userId,
-      username: user.displayName ?? user.email,
+      username: user.username,
       avatarUrl: user.avatarUrl,
       isHost: false,
       isReady: false,

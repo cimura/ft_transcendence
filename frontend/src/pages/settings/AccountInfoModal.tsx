@@ -72,7 +72,6 @@ export const AccountInfoModal = ({
           ...currentUser,
           email: response.user.email,
           username: response.user.username,
-          displayName: response.user.displayName ?? currentUser.displayName,
           avatarUrl: response.user.avatarUrl ?? currentUser.avatarUrl,
           createdAt: new Date(response.user.createdAt),
           updatedAt: new Date(response.user.updatedAt),

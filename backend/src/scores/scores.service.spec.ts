@@ -129,7 +129,6 @@ describe('ScoresService', () => {
             user: {
               id: userId,
               username: 'current',
-              displayName: null,
             },
           },
           {
@@ -143,7 +142,6 @@ describe('ScoresService', () => {
             user: {
               id: 'user-2',
               username: 'opponent',
-              displayName: 'Opponent Display',
             },
           },
         ],
@@ -157,7 +155,7 @@ describe('ScoresService', () => {
         {
           id: 'match-1',
           result: 'win',
-          opponents: ['Opponent Display'],
+          opponents: ['opponent'],
           playedAt: '2026-06-25T09:12:20.525Z',
           gameType: 'Bomberman',
           kills: 1,
@@ -192,7 +190,6 @@ describe('ScoresService', () => {
                 user: {
                   select: {
                     username: true,
-                    displayName: true,
                   },
                 },
               },
@@ -234,7 +231,6 @@ describe('ScoresService', () => {
             user: {
               id: userId,
               username: 'current',
-              displayName: null,
             },
           },
           {
@@ -248,7 +244,6 @@ describe('ScoresService', () => {
             user: {
               id: 'user-2',
               username: 'opponent',
-              displayName: null,
             },
           },
         ],
@@ -335,7 +330,6 @@ describe('ScoresService', () => {
       {
         userId: 'user-1',
         username: 'alice',
-        displayName: 'Alice',
         avatarUrl: '/avatars/default-1.svg',
         totalGames: 2,
         wins: 1,
@@ -347,7 +341,6 @@ describe('ScoresService', () => {
       {
         userId: 'user-2',
         username: 'bob',
-        displayName: null,
         avatarUrl: null,
         totalGames: 1,
         wins: 1,
@@ -363,7 +356,6 @@ describe('ScoresService', () => {
         {
           userId: 'user-1',
           username: 'alice',
-          displayName: 'Alice',
           avatarUrl: '/avatars/default-1.svg',
           totalGames: 2,
           wins: 1,
@@ -377,7 +369,6 @@ describe('ScoresService', () => {
         {
           userId: 'user-2',
           username: 'bob',
-          displayName: null,
           avatarUrl: null,
           totalGames: 1,
           wins: 1,
