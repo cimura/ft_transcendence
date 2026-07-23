@@ -106,6 +106,22 @@ describe('GameService', () => {
       // player-1 が残っていれば 2人揃っている判定になりカウントダウンが始まる
       expect(emit).toHaveBeenCalledWith('game:countdown', expect.any(Object));
     });
+
+    it('待機中に同一プレイヤーが多重 join しても失敗せず、最新のソケットに接続先が更新されること', () => {
+      service.handleGameJoin('room-1', 'player-1', 'client-1');
+
+      // React StrictMode 等による多重 join を想定 (まだ切断イベントは来ていない)
+      expect(() => {
+        service.handleGameJoin('room-1', 'player-1', 'client-1-new');
+      }).not.toThrow();
+
+      // 古いソケットからの切断は無視され、ゲームは開始できる
+      service.handleGameLeave('room-1', 'player-1', 'client-1');
+      service.handleGameJoin('room-1', 'player-2', 'client-2');
+      service.handleGameStart('room-1');
+
+      expect(emit).toHaveBeenCalledWith('game:countdown', expect.any(Object));
+    });
   });
 
   describe('Game Lifecycle & Disconnection', () => {
