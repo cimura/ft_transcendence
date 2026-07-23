@@ -62,4 +62,8 @@ describe('AuthController', () => {
     expect(authService.signIn).toHaveBeenCalledWith(dto);
     expect(result).toEqual({ accessToken: 'mock_token' });
   });
+
+  it('should complete logout without a response body', () => {
+    expect(controller.logout()).toBeUndefined();
+  });
 });
