@@ -6,7 +6,6 @@ type BackendFriendRequest = {
   status: 'PENDING' | 'ACCEPTED'
   requester: {
     id: string
-    email: string
     username: string
     avatarUrl: string | null
   }
@@ -17,7 +16,6 @@ const toFriendRequest = (request: BackendFriendRequest): FriendRequest => ({
   requester: {
     id: request.requester.id,
     username: request.requester.username,
-    email: request.requester.email,
     avatarUrl: request.requester.avatarUrl ?? undefined,
   },
   status: request.status.toLowerCase() as FriendRequest['status'],

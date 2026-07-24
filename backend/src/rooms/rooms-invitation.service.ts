@@ -57,8 +57,6 @@ export class RoomsInvitationService {
       select: {
         id: true,
         username: true,
-        displayName: true,
-        email: true,
         avatarUrl: true,
       },
     });
@@ -180,15 +178,11 @@ export class RoomsInvitationService {
   private toSnapshot(user: {
     id: string;
     username: string;
-    displayName: string | null;
-    email: string;
     avatarUrl: string | null;
   }): RoomInvitationUserSnapshot {
     return {
       id: user.id,
       username: user.username,
-      displayName: user.displayName,
-      email: user.email,
       avatarUrl: user.avatarUrl,
     };
   }
@@ -204,12 +198,12 @@ export class RoomsInvitationService {
       updatedAt: invitation.createdAt,
       inviter: {
         id: invitation.inviter.id,
-        username: this.userName(invitation.inviter),
+        username: invitation.inviter.username,
         avatarUrl: invitation.inviter.avatarUrl,
       },
       invitee: {
         id: invitation.invitee.id,
-        username: this.userName(invitation.invitee),
+        username: invitation.invitee.username,
         avatarUrl: invitation.invitee.avatarUrl,
       },
       room: {
@@ -217,9 +211,5 @@ export class RoomsInvitationService {
         name: roomName,
       },
     };
-  }
-
-  private userName(user: { email: string; displayName: string | null }) {
-    return user.displayName ?? user.email;
   }
 }

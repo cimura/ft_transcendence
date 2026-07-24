@@ -27,8 +27,6 @@ export interface RoomMessage {
 export interface RoomInvitationUserSnapshot {
   id: string;
   username: string; // User.username カラム(通知の actor.username 用)
-  displayName: string | null; // REST レスポンスの username = displayName ?? email 用
-  email: string;
   avatarUrl: string | null;
 }
 

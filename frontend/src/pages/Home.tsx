@@ -93,7 +93,7 @@ export function Home() {
         user = useAuthStore.getState().currentUser
       }
 
-      const username = user?.displayName || user?.username || 'Player'
+      const username = user?.username || 'Player'
       const room = await createRoom({
         name: `${username} の作戦領域`,
         maxPlayers: 2,
