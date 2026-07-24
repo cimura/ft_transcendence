@@ -92,6 +92,7 @@ describe('RoomsService', () => {
     service = new RoomsService(
       prisma as unknown as PrismaService,
       gamesService as unknown as GamesService,
+      undefined,
     );
   });
 

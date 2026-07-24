@@ -13,7 +13,6 @@ interface FriendState {
   setFriends: (friends: Friend[]) => void
   addFriend: (friend: Friend) => void
   removeFriend: (friendId: string) => void
-  updateFriendStatus: (userId: string, status: Friend['status']) => void
 
   // Actions - リクエスト関連
   setRequests: (requests: FriendRequest[]) => void
@@ -55,13 +54,6 @@ export const useFriendStore = create<FriendState>((set, get) => ({
   removeFriend: (friendId) =>
     set((state) => ({
       friends: state.friends.filter((f) => f.id !== friendId),
-    })),
-
-  updateFriendStatus: (userId, status) =>
-    set((state) => ({
-      friends: state.friends.map((f) =>
-        f.id === userId ? { ...f, status, isOnline: status !== 'offline' } : f
-      ),
     })),
 
   // リクエスト関連のアクション

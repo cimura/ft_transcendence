@@ -4,6 +4,7 @@ import {
   NotFoundException,
   ForbiddenException,
   ConflictException,
+  Optional,
 } from '@nestjs/common';
 import { Prisma } from '../generated/prisma/client';
 import { PrismaService } from '../prisma.service';
@@ -16,10 +17,14 @@ import {
   ReceivedFriendRequestDto,
 } from './dto/friends-response.dto';
 import { FriendRequestResponseDto } from './dto/friends-response.dto';
+import { RealtimeGateway } from '../websocket/realtime.gateway';
 
 @Injectable()
 export class FriendsService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    @Optional() private readonly realtimeGateway?: RealtimeGateway,
+  ) {}
 
   async getFriends(currentUserId: string): Promise<FriendInfoDto[]> {
     const friendships = await this.prisma.friendship.findMany({
@@ -58,8 +63,6 @@ export class FriendsService {
         username: friend.username,
         email: friend.email,
         avatarUrl: friend.avatarUrl,
-        isOnline: false,
-        status: 'offline',
       };
     });
   }
@@ -98,12 +101,33 @@ export class FriendsService {
     }
 
     try {
-      await this.prisma.friendship.create({
+      const request = await this.prisma.friendship.create({
         data: {
           requesterId: currentUserId,
           receiverId: targetUserId,
           pairKey,
         },
+        include: {
+          requester: {
+            select: {
+              id: true,
+              username: true,
+              avatarUrl: true,
+            },
+          },
+        },
+      });
+
+      this.realtimeGateway?.emitNotificationForUser(targetUserId, {
+        id: request.id,
+        type: 'friend_request',
+        createdAt: request.createdAt.toISOString(),
+        actor: {
+          id: request.requester.id,
+          username: request.requester.username,
+          avatarUrl: request.requester.avatarUrl,
+        },
+        friendRequestId: request.id,
       });
     } catch (error: unknown) {
       if (
