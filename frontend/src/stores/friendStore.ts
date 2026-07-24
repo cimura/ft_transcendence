@@ -1,6 +1,7 @@
 import { create } from 'zustand'
 import type { Friend, FriendRequest } from '../types/friend'
 import * as friendApi from '../api/friend'
+import { getApiErrorMessage } from '../api/errors'
 
 interface FriendState {
   friends: Friend[]
@@ -12,7 +13,6 @@ interface FriendState {
   setFriends: (friends: Friend[]) => void
   addFriend: (friend: Friend) => void
   removeFriend: (friendId: string) => void
-  updateFriendStatus: (userId: string, status: Friend['status']) => void
 
   // Actions - リクエスト関連
   setRequests: (requests: FriendRequest[]) => void
@@ -56,13 +56,6 @@ export const useFriendStore = create<FriendState>((set, get) => ({
       friends: state.friends.filter((f) => f.id !== friendId),
     })),
 
-  updateFriendStatus: (userId, status) =>
-    set((state) => ({
-      friends: state.friends.map((f) =>
-        f.id === userId ? { ...f, status, isOnline: status !== 'offline' } : f
-      ),
-    })),
-
   // リクエスト関連のアクション
   setRequests: (requests) => set({ requests }),
 
@@ -88,8 +81,7 @@ export const useFriendStore = create<FriendState>((set, get) => ({
       set({ friends, loading: false })
     } catch (error) {
       set({
-        error:
-          error instanceof Error ? error.message : 'Failed to fetch friends',
+        error: getApiErrorMessage(error, 'フレンド一覧の取得に失敗しました。'),
         loading: false,
       })
     }
@@ -102,8 +94,10 @@ export const useFriendStore = create<FriendState>((set, get) => ({
       set({ requests, loading: false })
     } catch (error) {
       set({
-        error:
-          error instanceof Error ? error.message : 'Failed to fetch requests',
+        error: getApiErrorMessage(
+          error,
+          'フレンドリクエストの取得に失敗しました。'
+        ),
         loading: false,
       })
     }
@@ -116,8 +110,10 @@ export const useFriendStore = create<FriendState>((set, get) => ({
       set({ loading: false })
     } catch (error) {
       set({
-        error:
-          error instanceof Error ? error.message : 'Failed to send request',
+        error: getApiErrorMessage(
+          error,
+          'フレンドリクエストの送信に失敗しました。'
+        ),
         loading: false,
       })
       throw error
@@ -139,8 +135,10 @@ export const useFriendStore = create<FriendState>((set, get) => ({
       set({ loading: false })
     } catch (error) {
       set({
-        error:
-          error instanceof Error ? error.message : 'Failed to accept request',
+        error: getApiErrorMessage(
+          error,
+          'フレンドリクエストの承認に失敗しました。'
+        ),
         loading: false,
       })
       throw error
@@ -159,8 +157,10 @@ export const useFriendStore = create<FriendState>((set, get) => ({
       set({ loading: false })
     } catch (error) {
       set({
-        error:
-          error instanceof Error ? error.message : 'Failed to reject request',
+        error: getApiErrorMessage(
+          error,
+          'フレンドリクエストの拒否に失敗しました。'
+        ),
         loading: false,
       })
       throw error
@@ -179,8 +179,7 @@ export const useFriendStore = create<FriendState>((set, get) => ({
       set({ loading: false })
     } catch (error) {
       set({
-        error:
-          error instanceof Error ? error.message : 'Failed to delete friend',
+        error: getApiErrorMessage(error, 'フレンドの削除に失敗しました。'),
         loading: false,
       })
       throw error

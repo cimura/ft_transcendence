@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import type { MatchHistory } from '../types/profile'
 import * as statsApi from '../api/stats'
+import { getApiErrorMessage } from '../api/errors'
 
 /**
  * Custom hook for fetching match history with infinite scroll
@@ -39,9 +40,7 @@ export const useMatchHistory = (
         setHasMore(response.hasMore)
         setPage(1)
       } catch (err) {
-        setError(
-          err instanceof Error ? err.message : 'Failed to fetch match history'
-        )
+        setError(getApiErrorMessage(err, '対戦履歴の取得に失敗しました。'))
       } finally {
         setLoading(false)
       }
@@ -64,7 +63,7 @@ export const useMatchHistory = (
       setPage(nextPage)
     } catch (err) {
       setError(
-        err instanceof Error ? err.message : 'Failed to load more matches'
+        getApiErrorMessage(err, '対戦履歴の追加読み込みに失敗しました。')
       )
     } finally {
       setLoadingMore(false)

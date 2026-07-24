@@ -23,6 +23,7 @@ import { SettingsMenu } from './pages/settings/SettingsMenu'
 import { AccountManagement } from './pages/settings/AccountManagement'
 import { useAuthStore } from './stores/authStore'
 import { NotificationsPage } from './pages/NotificationsPage'
+import { useRealtimeSocket } from './hooks/useRealtimeSocket'
 import BackgroundVideo from './components/common/BackgroundVideo'
 import { PrivacyPolicyPage } from './pages/legal/PrivacyPolicyPage'
 import { TermsOfServicePage } from './pages/legal/TermsOfServicePage'
@@ -68,6 +69,7 @@ function AuthenticatedRoutes() {
   const navigate = useNavigate()
   const location = useLocation()
   const isLoggedIn = useAuthStore((state) => Boolean(state.accessToken))
+  useRealtimeSocket()
 
   useEffect(() => {
     if (

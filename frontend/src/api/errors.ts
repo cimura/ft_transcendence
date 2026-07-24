@@ -16,11 +16,6 @@ const apiErrorMessages: Record<string, string> = {
     'フレンド関係が解除されたため、この招待には参加できません。',
 }
 
-const isValidationMessages = (message: unknown): message is string[] =>
-  Array.isArray(message) &&
-  message.length > 0 &&
-  message.every((item) => typeof item === 'string')
-
 export const getApiErrorMessage = (error: unknown, fallback: string) => {
   if (!axios.isAxiosError(error)) {
     return fallback
@@ -31,10 +26,6 @@ export const getApiErrorMessage = (error: unknown, fallback: string) => {
 
   if (data?.code && apiErrorMessages[data.code]) {
     return apiErrorMessages[data.code]
-  }
-
-  if (status === 400 && isValidationMessages(data?.message)) {
-    return data.message.join(' ')
   }
 
   if (status === 400) {

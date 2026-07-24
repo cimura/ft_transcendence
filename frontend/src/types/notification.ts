@@ -1,31 +1,16 @@
-export type NotificationType = 'friend_request' | 'room_invitation'
+import type {
+  RealtimeNotification,
+  RealtimeNotificationActor,
+} from '@ft_transcendence/shared/realtime-events.types'
 
-export interface NotificationActor {
-  id: string
-  username: string
-  avatarUrl: string | null
-}
-
-export interface FriendRequestNotification {
-  id: string
-  type: 'friend_request'
-  createdAt: string
-  actor: NotificationActor
-  friendRequestId: string
-}
-
-export interface RoomInvitationNotification {
-  id: string
-  type: 'room_invitation'
-  createdAt: string
-  actor: NotificationActor
-  room: {
-    id: string
-    name: string
-  }
-  invitationId: string
-}
-
-export type NotificationItem =
-  | FriendRequestNotification
-  | RoomInvitationNotification
+export type NotificationType = RealtimeNotification['type']
+export type NotificationActor = RealtimeNotificationActor
+export type FriendRequestNotification = Extract<
+  RealtimeNotification,
+  { type: 'friend_request' }
+>
+export type RoomInvitationNotification = Extract<
+  RealtimeNotification,
+  { type: 'room_invitation' }
+>
+export type NotificationItem = RealtimeNotification
