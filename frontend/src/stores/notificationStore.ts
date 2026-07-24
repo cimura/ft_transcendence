@@ -43,14 +43,23 @@ export const useNotificationStore = create<NotificationStore>((set, get) => ({
 
   fetchNotifications: async () => {
     try {
+      // fetch開始前に存在していた通知のidを控えておく。
+      const knownIdsBeforeFetch = new Set(get().notifications.map((n) => n.id))
       set({ loading: true, error: null })
       const notifications = await getNotifications()
-      set((state) => ({
-        // 通知ソケットがfetch中に受信した通知を失わないように統合する。
-        notifications: mergeNotifications(notifications, state.notifications),
-        loading: false,
-        loaded: true,
-      }))
+      set((state) => {
+        // fetch中にソケットで新着した通知（fetch開始前には存在しなかったid）のみ保持する。
+        // fetch開始前から存在した通知はサーバの結果を正とし、
+        // サーバ側で削除された通知（承認・拒否済みのフレンド申請など）を再投入しない。
+        const socketArrivals = state.notifications.filter(
+          (n) => !knownIdsBeforeFetch.has(n.id)
+        )
+        return {
+          notifications: mergeNotifications(notifications, socketArrivals),
+          loading: false,
+          loaded: true,
+        }
+      })
     } catch (error) {
       set({
         error: toErrorMessage(error),
