@@ -1,10 +1,19 @@
 import { ConflictException, NotFoundException } from '@nestjs/common';
+import type { EventEmitter2 } from '@nestjs/event-emitter';
 import { PrismaService } from '../prisma.service';
 import { bombermanGame } from '../games/games.constants';
 import { GamesService } from '../games/games.service';
 import { RoomsService } from './rooms.service';
 import { RoomsStateService } from './rooms-state.service';
 import type { Room } from '../common/types/room.type';
+import {
+  ROOM_CREATED_EVENT,
+  ROOM_UPDATED_EVENT,
+  ROOM_DELETED_EVENT,
+  RoomCreatedEvent,
+  RoomUpdatedEvent,
+  RoomDeletedEvent,
+} from './events/room-domain-events';
 
 const user = {
   id: 'user-host',
@@ -32,6 +41,10 @@ describe('RoomsService', () => {
     findById: jest.fn(),
   };
 
+  const eventEmitter = {
+    emit: jest.fn(),
+  };
+
   beforeEach(() => {
     jest.clearAllMocks();
     gamesService.findById.mockReturnValue(bombermanGame);
@@ -40,6 +53,7 @@ describe('RoomsService', () => {
       prisma as unknown as PrismaService,
       gamesService as unknown as GamesService,
       roomsState,
+      eventEmitter as unknown as EventEmitter2,
     );
   });
 
@@ -86,6 +100,10 @@ describe('RoomsService', () => {
     expect(result.hostId).toBe(user.id);
     expect(roomsState.getAllRooms().length).toBe(1);
     expect(roomsState.getAllRooms()[0].participants[user.id].isHost).toBe(true);
+    expect(eventEmitter.emit).toHaveBeenCalledWith(
+      ROOM_CREATED_EVENT,
+      expect.any(RoomCreatedEvent),
+    );
   });
 
   it('filters rooms by status for the room list', () => {
@@ -223,6 +241,10 @@ describe('RoomsService', () => {
     const memoryRoom = roomsState.getRoom('room-1')!;
     expect(memoryRoom.participants[user.id]).toBeUndefined();
     expect(memoryRoom.participants[guest.id].isHost).toBe(true);
+    expect(eventEmitter.emit).toHaveBeenCalledWith(
+      ROOM_UPDATED_EVENT,
+      expect.any(RoomUpdatedEvent),
+    );
   });
 
   it('deletes the room from memory when the last participant leaves', () => {
@@ -230,8 +252,12 @@ describe('RoomsService', () => {
 
     const result = service.leave('room-1', user.id);
 
-    expect(result).toEqual({ deleted: true, roomId: 'room-1' });
+    expect(result).toBeNull();
     expect(roomsState.getRoom('room-1')).toBeUndefined();
+    expect(eventEmitter.emit).toHaveBeenCalledWith(
+      ROOM_DELETED_EVENT,
+      expect.any(RoomDeletedEvent),
+    );
   });
 
   it('does not start until the room is full', () => {
