@@ -10,7 +10,6 @@ import { UserStatsDto } from './dto/user-stats.dto';
 type RankingAggregateRow = {
   userId: string;
   username: string;
-  displayName: string | null;
   avatarUrl: string | null;
   totalGames: number;
   wins: number;
@@ -88,7 +87,6 @@ export class ScoresService {
                   user: {
                     select: {
                       username: true,
-                      displayName: true,
                     },
                   },
                 },
@@ -105,7 +103,7 @@ export class ScoresService {
     const data = participants.map((participant) => {
       const opponents = participant.match.participants
         .filter((item) => item.userId !== userId)
-        .map((item) => item.user.displayName ?? item.user.username);
+        .map((item) => item.user.username);
 
       return {
         id: participant.match.id,
@@ -205,7 +203,6 @@ export class ScoresService {
         SELECT
           mp."userId",
           u."username",
-          u."displayName",
           u."avatarUrl",
           COUNT(*)::int AS "totalGames",
           COUNT(*) FILTER (WHERE mp."result" = 'WIN')::int AS "wins",
@@ -218,7 +215,7 @@ export class ScoresService {
           )::int AS "points"
         FROM "MatchParticipant" mp
         INNER JOIN "User" u ON u."id" = mp."userId"
-        GROUP BY mp."userId", u."username", u."displayName", u."avatarUrl"
+        GROUP BY mp."userId", u."username", u."avatarUrl"
         ORDER BY
           "points" DESC,
           "wins" DESC,

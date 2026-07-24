@@ -47,7 +47,6 @@ export default function SignIn({
           id: 'current-user-id',
           email: identifier,
           username: 'current_user',
-          displayName: 'Current User',
           avatarUrl: '/avatars/default-1.svg',
           isGuest: false,
           createdAt: new Date('2024-01-01'),
