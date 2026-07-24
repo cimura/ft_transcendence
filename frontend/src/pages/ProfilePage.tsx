@@ -111,7 +111,7 @@ export const ProfilePage = () => {
         <ProfileHeader
           profile={profile}
           onEdit={() => setIsEditModalOpen(true)}
-          onBack={() => navigate(profileBackPath)}
+          onBack={() => navigate(profileBackPath, { replace: true })}
         />
 
         {/* タブナビゲーション */}

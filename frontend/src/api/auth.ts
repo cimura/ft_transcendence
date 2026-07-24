@@ -129,5 +129,5 @@ export const getCurrentUser = async (): Promise<User> => {
  * @returns Promise<void>
  */
 export const logout = async (): Promise<void> => {
-  await api.post('/api/auth/logout')
+  await api.post('/auth/logout')
 }

@@ -1,4 +1,11 @@
-import { Body, Controller, Post, HttpCode, HttpStatus } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Post,
+  HttpCode,
+  HttpStatus,
+  UseGuards,
+} from '@nestjs/common';
 import { AuthService } from './auth.service';
 import {
   ApiTags,
@@ -7,6 +14,8 @@ import {
   ApiCreatedResponse,
   ApiUnauthorizedResponse,
   ApiConflictResponse,
+  ApiBearerAuth,
+  ApiNoContentResponse,
 } from '@nestjs/swagger';
 import {
   SignUpRequestDto,
@@ -14,6 +23,7 @@ import {
   SignUpConflictResponseDto,
 } from './dto/signup.dto';
 import { SignInRequestDto, SignInResponseDto } from './dto/signin.dto';
+import { JwtAuthGuard } from './jwt-auth.guard';
 
 @Controller('auth')
 @ApiTags('auth')
@@ -39,4 +49,12 @@ export class AuthController {
   signIn(@Body() dto: SignInRequestDto) {
     return this.authService.signIn(dto);
   }
+
+  @Post('logout')
+  @HttpCode(HttpStatus.NO_CONTENT)
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Logout (ログアウト)' })
+  @ApiNoContentResponse({ description: 'ログアウト成功時' })
+  logout(): void {}
 }

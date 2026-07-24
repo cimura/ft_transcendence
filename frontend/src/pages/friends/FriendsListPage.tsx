@@ -61,7 +61,7 @@ export function FriendsListPage() {
       <div className="relative w-full max-w-4xl z-10 mt-12">
         {/* 戻るボタン */}
         <button
-          onClick={() => navigate(-1)}
+          onClick={() => navigate('/friends', { replace: true })}
           className="absolute -top-16 left-0 bg-black/40 backdrop-blur-md text-cyan-100 px-6 py-2 rounded-full border border-cyan-500/50 hover:bg-cyan-900/50 hover:border-cyan-300 hover:shadow-[0_0_15px_rgba(0,255,255,0.3)] transition-all"
         >
           &lt; 戻る
