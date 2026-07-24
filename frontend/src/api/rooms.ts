@@ -2,7 +2,9 @@ import api from './client'
 import type { CreateRoomDto } from '../types'
 
 export const getRooms = async (status?: 'waiting' | 'playing' | 'finished') => {
-  const response = await api.get('/rooms', { params: status ? { status } : undefined })
+  const response = await api.get('/rooms', {
+    params: status ? { status } : undefined,
+  })
   return response.data
 }
 
