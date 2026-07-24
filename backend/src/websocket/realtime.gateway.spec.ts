@@ -7,7 +7,7 @@ describe('RealtimeGateway', () => {
   };
   const client = {
     id: 'socket-1',
-    data: {},
+    data: {} as { user?: { id: string } },
     join: jest.fn().mockResolvedValue(undefined),
     emit: jest.fn(),
     disconnect: jest.fn(),
