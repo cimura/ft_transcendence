@@ -2,6 +2,7 @@ import { create } from 'zustand'
 import axios from 'axios'
 import type { User } from '../types/user'
 import * as authApi from '../api/auth'
+import { getApiErrorMessage } from '../api/errors'
 
 interface AuthState {
   currentUser: User | null
@@ -68,17 +69,18 @@ export const useAuthStore = create<AuthState>((set) => ({
         set({
           currentUser: null,
           accessToken: null,
-          error: 'Session expired. Please sign in again.',
+          error:
+            'セッションの有効期限が切れました。もう一度ログインしてください。',
           loading: false,
         })
         return
       }
 
       set({
-        error:
-          error instanceof Error
-            ? error.message
-            : 'Failed to fetch current user',
+        error: getApiErrorMessage(
+          error,
+          'アカウント情報の取得に失敗しました。'
+        ),
         loading: false,
       })
     }
@@ -93,7 +95,7 @@ export const useAuthStore = create<AuthState>((set) => ({
     } catch (error) {
       logoutError = error
       set({
-        error: error instanceof Error ? error.message : 'Failed to logout',
+        error: getApiErrorMessage(error, 'ログアウトに失敗しました。'),
       })
     } finally {
       storeAccessToken(null)

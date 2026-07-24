@@ -1,5 +1,6 @@
 import { create } from 'zustand'
 import { getNotifications } from '../api/notifications'
+import { getApiErrorMessage } from '../api/errors'
 import type { NotificationItem } from '../types/notification'
 
 interface NotificationStore {
@@ -13,7 +14,7 @@ interface NotificationStore {
 }
 
 const toErrorMessage = (error: unknown) =>
-  error instanceof Error ? error.message : 'Failed to fetch notifications'
+  getApiErrorMessage(error, '通知の取得に失敗しました。')
 
 export const useNotificationStore = create<NotificationStore>((set, get) => ({
   notifications: [],

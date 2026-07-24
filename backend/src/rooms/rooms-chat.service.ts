@@ -57,21 +57,23 @@ export class RoomsChatService {
     );
 
     if (!participant) {
-      throw new ForbiddenException('You are not a participant of this room');
+      throw new ForbiddenException('このルームの参加者ではありません。');
     }
 
     if (room.status !== RoomStatus.WAITING) {
-      throw new ConflictException('Messages can only be sent in waiting rooms');
+      throw new ConflictException(
+        'メッセージは待機中のルームでのみ送信できます。',
+      );
     }
 
     const content = dto.content.trim();
     if (!content) {
-      throw new BadRequestException('Message content is required');
+      throw new BadRequestException('メッセージを入力してください。');
     }
 
     if (content.length > 200) {
       throw new BadRequestException(
-        'Message content must be 200 characters or less',
+        'メッセージは200文字以内で入力してください。',
       );
     }
 
@@ -84,7 +86,9 @@ export class RoomsChatService {
       latestMessage &&
       Date.now() - latestMessage.createdAt.getTime() < MESSAGE_COOLDOWN_MS
     ) {
-      throw new ConflictException('Please wait before sending another message');
+      throw new ConflictException(
+        '次のメッセージを送信するまでしばらくお待ちください。',
+      );
     }
 
     const message = await this.prisma.$transaction(async (tx) => {
@@ -139,7 +143,7 @@ export class RoomsChatService {
       (item) => item.userId === userId,
     );
     if (!participant) {
-      throw new ForbiddenException('You are not a participant of this room');
+      throw new ForbiddenException('このルームの参加者ではありません。');
     }
   }
 

@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import type { UserStats } from '../types/profile'
 import * as statsApi from '../api/stats'
+import { getApiErrorMessage } from '../api/errors'
 
 /**
  * Custom hook for fetching user statistics
@@ -27,7 +28,7 @@ export const useStats = (userId: string | undefined) => {
         const data = await statsApi.getUserStats(userId)
         setStats(data)
       } catch (err) {
-        setError(err instanceof Error ? err.message : 'Failed to fetch stats')
+        setError(getApiErrorMessage(err, '統計情報の取得に失敗しました。'))
       } finally {
         setLoading(false)
       }

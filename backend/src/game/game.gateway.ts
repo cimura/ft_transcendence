@@ -65,26 +65,39 @@ export class GameGateway
     const user = client.data.user;
     if (!user) return;
 
-    const initData = this.gameService.handleGameJoin(
-      data.roomId,
-      user.id,
-      client.id,
-    );
-
     const previousRoomId = client.data.roomId;
+
+    try {
+      await client.join(data.roomId);
+    } catch (error) {
+      this.logger.warn(
+        `Failed to join Socket.IO room { roomId: '${data.roomId}', socketId: '${client.id}' }: ${
+          error instanceof Error ? error.message : String(error)
+        }`,
+        error instanceof Error ? error.stack : undefined,
+      );
+      throw new WsException('ルームに参加できません。');
+    }
+
+    let initData: Parameters<ServerToClientEvents['game:init']>[0];
+    try {
+      initData = this.gameService.handleGameJoin(
+        data.roomId,
+        user.id,
+        client.id,
+      );
+    } catch (error) {
+      if (previousRoomId !== data.roomId) {
+        await client.leave(data.roomId);
+      }
+      throw error;
+    }
+
     if (previousRoomId && previousRoomId !== data.roomId) {
       this.cleanupPlayerConnection(previousRoomId, user.id, client.id);
       await client.leave(previousRoomId);
     }
-
-    try {
-      await client.join(data.roomId);
-      client.data.roomId = data.roomId;
-    } catch (error) {
-      throw new WsException(
-        error instanceof Error ? error.message : 'Cannot join the room',
-      );
-    }
+    client.data.roomId = data.roomId;
 
     this.socketPresenceService.register({
       namespace: 'game',

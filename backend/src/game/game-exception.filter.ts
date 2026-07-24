@@ -1,6 +1,7 @@
 import { Catch, ArgumentsHost, Logger, ExceptionFilter } from '@nestjs/common';
-import { WsException } from '@nestjs/websockets';
 import { GameSocket } from './game.types';
+
+const SAFE_GAME_ERROR_MESSAGE = 'ゲーム処理中にエラーが発生しました。';
 
 @Catch()
 export class GameExceptionFilter implements ExceptionFilter {
@@ -8,29 +9,14 @@ export class GameExceptionFilter implements ExceptionFilter {
 
   catch(exception: unknown, host: ArgumentsHost) {
     const client = host.switchToWs().getClient<GameSocket>();
-
-    let message = 'An unexpected error occurred';
-
-    if (exception instanceof WsException) {
-      const errorData = exception.getError();
-
-      if (typeof errorData === 'string') {
-        message = errorData;
-      } else if (
-        typeof errorData === 'object' &&
-        errorData !== null &&
-        'message' in errorData
-      ) {
-        message = String(errorData.message);
-      }
-    } else if (exception instanceof Error) {
-      message = exception.message;
-    }
+    const internalMessage =
+      exception instanceof Error ? exception.message : String(exception);
 
     this.logger.warn(
-      `WebSocket Error: ${message} { socketId: '${client.id}' }`,
+      `WebSocket Error: ${internalMessage} { socketId: '${client.id}' }`,
+      exception instanceof Error ? exception.stack : undefined,
     );
 
-    client.emit('game:error', { message });
+    client.emit('game:error', { message: SAFE_GAME_ERROR_MESSAGE });
   }
 }
