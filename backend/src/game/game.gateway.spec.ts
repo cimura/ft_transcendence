@@ -116,7 +116,7 @@ describe('GameGateway', () => {
       expect(gameService.handleGameStart).toHaveBeenCalledWith('room-1');
     });
 
-    it('以前のルームがある場合、退出(leave)してから参加すること', async () => {
+    it('以前のルームがある場合、新ルームへの参加後に退出すること', async () => {
       const client = createMockSocket();
       client.data.user = { id: 'user-1' };
       client.data.roomId = 'room-old';
@@ -137,7 +137,7 @@ describe('GameGateway', () => {
       expect(client.data.roomId).toBe('room-new');
     });
 
-    it('参加処理(handleGameJoin)がエラーを投げた場合、例外をスローし以降の処理を行わないこと（例外フィルターに委譲）', async () => {
+    it('参加処理(handleGameJoin)がエラーを投げた場合、Socket.IOルームへの参加をロールバックすること', async () => {
       const client = createMockSocket();
       client.data.user = { id: 'user-1' };
       const joinData = { roomId: 'room-1' };
@@ -152,20 +152,20 @@ describe('GameGateway', () => {
         'Room is full',
       );
 
-      // 後続の処理が呼ばれていないこと（エラーハンドリングはFilterが担うため）
-      expect(client.join).not.toHaveBeenCalled();
+      // Socket.IOルームへの参加がロールバックされること
+      expect(client.join).toHaveBeenCalledWith('room-1');
+      expect(client.leave).toHaveBeenCalledWith('room-1');
       expect(client.data.roomId).toBeUndefined(); // roomIdが更新されていないこと
       expect(client.emit).not.toHaveBeenCalled();
       expect(gameService.handleGameStart).not.toHaveBeenCalled();
     });
 
-    it('client.join が失敗した場合、WsExceptionをスローし、roomIdが更新されないこと', async () => {
+    it('client.join が失敗した場合、新旧ルームのゲーム状態を変更しないこと', async () => {
       const client = createMockSocket();
       client.data.user = { id: 'user-1' };
+      client.data.roomId = 'room-old';
       const joinData = { roomId: 'room-1' };
-      const initData = { phase: 'waiting' };
 
-      gameService.handleGameJoin.mockReturnValue(initData as any);
       // joinが失敗する挙動をモック
       client.join.mockRejectedValue(new Error('Socket join failed'));
 
@@ -174,11 +174,14 @@ describe('GameGateway', () => {
         WsException,
       );
       await expect(gateway.handleJoin(joinData, client)).rejects.toThrow(
-        'Socket join failed',
+        'ルームに参加できません。',
       );
 
-      // 失敗した場合は client.data.roomId に値が代入されていないこと（不整合防止）
-      expect(client.data.roomId).toBeUndefined();
+      // 新旧ルームのゲーム状態と現在のroomIdが変更されていないこと
+      expect(gameService.handleGameJoin).not.toHaveBeenCalled();
+      expect(gameService.handleGameLeave).not.toHaveBeenCalled();
+      expect(client.leave).not.toHaveBeenCalled();
+      expect(client.data.roomId).toBe('room-old');
 
       // 後続の処理が呼ばれていないこと
       expect(client.emit).not.toHaveBeenCalled();
