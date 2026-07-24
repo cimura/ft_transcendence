@@ -3,6 +3,9 @@ import { io, Socket } from 'socket.io-client'
 import { useGameStore } from '../stores/gameStore'
 import type { ServerToClientEvents } from '@ft_transcendence/shared/game-events.types'
 
+const BACKEND_URL = import.meta.env.VITE_BACKEND_URL || window.location.origin
+const GAME_NAMESPACE = `${BACKEND_URL.replace(/\/$/, '')}/game`
+
 export function useGameSocket(roomId: string) {
   const socketRef = useRef<Socket | null>(null)
   const setGameState = useGameStore((state) => state.setGameState)
@@ -18,7 +21,7 @@ export function useGameSocket(roomId: string) {
     if (!socketRef.current) {
       const token = localStorage.getItem('accessToken')
 
-      socketRef.current = io('/game', {
+      socketRef.current = io(GAME_NAMESPACE, {
         transports: ['websocket'],
         secure: true,
         auth: { token: `Bearer ${token}` },
