@@ -56,5 +56,6 @@ export class AuthController {
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Logout (ログアウト)' })
   @ApiNoContentResponse({ description: 'ログアウト成功時' })
+  @ApiUnauthorizedResponse({ description: '認証失敗時' })
   logout(): void {}
 }

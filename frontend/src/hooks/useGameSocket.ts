@@ -101,9 +101,7 @@ export function useGameSocket(roomId: string) {
 
     socket.on('connect_error', (error: Error) => {
       console.error('Socket connection error:', error)
-      setErrorMessage(
-        `接続エラー: ${error.message || 'サーバーに接続できません'}`
-      )
+      setErrorMessage('接続エラー: サーバーに接続できません。')
     })
 
     socket.on('disconnect', (reason: string) => {
