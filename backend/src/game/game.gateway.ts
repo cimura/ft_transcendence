@@ -88,26 +88,6 @@ export class GameGateway
       );
     } catch (error) {
       if (previousRoomId !== data.roomId) {
-        await client.leave(data.roomId);
-      }
-      throw error;
-    }
-
-    if (previousRoomId && previousRoomId !== data.roomId) {
-      this.cleanupPlayerConnection(previousRoomId, user.id, client.id);
-      await client.leave(previousRoomId);
-    }
-    client.data.roomId = data.roomId;
-
-    let initData: Parameters<ServerToClientEvents['game:init']>[0];
-    try {
-      initData = this.gameService.handleGameJoin(
-        data.roomId,
-        user.id,
-        client.id,
-      );
-    } catch (error) {
-      if (previousRoomId !== data.roomId) {
         try {
           await client.leave(data.roomId);
         } catch (rollbackError) {
