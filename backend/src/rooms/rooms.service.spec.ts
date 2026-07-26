@@ -256,7 +256,20 @@ describe('RoomsService', () => {
       },
     });
 
-    service.leave('room-1', user.id);
+    const roomAfterHostLeaves = service.leave('room-1', user.id);
+
+    expect(roomAfterHostLeaves).toEqual(
+      expect.objectContaining({
+        hostId: guest.id,
+        players: [
+          expect.objectContaining({
+            userId: guest.id,
+            isHost: true,
+          }),
+        ],
+      }),
+    );
+
     const result = service.leave('room-1', guest.id);
 
     expect(result).toEqual({ deleted: true, roomId: 'room-1' });
