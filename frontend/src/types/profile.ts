@@ -24,7 +24,6 @@ export interface MatchHistory {
 export interface RankingItem {
   userId: string
   username: string
-  displayName: string | null
   avatarUrl: string | null
   rank: number
   totalGames: number

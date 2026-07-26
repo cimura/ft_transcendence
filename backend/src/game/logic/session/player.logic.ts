@@ -1,4 +1,4 @@
-import { GameSession } from '../../game.types';
+import { GameSession } from '../../../common/types/game.type';
 import { START_POSITIONS } from '../setup/map.logic';
 
 export const PLAYER_COLORS = [
@@ -19,7 +19,11 @@ export function addPlayerToRoom(
   username: string,
 ): AddPlayerResult {
   if (room.players[playerId]) {
-    return { success: false };
+    // 待機中の多重 join (React StrictMode の二重effect実行など)。
+    // ゲーム開始前で実害がないため、新しいソケットへ接続先を更新するだけで成功扱いにする
+    room.playerConnections[playerId].clientId = clientId;
+    room.playerConnections[playerId].lastActiveTime = 0;
+    return { success: true };
   }
 
   const availableIndices: number[] = [];

@@ -36,7 +36,6 @@ export class FriendsService {
         receiver: {
           select: {
             id: true,
-            email: true,
             username: true,
             avatarUrl: true,
           },
@@ -44,7 +43,6 @@ export class FriendsService {
         requester: {
           select: {
             id: true,
-            email: true,
             username: true,
             avatarUrl: true,
           },
@@ -61,7 +59,6 @@ export class FriendsService {
       return {
         id: friend.id,
         username: friend.username,
-        email: friend.email,
         avatarUrl: friend.avatarUrl,
       };
     });
@@ -157,7 +154,6 @@ export class FriendsService {
         requester: {
           select: {
             id: true,
-            email: true,
             username: true,
             avatarUrl: true,
           },
@@ -170,7 +166,6 @@ export class FriendsService {
       status: req.status, // "PENDING"
       requester: {
         id: req.requester.id,
-        email: req.requester.email,
         username: req.requester.username,
         avatarUrl: req.requester.avatarUrl,
       },

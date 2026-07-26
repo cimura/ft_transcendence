@@ -99,7 +99,7 @@ export function RankingsPage() {
                 </span>
                 <span className="min-w-0">
                   <span className="block truncate font-bold text-cyan-50 group-hover:text-cyan-200">
-                    {item.displayName ?? item.username}
+                    {item.username}
                   </span>
                   <span className="block truncate text-sm text-cyan-100/50">
                     {item.totalGames}戦 {item.wins}勝 {item.losses}敗{' '}

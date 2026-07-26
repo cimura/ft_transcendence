@@ -23,7 +23,7 @@ import {
   RoomServerToClientEvents,
   RoomSnapshot,
 } from '@ft_transcendence/shared/rooms-events.types';
-import type { RoomResponse } from './rooms.types';
+import type { RoomResponse } from '../common/types/room.type';
 
 interface ConnectionData {
   user: {
@@ -181,7 +181,6 @@ export class RoomsGateway implements OnGatewayConnection, OnGatewayDisconnect {
       maxPlayers: room.maxPlayers,
       status: room.status,
       mode: room.mode,
-      settingsSnapshot: room.settingsSnapshot,
       createdAt: room.createdAt.toISOString(),
       updatedAt: room.updatedAt.toISOString(),
       startedAt: room.startedAt?.toISOString(),

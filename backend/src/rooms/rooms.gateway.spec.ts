@@ -2,7 +2,7 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { RoomsGateway } from './rooms.gateway';
 import { SocketAuthService } from '../websocket/socket-auth.service';
 import { RoomsChatService } from './rooms-chat.service';
-import type { RoomResponse } from './rooms.types';
+import type { RoomResponse } from '../common/types/room.type';
 
 describe('RoomsGateway', () => {
   let gateway: RoomsGateway;
@@ -161,7 +161,6 @@ describe('RoomsGateway', () => {
         maxPlayers: 2,
         status: 'waiting',
         mode: 'online',
-        settingsSnapshot: {},
         createdAt: new Date('2026-07-01T00:00:00.000Z'),
         updatedAt: new Date('2026-07-01T00:00:00.000Z'),
         startedAt: null,
@@ -193,7 +192,6 @@ describe('RoomsGateway', () => {
         maxPlayers: 2,
         status: 'waiting',
         mode: 'online',
-        settingsSnapshot: {},
         createdAt: '2026-07-01T00:00:00.000Z',
         updatedAt: '2026-07-01T00:00:00.000Z',
         startedAt: undefined,

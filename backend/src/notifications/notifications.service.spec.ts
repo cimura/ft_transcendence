@@ -1,9 +1,7 @@
-import {
-  FriendRequestStatus,
-  RoomInvitationStatus,
-} from '../generated/prisma/enums';
+import { FriendRequestStatus } from '../generated/prisma/enums';
 import { PrismaService } from '../prisma.service';
 import { NotificationsService } from './notifications.service';
+import { RoomsStateService } from '../rooms/rooms-state.service';
 
 describe('NotificationsService', () => {
   let service: NotificationsService;
@@ -12,14 +10,18 @@ describe('NotificationsService', () => {
     friendship: {
       findMany: jest.fn(),
     },
-    roomInvitation: {
-      findMany: jest.fn(),
-    },
+  };
+
+  const roomsState = {
+    getInvitationsForInvitee: jest.fn(),
   };
 
   beforeEach(() => {
     jest.clearAllMocks();
-    service = new NotificationsService(prisma as unknown as PrismaService);
+    service = new NotificationsService(
+      prisma as unknown as PrismaService,
+      roomsState as unknown as RoomsStateService,
+    );
   });
 
   it('aggregates pending friend requests and room invitations newest first', async () => {
@@ -34,18 +36,19 @@ describe('NotificationsService', () => {
         },
       },
     ]);
-    prisma.roomInvitation.findMany.mockResolvedValue([
+
+    roomsState.getInvitationsForInvitee.mockReturnValue([
       {
-        id: 'invitation-1',
-        createdAt: new Date('2026-07-02T10:00:00.000Z'),
-        inviter: {
-          id: 'user-bob',
-          username: 'bob',
-          avatarUrl: '/uploads/bob.png',
-        },
-        room: {
-          id: 'room-1',
-          name: 'Bob Room',
+        room: { id: 'room-1', name: 'Bob Room' },
+        invitation: {
+          id: 'invitation-1',
+          roomId: 'room-1',
+          createdAt: new Date('2026-07-02T10:00:00.000Z'),
+          inviter: {
+            id: 'user-bob',
+            username: 'bob',
+            avatarUrl: '/uploads/bob.png',
+          },
         },
       },
     ]);
@@ -60,13 +63,8 @@ describe('NotificationsService', () => {
         },
       }),
     );
-    expect(prisma.roomInvitation.findMany).toHaveBeenCalledWith(
-      expect.objectContaining({
-        where: {
-          inviteeId: 'current-user',
-          status: RoomInvitationStatus.PENDING,
-        },
-      }),
+    expect(roomsState.getInvitationsForInvitee).toHaveBeenCalledWith(
+      'current-user',
     );
     expect(result).toEqual([
       {

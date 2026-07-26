@@ -16,7 +16,7 @@ import { GameExceptionFilter } from './game-exception.filter';
 import { SocketAuthService } from '../websocket/socket-auth.service';
 import { SocketPresenceService } from '../websocket/socket-presence.service';
 import { getSocketCorsOrigins } from '../websocket/socket-cors';
-import type { GameSocket } from './game.types';
+import type { GameSocket } from '../common/types/game.type';
 import type {
   ClientToServerEvents,
   ServerToClientEvents,

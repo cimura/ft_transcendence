@@ -13,16 +13,9 @@ export class FriendInfoDto {
 
   @ApiProperty({
     example: 'takato_06',
-    description:
-      '表示名（displayNameがない場合はemailの頭文字やアカウント名など）',
+    description: 'ユーザー名',
   })
   username: string;
-
-  @ApiProperty({
-    example: 'user@example.com',
-    description: 'メールアドレス',
-  })
-  email: string;
 
   @ApiProperty({
     example: 'http://localhost:8443/uploads/avatars/default.png',
@@ -61,14 +54,8 @@ export class PendingRequesterInfoDto {
   id: string;
 
   @ApiProperty({
-    example: 'requester@example.com',
-    description: '申請者のメールアドレス',
-  })
-  email: string;
-
-  @ApiProperty({
     example: 'Alice',
-    description: '申請者の表示名（username）',
+    description: '申請者のユーザー名',
   })
   username: string;
 

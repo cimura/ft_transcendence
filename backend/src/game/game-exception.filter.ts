@@ -1,5 +1,5 @@
 import { Catch, ArgumentsHost, Logger, ExceptionFilter } from '@nestjs/common';
-import { GameSocket } from './game.types';
+import { GameSocket } from '../common/types/game.type';
 
 const SAFE_GAME_ERROR_MESSAGE = 'ゲーム処理中にエラーが発生しました。';
 

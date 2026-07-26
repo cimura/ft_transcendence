@@ -9,9 +9,10 @@ import {
   GAME_COUNTDOWN_SEC,
   DISCONNECT_TIMEOUT_MS,
 } from './constants/game-constants';
-import { GameSession } from './game.types';
+import { GameSession } from '../common/types/game.type';
+import { RoomsStateService } from '../rooms/rooms-state.service';
 import { advanceGameTick } from './logic/core/loop.logic';
-import { createInitialMap } from './logic/setup/map.logic';
+import { createInitialMap, START_POSITIONS } from './logic/setup/map.logic';
 import {
   startCountdownLogic,
   startGameLoopLogic,
@@ -24,21 +25,19 @@ import {
   disconnectPlayerFromRoom,
 } from './logic/session/player.logic';
 import { tryPlaceBomb } from './logic/mechanics/bomb.logic';
-import { START_POSITIONS } from './logic/setup/map.logic';
 import { ScoresService } from '../scores/scores.service';
 import { bombermanGame } from '../games/games.constants';
-
-const MIN_PLAYERS_TO_START = 2;
 
 @Injectable()
 export class GameService {
   private static readonly brand = 'GameService';
   private readonly logger = new Logger(GameService.brand);
-
-  private rooms = new Map<string, GameSession>();
   private server: Server;
 
-  constructor(private readonly scoresService: ScoresService) {}
+  constructor(
+    private readonly scoresService: ScoresService,
+    private readonly roomsState: RoomsStateService,
+  ) {}
 
   setServer(server: Server) {
     this.server = server;
@@ -52,68 +51,72 @@ export class GameService {
     if (!this.checkRoomEntryPermission(roomId, playerId)) {
       throw new WsException('ルームに参加できません。');
     }
-    const room = this.getOrCreateRoom(roomId);
-    if (room.phase === 'waiting') {
-      // 新規プレイヤーの参加
-      // TODO: playerIdを使ってusernameをデータベースから引っ張ってくる処理(一旦仮の'test-username'で統一)
-      const result = addPlayerToRoom(room, playerId, clientId, 'test-username');
-      if (result.success) {
-        this.server.to(room.roomId).emit('game:state', {
-          players: room.players,
-          bombs: room.bombs,
-        });
-        this.logger.log(
-          `Player joined { roomId: '${room.roomId}', playerId: '${playerId}' }`,
-        );
-      }
-    } else if (room.phase === 'countdown' || room.phase === 'playing') {
-      // 既存プレイヤーの再接続
-      const result = reconnectPlayerToRoom(room, playerId, clientId);
 
-      if (result.success) {
-        this.server.to(roomId).emit('game:state', {
-          players: room.players,
-          bombs: room.bombs,
-        });
-        this.logger.debug(
-          `Player reconnected { roomId: '${room.roomId}', playerId: '${playerId}' }`,
-        );
+    const session = this.getOrCreateSession(roomId);
+    const roomState = this.roomsState.getRoom(roomId)!;
+
+    const username = roomState.participants[playerId].username;
+
+    if (session.phase === 'waiting') {
+      const result = addPlayerToRoom(session, playerId, clientId, username);
+      if (!result.success) {
+        throw new WsException('Cannot join the room');
       }
+      this.server.to(session.roomId).emit('game:state', {
+        players: session.players,
+        bombs: session.bombs,
+      });
+      this.logger.log(
+        `Player joined { roomId: '${session.roomId}', playerId: '${playerId}' }`,
+      );
+    } else if (session.phase === 'countdown' || session.phase === 'playing') {
+      const result = reconnectPlayerToRoom(session, playerId, clientId);
+      if (!result.success) {
+        throw new WsException('Cannot join the room');
+      }
+      this.server.to(roomId).emit('game:state', {
+        players: session.players,
+        bombs: session.bombs,
+      });
+      this.logger.debug(
+        `Player reconnected { roomId: '${session.roomId}', playerId: '${playerId}' }`,
+      );
     }
 
     return {
       yourId: playerId,
       serverTime: Date.now(),
-      map: room.map,
-      players: room.players,
-      bombs: room.bombs,
-      phase: room.phase,
+      map: session.map,
+      players: session.players,
+      bombs: session.bombs,
+      phase: session.phase,
     };
   }
 
   handleGameStart(roomId: string) {
-    const room = this.getOrCreateRoom(roomId);
+    const roomState = this.roomsState.getRoom(roomId);
+    if (!roomState || !roomState.gameSession) return;
+    const session = roomState.gameSession;
 
-    // DEBUG: 2人での動作確認のための仮条件
     if (
-      Object.keys(room.players).length < MIN_PLAYERS_TO_START ||
-      room.phase !== 'waiting'
+      Object.keys(session.players).length !== roomState.maxPlayers ||
+      session.phase !== 'waiting'
     ) {
       return;
     }
 
     try {
-      startCountdownLogic(room, () => {
+      startCountdownLogic(session, () => {
         try {
-          if (!this.rooms.has(room.roomId)) return;
+          if (!this.roomsState.getRoom(session.roomId)) return;
 
-          startGameLoopLogic(room, () => this.onGameTick(room));
+          startGameLoopLogic(session, () => this.onGameTick(session));
 
-          this.server.to(room.roomId).emit('game:playing');
-          this.logger.log(`Game loop started { roomId: '${room.roomId}' }`);
+          this.server.to(session.roomId).emit('game:playing');
+          this.logger.log(`Game loop started { roomId: '${session.roomId}' }`);
         } catch (error) {
           this.handleGameError(
-            room.roomId,
+            session.roomId,
             error,
             'ゲームの開始に失敗しました。',
           );
@@ -124,46 +127,42 @@ export class GameService {
       this.server
         .to(roomId)
         .emit('game:countdown', { seconds: GAME_COUNTDOWN_SEC, startsAt });
-      this.logger.log(`Countdown started { roomId: '${room.roomId}' }`);
+      this.logger.log(`Countdown started { roomId: '${session.roomId}' }`);
     } catch (error) {
       this.handleGameError(roomId, error, 'ゲームの開始に失敗しました。');
     }
   }
 
   handleGameLeave(roomId: string, playerId: string, clientId: string) {
-    const room = this.rooms.get(roomId);
-    if (!room || !room.players[playerId]) return;
-    if (room.playerConnections[playerId].clientId !== clientId) {
-      // 以前のソケットインスタンスの切断イベントは無視する
+    const session = this.roomsState.getRoom(roomId)?.gameSession;
+    if (!session || !session.players[playerId]) return;
+
+    if (session.playerConnections[playerId].clientId !== clientId) {
       this.logger.debug(
-        `Ignored disconnect from different socket { roomId: '${room.roomId}', playerId: '${playerId}', socketId: '${clientId}' }`,
+        `Ignored disconnect from different socket { roomId: '${session.roomId}', playerId: '${playerId}' }`,
       );
       return;
     }
 
-    if (room.phase === 'waiting' || room.phase === 'ended') {
-      // 完全に room から削除
-      const result = removePlayerFromRoom(room, playerId);
-
+    if (session.phase === 'waiting' || session.phase === 'ended') {
+      const result = removePlayerFromRoom(session, playerId);
       if (result.success) {
         this.logger.log(
-          `Player left { roomId: '${room.roomId}', playerId: '${playerId}' }`,
+          `Player left { roomId: '${session.roomId}', playerId: '${playerId}' }`,
         );
         if (result.isEmpty) {
-          this.cleanupRoom(room.roomId);
+          this.cleanupRoom(session.roomId); // 全員退出時にメモリ解放
         }
       }
-    } else if (room.phase === 'countdown' || room.phase === 'playing') {
-      // 一時的な切断状態への移行
-      const result = disconnectPlayerFromRoom(room, playerId, Date.now());
-
+    } else if (session.phase === 'countdown' || session.phase === 'playing') {
+      const result = disconnectPlayerFromRoom(session, playerId, Date.now());
       if (result.success) {
         this.logger.debug(
-          `Player disconnected { roomId: '${room.roomId}', playerId: '${playerId}' }`,
+          `Player disconnected { roomId: '${session.roomId}', playerId: '${playerId}' }`,
         );
         if (result.isAllDisconnected) {
           this.logger.log(
-            `All players disconnected { roomId: '${room.roomId}' }`,
+            `All players disconnected { roomId: '${session.roomId}' }`,
           );
         }
       }
@@ -176,19 +175,18 @@ export class GameService {
     direction: Direction | null,
     seq: number,
   ) {
-    const room = this.rooms.get(roomId);
-    if (!room || room.phase !== 'playing') return;
+    const session = this.roomsState.getRoom(roomId)?.gameSession;
+    if (!session || session.phase !== 'playing') return;
 
-    if (!room.playerInputs) room.playerInputs = {};
-    room.playerInputs[playerId] = { direction, seq };
+    if (!session.playerInputs) session.playerInputs = {};
+    session.playerInputs[playerId] = { direction, seq };
   }
 
   handleBombPlace(roomId: string, playerId: string) {
-    const room = this.rooms.get(roomId);
-    if (!room || room.phase !== 'playing') return;
+    const session = this.roomsState.getRoom(roomId)?.gameSession;
+    if (!session || session.phase !== 'playing') return;
 
-    const bomb = tryPlaceBomb(room, playerId, Date.now());
-
+    const bomb = tryPlaceBomb(session, playerId, Date.now());
     if (bomb) {
       this.server.to(roomId).emit('bomb:spawn', { bomb });
     }
@@ -209,53 +207,41 @@ export class GameService {
   }
 
   private checkRoomEntryPermission(roomId: string, playerId: string): boolean {
-    const room = this.rooms.get(roomId);
-    if (!room) {
-      // TODO: LobbyAPI と繋げたら false にする（現在は暫定許容）
-      return true;
-    }
-    if (room.phase === 'ended') {
-      return false;
-    }
+    const roomState = this.roomsState.getRoom(roomId);
+    if (!roomState) return false;
 
-    const player = room.players[playerId];
+    // ルームの参加者として登録されているか確認
+    if (!roomState.participants[playerId]) return false;
 
-    if (room.phase === 'waiting') {
-      // TODO: MIN_PLAYERS_TO_START ではなく MAX_PLAYERS など適切な値に変更する
-      if (!player && Object.keys(room.players).length >= MIN_PLAYERS_TO_START) {
-        return false;
-      }
-      return true;
-    }
+    const session = roomState.gameSession;
+    if (!session) return true; // まだセッションが作られていない(WAITING)なら参加可能
 
-    if (room.phase === 'countdown' || room.phase === 'playing') {
-      // プレイヤー情報がない
-      if (!player) {
-        return false;
-      }
-      if (!player.isDisconnected) {
-        // 切断扱いになっていない（多重ログイン防止）
-        return false;
-      }
-      // タイムアウトかどうか
-      const connection = room.playerConnections[playerId];
-      if (!connection) {
-        return false;
-      }
-      const isTimedOut =
-        Date.now() - connection.lastActiveTime >= DISCONNECT_TIMEOUT_MS;
-      if (isTimedOut) {
-        return false;
-      }
-      return true;
-    }
-    return false;
+    if (session.phase === 'ended') return false;
+
+    const player = session.players[playerId];
+    if (session.phase === 'waiting') return true;
+
+    if (!player) return false;
+    if (!player.isDisconnected) return false;
+
+    const connection = session.playerConnections[playerId];
+    if (!connection) return false;
+
+    const isTimedOut =
+      Date.now() - connection.lastActiveTime >= DISCONNECT_TIMEOUT_MS;
+    if (isTimedOut) return false;
+
+    return true;
   }
 
-  private getOrCreateRoom(roomId: string): GameSession {
-    let room = this.rooms.get(roomId);
-    if (!room) {
-      room = {
+  private getOrCreateSession(roomId: string): GameSession {
+    const roomState = this.roomsState.getRoom(roomId);
+    if (!roomState) {
+      throw new WsException('Room not found');
+    }
+
+    if (!roomState.gameSession) {
+      roomState.gameSession = {
         roomId,
         phase: 'waiting',
         map: createInitialMap(),
@@ -272,35 +258,37 @@ export class GameService {
         disconnectedAt: 0,
         stats: {},
       };
-      this.rooms.set(roomId, room);
-      this.logger.log(`Room created { roomId: '${roomId}' }`);
+      this.logger.log(`GameSession initialized { roomId: '${roomId}' }`);
     }
-    return room;
+    return roomState.gameSession;
   }
 
-  private onGameTick(room: GameSession) {
+  private onGameTick(session: GameSession) {
     const now = Date.now();
+    try {
+      const result = advanceGameTick(session, now);
 
-    const result = advanceGameTick(room, now);
+      for (const exp of result.explosions) {
+        this.server.to(session.roomId).emit('bomb:explode', { ...exp });
+      }
 
-    for (const exp of result.explosions) {
-      this.server.to(room.roomId).emit('bomb:explode', { ...exp });
-    }
+      this.server.to(session.roomId).emit('game:state', {
+        players: session.players,
+        bombs: session.bombs,
+      });
 
-    this.server.to(room.roomId).emit('game:state', {
-      players: room.players,
-      bombs: room.bombs,
-    });
-
-    if (result.isGameEnded && result.endResult) {
-      this.server.to(room.roomId).emit('game:end', result.endResult);
-      void this.recordMatchResult(room, now, result.endResult);
-      this.cleanupRoom(room.roomId);
+      if (result.isGameEnded && result.endResult) {
+        this.server.to(session.roomId).emit('game:end', result.endResult);
+        void this.recordMatchResult(session, now, result.endResult);
+        this.cleanupRoom(session.roomId);
+      }
+    } catch (error) {
+      this.handleGameError(session.roomId, error, 'Game tick failed.');
     }
   }
 
   private async recordMatchResult(
-    room: GameSession,
+    session: GameSession,
     finishedAtMs: number,
     endResult: NonNullable<ReturnType<typeof advanceGameTick>['endResult']>,
   ) {
@@ -314,24 +302,25 @@ export class GameService {
       });
     } catch (error) {
       this.logger.error(
-        `Failed to record match result for room ${room.roomId}`,
+        `Failed to record match result for room ${session.roomId}`,
         error instanceof Error ? error.stack : String(error),
       );
     }
   }
 
   private cleanupRoom(roomId: string) {
-    const room = this.rooms.get(roomId);
-    if (!room) return;
+    const roomState = this.roomsState.getRoom(roomId);
+    const session = roomState?.gameSession;
 
-    stopGameLoopLogic(room);
-
-    if (room.countdownTimerId) {
-      clearTimeout(room.countdownTimerId);
-      room.countdownTimerId = undefined;
+    if (session) {
+      stopGameLoopLogic(session);
+      if (session.countdownTimerId) {
+        clearTimeout(session.countdownTimerId);
+        session.countdownTimerId = undefined;
+      }
     }
 
-    this.rooms.delete(roomId);
-    this.logger.log(`Room deleted { roomId: '${roomId}' }`);
+    this.roomsState.deleteRoom(roomId);
+    this.logger.log(`Room deleted and memory freed { roomId: '${roomId}' }`);
   }
 }

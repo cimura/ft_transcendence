@@ -9,9 +9,6 @@ export class RankingItemDto {
   @ApiProperty({ example: 'alice' })
   username: string;
 
-  @ApiProperty({ example: 'Alice' })
-  displayName: string | null;
-
   @ApiProperty({ example: '/avatars/default-1.svg' })
   avatarUrl: string | null;
 
