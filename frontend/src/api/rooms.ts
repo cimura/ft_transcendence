@@ -1,39 +1,49 @@
 import api from './client'
 import type { CreateRoomDto } from '../types'
+import type { RoomSnapshot } from '@ft_transcendence/shared/rooms-events.types'
 
-export const getRooms = async (status?: 'waiting' | 'playing' | 'finished') => {
+export const getRooms = async (
+  status?: 'waiting' | 'playing' | 'finished'
+): Promise<RoomSnapshot[]> => {
   const response = await api.get('/rooms', {
     params: status ? { status } : undefined,
   })
   return response.data
 }
 
-export const createRoom = async (dto: CreateRoomDto) => {
+export const createRoom = async (
+  dto: CreateRoomDto
+): Promise<RoomSnapshot> => {
   const response = await api.post('/rooms', dto)
   return response.data
 }
 
-export const getRoom = async (roomId: string) => {
+export const getRoom = async (roomId: string): Promise<RoomSnapshot> => {
   const response = await api.get(`/rooms/${roomId}`)
   return response.data
 }
 
-export const joinRoom = async (roomId: string) => {
+export const joinRoom = async (roomId: string): Promise<RoomSnapshot> => {
   const response = await api.post(`/rooms/${roomId}/join`)
   return response.data
 }
 
-export const leaveRoom = async (roomId: string) => {
+export const leaveRoom = async (
+  roomId: string
+): Promise<{ deleted: true; roomId: string } | RoomSnapshot> => {
   const response = await api.post(`/rooms/${roomId}/leave`)
   return response.data
 }
 
-export const setRoomReady = async (roomId: string, isReady: boolean) => {
+export const setRoomReady = async (
+  roomId: string,
+  isReady: boolean
+): Promise<RoomSnapshot> => {
   const response = await api.post(`/rooms/${roomId}/ready`, { isReady })
   return response.data
 }
 
-export const startRoom = async (roomId: string) => {
+export const startRoom = async (roomId: string): Promise<RoomSnapshot> => {
   const response = await api.post(`/rooms/${roomId}/start`)
   return response.data
 }

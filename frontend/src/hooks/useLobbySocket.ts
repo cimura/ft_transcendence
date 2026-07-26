@@ -1,7 +1,6 @@
 import { useEffect, useRef } from 'react'
 import { io, Socket } from 'socket.io-client'
 import { useRoomStore } from '../stores/roomStore'
-import { toGameRoom } from '../utils/roomSnapshot'
 import type {
   RoomClientToServerEvents,
   RoomServerToClientEvents,
@@ -40,15 +39,15 @@ export function useLobbySocket() {
     })
 
     socket.on('lobby:rooms', (rooms: RoomSnapshot[]) => {
-      setRooms(rooms.map(toGameRoom))
+      setRooms(rooms)
     })
 
     socket.on('room:created', (snapshot: RoomSnapshot) => {
-      upsertRoom(toGameRoom(snapshot))
+      upsertRoom(snapshot)
     })
 
     socket.on('room:updated', (snapshot: RoomSnapshot) => {
-      upsertRoom(toGameRoom(snapshot))
+      upsertRoom(snapshot)
     })
 
     socket.on(
