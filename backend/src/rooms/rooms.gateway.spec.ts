@@ -333,7 +333,7 @@ describe('RoomsGateway', () => {
     });
   });
 
-  describe('lobby:join / lobby:leave', () => {
+  describe('lobby:join', () => {
     it('lobby ルームに参加し、現在のロビー一覧を送信する', () => {
       const client = createMockSocket();
       roomsLobbyService.getLobbyRooms.mockReturnValue([mockRoomResponse]);
@@ -344,12 +344,6 @@ describe('RoomsGateway', () => {
       expect(client.emit).toHaveBeenCalledWith('lobby:rooms', [
         toSnapshot(mockRoomResponse),
       ]);
-    });
-
-    it('lobby ルームから退出する', () => {
-      const client = createMockSocket();
-      gateway.handleLobbyLeave(client);
-      expect(client.leave).toHaveBeenCalledWith('lobby');
     });
   });
 

@@ -61,7 +61,6 @@ export function useLobbySocket() {
     socket.connect()
 
     return () => {
-      socket.emit('lobby:leave')
       socket.disconnect()
       socketRef.current = null
     }

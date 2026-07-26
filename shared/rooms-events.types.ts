@@ -50,7 +50,6 @@ export interface RoomClientToServerEvents {
   "room:join": (data: { roomId: string }) => void;
   "room:leave": () => void;
   "lobby:join": () => void;
-  "lobby:leave": () => void;
   "chat:join": (data: { roomId: string }) => void;
   "chat:leave": (data: { roomId: string }) => void;
   "chat:message": (
