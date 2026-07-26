@@ -23,10 +23,10 @@ import {
   ChatMessageDto,
 } from './dto/events.dto';
 import {
+  RoomSnapshot,
   RoomClientToServerEvents,
   RoomServerToClientEvents,
 } from '@ft_transcendence/shared/rooms-events.types';
-import type { RoomResponse } from '../common/types/room.type';
 
 // room:leave / disconnect からこの猶予内に再接続(room:join)しなければ自動退出させる。
 // game 側の DISCONNECT_TIMEOUT_MS (30秒) と揃えている。
@@ -123,10 +123,7 @@ export class RoomsGateway implements OnGatewayConnection, OnGatewayDisconnect {
   handleLobbyJoin(@ConnectedSocket() client: RoomsSocket) {
     void client.join(LOBBY_ROOM);
     const rooms = this.roomsLobbyService.getLobbyRooms();
-    client.emit(
-      'lobby:rooms',
-      rooms.map((room) => this.roomsLobbyService.toSnapshot(room)),
-    );
+    client.emit('lobby:rooms', rooms);
   }
 
   @SubscribeMessage('chat:join')
@@ -198,21 +195,17 @@ export class RoomsGateway implements OnGatewayConnection, OnGatewayDisconnect {
     }
   }
 
-  emitRoomCreated(room: RoomResponse) {
+  emitRoomCreated(room: RoomSnapshot) {
     if (!this.roomsLobbyService.isLobbyVisible(room)) return;
-    this.server
-      .to(LOBBY_ROOM)
-      .emit('room:created', this.roomsLobbyService.toSnapshot(room));
+    this.server.to(LOBBY_ROOM).emit('room:created', room);
   }
 
-  emitRoomUpdated(room: RoomResponse) {
-    const snapshot = this.roomsLobbyService.toSnapshot(room);
-
-    this.server.to(room.id).emit('room:updated', snapshot);
-    // WAITING→PLAYING などステータス変化時もロビー側で最新表示にする
+  emitRoomUpdated(room: RoomSnapshot) {
+    this.server.to(room.id).emit('room:updated', room);
+    // waiting→playing などステータス変化時もロビー側で最新表示にする
     // (waiting でなくなった場合、フロント側でロビー一覧から取り除かれる)
     if (room.mode === 'online') {
-      this.server.to(LOBBY_ROOM).emit('room:updated', snapshot);
+      this.server.to(LOBBY_ROOM).emit('room:updated', room);
     }
   }
 
@@ -260,7 +253,7 @@ export class RoomsGateway implements OnGatewayConnection, OnGatewayDisconnect {
   // ホストが戻らないまま部屋だけが残り続ける「ゴーストルーム」を防ぐ
   private autoLeaveRoom(roomId: string, userId: string) {
     const room = this.roomsState.getRoom(roomId);
-    if (!room || room.status !== 'WAITING' || !room.participants[userId]) {
+    if (!room || room.status !== 'waiting' || !room.participants[userId]) {
       return;
     }
 

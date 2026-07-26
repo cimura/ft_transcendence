@@ -35,7 +35,7 @@ export class RoomsChatService {
       throw new ForbiddenException('You are not a participant of this room');
     }
 
-    if (room.status !== 'WAITING') {
+    if (room.status !== 'waiting') {
       throw new ConflictException('Messages can only be sent in waiting rooms');
     }
 

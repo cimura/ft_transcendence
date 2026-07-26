@@ -47,8 +47,8 @@ describe('GameService', () => {
       name: 'Test Room',
       hostId: 'player-1',
       maxPlayers: 2,
-      status: 'WAITING',
-      mode: 'ONLINE',
+      status: 'waiting',
+      mode: 'online',
       participants: {
         'player-1': {
           userId: 'player-1',
