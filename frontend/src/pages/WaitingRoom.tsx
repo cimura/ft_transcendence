@@ -1,3 +1,4 @@
+// frontend/src/pages/WaitingRoom.tsx
 import { useNavigate, useParams } from 'react-router-dom'
 import { useRoomStore } from '../stores/roomStore'
 import { useEffect, useState } from 'react'
@@ -160,7 +161,6 @@ export function WaitingRoom() {
   }
 
   return (
-    // 変更点: 背景を透過にし、HUD風のフォントに変更
     <div className="min-h-screen bg-transparent text-cyan-100 font-sans relative">
       {/* うっすらとした背景グリッド */}
       <div className="absolute inset-0 bg-[linear-gradient(rgba(0,255,255,0.02)_1px,transparent_1px),linear-gradient(90deg,rgba(0,255,255,0.02)_1px,transparent_1px)] bg-[size:30px_30px] pointer-events-none" />
@@ -198,8 +198,10 @@ export function WaitingRoom() {
       <main className="relative z-10 mx-auto max-w-7xl px-4 py-8 sm:px-6">
         <div className="grid gap-6 lg:grid-cols-[360px_minmax(0,1fr)] xl:grid-cols-[340px_minmax(0,1fr)_360px]">
           {/* 左側: プレイヤーリスト & アクション */}
-          <section className="flex flex-col gap-6">
-            <div className="rounded-2xl border border-cyan-500/30 bg-black/40 backdrop-blur-md p-5 shadow-[0_0_20px_rgba(0,255,255,0.05)]">
+          {/* 修正: h-full を追加し、親グリッドの高さに合わせる */}
+          <section className="flex flex-col gap-6 h-full">
+            {/* 修正: flex-1 を追加して、このパネルが縦の余白を埋めるようにする */}
+            <div className="rounded-2xl border border-cyan-500/30 bg-black/40 backdrop-blur-md p-5 flex flex-col flex-1 shadow-[0_0_20px_rgba(0,255,255,0.05)]">
               <div className="flex items-center justify-between mb-4 border-b border-cyan-500/20 pb-2">
                 <h2 className="text-lg font-bold tracking-widest text-cyan-200">
                   SQUAD{' '}
@@ -213,7 +215,8 @@ export function WaitingRoom() {
                 </span>
               </div>
 
-              <div className="space-y-3">
+              {/* 修正: flex-1 overflow-y-auto を追加し、プレイヤーが増えたらスクロールするようにする */}
+              <div className="space-y-3 flex-1 overflow-y-auto pr-1 scrollbar-thin scrollbar-thumb-cyan-700/50 scrollbar-track-transparent">
                 {currentRoom.players.map((player) => (
                   <PlayerCard key={player.userId} player={player} />
                 ))}
@@ -235,7 +238,8 @@ export function WaitingRoom() {
             </div>
 
             {/* アクションボタン (Ready / Start) */}
-            <div className="w-full">
+            {/* 修正: shrink-0 を追加し、上に押し潰されないようにする */}
+            <div className="w-full shrink-0">
               {!isHost && (
                 <button
                   onClick={handleToggleReady}
@@ -275,13 +279,17 @@ export function WaitingRoom() {
               )}
             </div>
 
+            {/* 修正: shrink-0 を追加 */}
             {isHost && currentRoom.status === 'waiting' && (
-              <RoomInviteSection currentRoom={currentRoom} />
+              <div className="shrink-0">
+                <RoomInviteSection currentRoom={currentRoom} />
+              </div>
             )}
           </section>
 
           {/* 中央: マップ・ゲーム情報 */}
-          <section className="rounded-2xl border border-cyan-500/30 bg-black/40 p-6 backdrop-blur-md shadow-[0_0_30px_rgba(0,255,255,0.05)] relative overflow-hidden flex flex-col">
+          {/* 修正: h-full を追加 */}
+          <section className="rounded-2xl border border-cyan-500/30 bg-black/40 p-6 backdrop-blur-md shadow-[0_0_30px_rgba(0,255,255,0.05)] relative overflow-hidden flex flex-col h-full">
             <div className="absolute top-0 right-0 w-32 h-32 bg-cyan-600/10 rounded-full blur-3xl pointer-events-none" />
 
             <h2 className="text-xl font-bold tracking-widest text-cyan-100 flex items-center gap-3">
