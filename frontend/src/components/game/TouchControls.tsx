@@ -6,29 +6,76 @@ type TouchControlsProps = {
   activeControl: ActiveControl
 }
 
-const directions: { label: string; direction: Direction; className: string }[] =
-  [
-    { label: '上', direction: 'up', className: 'col-start-2 row-start-1' },
-    { label: '左', direction: 'left', className: 'col-start-1 row-start-2' },
-    { label: '下', direction: 'down', className: 'col-start-2 row-start-2' },
-    { label: '右', direction: 'right', className: 'col-start-3 row-start-2' },
-  ]
+// 線の太さを 3.5 にして、目標画像のようなクッキリとした太いアイコンに変更
+const directions: {
+  label: string
+  direction: Direction
+  className: string
+  icon: React.ReactNode
+}[] = [
+  {
+    label: '上',
+    direction: 'up',
+    className: 'col-start-2 row-start-1',
+    icon: (
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3.5" strokeLinecap="round" strokeLinejoin="round" className="w-8 h-8">
+        <path d="M12 20V4" />
+        <path d="m5 11 7-7 7 7" />
+      </svg>
+    ),
+  },
+  {
+    label: '左',
+    direction: 'left',
+    className: 'col-start-1 row-start-2',
+    icon: (
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3.5" strokeLinecap="round" strokeLinejoin="round" className="w-8 h-8">
+        <path d="M20 12H4" />
+        <path d="m11 19-7-7 7-7" />
+      </svg>
+    ),
+  },
+  {
+    label: '下',
+    direction: 'down',
+    className: 'col-start-2 row-start-2',
+    icon: (
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3.5" strokeLinecap="round" strokeLinejoin="round" className="w-8 h-8">
+        <path d="M12 4v16" />
+        <path d="m19 13-7 7-7-7" />
+      </svg>
+    ),
+  },
+  {
+    label: '右',
+    direction: 'right',
+    className: 'col-start-3 row-start-2',
+    icon: (
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3.5" strokeLinecap="round" strokeLinejoin="round" className="w-8 h-8">
+        <path d="M4 12h16" />
+        <path d="m13 5 7 7-7 7" />
+      </svg>
+    ),
+  },
+]
 
+// パネルを画面いっぱいに広げず、コンテンツの幅(w-max)に合わせてコンパクトに
 const panelStyles =
-  'flex touch-none select-none flex-col gap-3 rounded-lg border border-gray-200 bg-white p-4 shadow-sm'
+  'relative flex flex-col items-center justify-center gap-4 p-6 bg-cyan-950/30 backdrop-blur-md rounded-[1.5rem] border border-cyan-500/40 shadow-[0_0_30px_rgba(0,255,255,0.15)] w-max mx-auto'
 
+// ボーダーを border-[3px] に太くし、角の丸みを調整してサイバー感を強調
 const directionButtonStyles = {
-  base: 'h-12 touch-none rounded-md text-sm font-semibold transition-colors',
-  idle: 'bg-gray-800 text-white active:bg-gray-600',
-  active: 'bg-yellow-300 text-gray-950 shadow-lg ring-2 ring-yellow-500',
-  inactive: 'bg-gray-300 text-gray-500 opacity-45',
+  base: 'w-[4.5rem] h-[4.5rem] touch-none rounded-2xl flex items-center justify-center transition-all duration-100 border-[3px]',
+  idle: 'border-cyan-400 text-cyan-400 bg-transparent shadow-[0_0_15px_rgba(0,255,255,0.3),inset_0_0_15px_rgba(0,255,255,0.2)]',
+  active: 'border-cyan-200 text-white bg-cyan-400/40 shadow-[0_0_25px_rgba(0,255,255,0.7),inset_0_0_20px_rgba(0,255,255,0.5)] scale-95',
+  inactive: 'border-cyan-900/60 text-cyan-800 bg-transparent',
 }
 
 const bombButtonStyles = {
-  base: 'h-12 touch-none rounded-md font-semibold transition-colors',
-  idle: 'bg-red-600 text-white active:bg-red-500',
-  active: directionButtonStyles.active,
-  inactive: 'bg-red-200 text-red-500 opacity-45',
+  base: 'w-full h-[4.5rem] touch-none rounded-2xl flex items-center justify-center transition-all duration-100 border-[3px]',
+  idle: 'border-red-500 text-red-500 bg-transparent shadow-[0_0_15px_rgba(255,0,0,0.3),inset_0_0_15px_rgba(255,0,0,0.2)]',
+  active: 'border-red-300 text-white bg-red-500/40 shadow-[0_0_25px_rgba(255,0,0,0.7),inset_0_0_20px_rgba(255,0,0,0.5)] scale-95',
+  inactive: 'border-red-900/60 text-red-800 bg-transparent',
 }
 
 export function TouchControls({ onInput, activeControl }: TouchControlsProps) {
@@ -58,8 +105,15 @@ export function TouchControls({ onInput, activeControl }: TouchControlsProps) {
 
   return (
     <div className={panelStyles}>
-      <div className="grid grid-cols-3 grid-rows-2 gap-2">
-        {directions.map(({ label, direction, className }) => (
+      {/* HUD風の四隅のアクセント装飾 */}
+      <div className="absolute top-3 left-3 w-4 h-4 border-t-[3px] border-l-[3px] border-cyan-400 opacity-80 rounded-tl-sm pointer-events-none" />
+      <div className="absolute top-3 right-3 w-4 h-4 border-t-[3px] border-r-[3px] border-cyan-400 opacity-80 rounded-tr-sm pointer-events-none" />
+      <div className="absolute bottom-3 left-3 w-4 h-4 border-b-[3px] border-l-[3px] border-cyan-400 opacity-80 rounded-bl-sm pointer-events-none" />
+      <div className="absolute bottom-3 right-3 w-4 h-4 border-b-[3px] border-r-[3px] border-cyan-400 opacity-80 rounded-br-sm pointer-events-none" />
+
+      {/* 十字キーエリア */}
+      <div className="grid grid-cols-3 grid-rows-2 gap-3 relative z-10">
+        {directions.map(({ label, direction, className, icon }) => (
           <button
             key={direction}
             type="button"
@@ -78,13 +132,16 @@ export function TouchControls({ onInput, activeControl }: TouchControlsProps) {
               handlePointerUp()
             }}
           >
-            {label}
+            {icon}
           </button>
         ))}
       </div>
+      
+      {/* 爆弾ボタンエリア */}
       <button
         type="button"
-        className={`${bombButtonStyles.base} ${getBombClassName()}`}
+        aria-label="爆弾"
+        className={`${bombButtonStyles.base} ${getBombClassName()} relative z-10`}
         onPointerDown={(event) => {
           event.preventDefault()
           onInput({ type: 'place_bomb' })
@@ -96,7 +153,13 @@ export function TouchControls({ onInput, activeControl }: TouchControlsProps) {
           event.preventDefault()
         }}
       >
-        爆弾
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" className="w-10 h-10">
+          <circle cx="11" cy="14" r="6" />
+          <path d="M15 10c1.5-1.5 2.5-1.5 4-2" />
+          <path d="M21 7.5a1.5 1.5 0 0 0-3 0" />
+          <path d="M19 6v3" />
+          <path d="M17.5 7.5h3" />
+        </svg>
       </button>
     </div>
   )
