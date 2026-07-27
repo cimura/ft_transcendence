@@ -53,7 +53,7 @@ export function GameMapPreview() {
   return (
     <div
       ref={containerRef}
-      className="flex min-h-[220px] items-center justify-center overflow-hidden rounded-md bg-gray-950 p-3"
+      className="flex h-full min-h-[220px] items-center justify-center overflow-hidden rounded-md bg-gray-950 p-3"
     >
       <canvas
         ref={canvasRef}
