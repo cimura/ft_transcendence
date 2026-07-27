@@ -23,18 +23,6 @@ export class FriendInfoDto {
     nullable: true,
   })
   avatarUrl: string | null;
-
-  @ApiProperty({
-    example: false,
-    description: 'リアルタイムのオンライン状態フラグ',
-  })
-  isOnline: boolean;
-
-  @ApiProperty({
-    example: 'offline',
-    description: 'ステータスの詳細文字列（online, offline, awayなど）',
-  })
-  status: string;
 }
 
 /**

@@ -142,11 +142,6 @@ export class RoomsGateway implements OnGatewayConnection, OnGatewayDisconnect {
     );
   }
 
-  @SubscribeMessage('lobby:leave')
-  handleLobbyLeave(@ConnectedSocket() client: RoomsSocket) {
-    void client.leave(LOBBY_ROOM);
-  }
-
   @SubscribeMessage('chat:join')
   async handleChatJoin(
     @ConnectedSocket() client: RoomsSocket,

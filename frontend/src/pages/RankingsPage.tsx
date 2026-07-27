@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { getRankings } from '../api/stats'
+import { getApiErrorMessage } from '../api/errors'
 import type { RankingItem } from '../types/profile'
 
 /**
@@ -26,11 +27,7 @@ export function RankingsPage() {
         if (!ignore) setRankings(response.data)
       } catch (err) {
         if (!ignore) {
-          setError(
-            err instanceof Error
-              ? err.message
-              : 'ランキングの取得に失敗しました'
-          )
+          setError(getApiErrorMessage(err, 'ランキングの取得に失敗しました。'))
         }
       } finally {
         if (!ignore) setLoading(false)

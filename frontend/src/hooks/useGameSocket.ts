@@ -3,6 +3,9 @@ import { io, Socket } from 'socket.io-client'
 import { useGameStore } from '../stores/gameStore'
 import type { ServerToClientEvents } from '@ft_transcendence/shared/game-events.types'
 
+const BACKEND_URL = import.meta.env.VITE_BACKEND_URL || window.location.origin
+const GAME_NAMESPACE = `${BACKEND_URL.replace(/\/$/, '')}/game`
+
 export function useGameSocket(roomId: string) {
   const socketRef = useRef<Socket | null>(null)
   const setGameState = useGameStore((state) => state.setGameState)
@@ -18,7 +21,7 @@ export function useGameSocket(roomId: string) {
     if (!socketRef.current) {
       const token = localStorage.getItem('accessToken')
 
-      socketRef.current = io('/game', {
+      socketRef.current = io(GAME_NAMESPACE, {
         transports: ['websocket'],
         secure: true,
         auth: { token: `Bearer ${token}` },
@@ -101,9 +104,7 @@ export function useGameSocket(roomId: string) {
 
     socket.on('connect_error', (error: Error) => {
       console.error('Socket connection error:', error)
-      setErrorMessage(
-        `接続エラー: ${error.message || 'サーバーに接続できません'}`
-      )
+      setErrorMessage('接続エラー: サーバーに接続できません。')
     })
 
     socket.on('disconnect', (reason: string) => {

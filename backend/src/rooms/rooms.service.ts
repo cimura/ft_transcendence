@@ -190,6 +190,12 @@ export class RoomsService {
 
     const remainingParticipants = Object.values(room.participants);
 
+    // 空室のルームは削除する。
+    if (remainingParticipants.length === 0) {
+      this.roomsState.deleteRoom(roomId);
+      return { deleted: true as const, roomId };
+    }
+
     // ホストが退出した場合の処理
     if (participant.isHost) {
       if (remainingParticipants.length === 0) {

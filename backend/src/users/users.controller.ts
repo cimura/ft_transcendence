@@ -9,10 +9,10 @@ import {
   UseInterceptors,
   UploadedFile,
   Request,
+  Param,
   HttpCode,
   HttpStatus,
   Query,
-  Param,
   BadRequestException,
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
