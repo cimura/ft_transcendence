@@ -50,7 +50,9 @@ export class RoomsController {
   @ApiOperation({ summary: 'ルームを作成' })
   @ApiResponse({ status: 201, description: '成功時' })
   async create(@Request() req: UserRequest, @Body() dto: CreateRoomDto) {
-    return this.roomsService.create(req.user.userId, dto);
+    const room = await this.roomsService.create(req.user.userId, dto);
+    this.roomsGateway.emitRoomCreated(room);
+    return room;
   }
 
   @Get(':roomId')

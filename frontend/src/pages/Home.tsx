@@ -1,8 +1,6 @@
 import { useNavigate } from 'react-router-dom'
-import { useEffect, useState } from 'react'
+import { useEffect } from 'react'
 import { useAuthStore } from '../stores/authStore'
-import { useRoomStore } from '../stores/roomStore'
-import { createRoom } from '../api/rooms'
 import { useNotifications } from '../hooks/useNotifications'
 
 const signalBars = [
@@ -37,8 +35,6 @@ type HomeNavItem = {
 export function Home() {
   const navigate = useNavigate()
   const { currentUser, fetchCurrentUser, loading } = useAuthStore()
-  const { setCurrentRoom, upsertRoom } = useRoomStore()
-  const [isCreatingRoom, setIsCreatingRoom] = useState(false)
   const { notifications } = useNotifications()
   const navItems: HomeNavItem[] = [
     {
@@ -82,31 +78,8 @@ export function Home() {
     }
   }
 
-  const handleStartMatchClick = async () => {
-    if (isCreatingRoom) return
-
-    setIsCreatingRoom(true)
-    try {
-      let user = currentUser
-      if (!user) {
-        await fetchCurrentUser()
-        user = useAuthStore.getState().currentUser
-      }
-
-      const username = user?.username || 'Player'
-      const room = await createRoom({
-        name: `${username} の作戦領域`,
-        maxPlayers: 2,
-      })
-
-      upsertRoom(room)
-      setCurrentRoom(room)
-      navigate(`/room/${room.id}`)
-    } catch (error) {
-      console.error('Failed to create match room:', error)
-    } finally {
-      setIsCreatingRoom(false)
-    }
+  const handleStartMatchClick = () => {
+    navigate('/lobby')
   }
 
   return (
@@ -219,7 +192,6 @@ export function Home() {
 
           <button
             onClick={handleStartMatchClick}
-            disabled={isCreatingRoom}
             className="group relative w-full bg-black/40 backdrop-blur-xl border-2 border-cyan-300/80 rounded-[2rem] py-14 flex flex-col items-center justify-center overflow-hidden transition-all duration-500 hover:scale-[1.02] disabled:opacity-50"
             style={{
               boxShadow:
@@ -236,7 +208,7 @@ export function Home() {
             </span>
 
             <span className="relative z-10 text-6xl font-black text-white tracking-[0.2em] group-hover:tracking-[0.3em] transition-all duration-500 drop-shadow-[0_0_15px_rgba(255,255,255,0.8)]">
-              {isCreatingRoom ? 'INITIALIZING...' : '対戦開始'}
+              対戦開始
             </span>
 
             <div className="absolute bottom-4 inset-x-8 flex items-end justify-between opacity-80">
