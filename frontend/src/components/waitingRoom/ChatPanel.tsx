@@ -57,7 +57,7 @@ export function ChatPanel({
   }
 
   return (
-    <aside className="flex h-[560px] min-h-[420px] flex-col overflow-hidden rounded-2xl border border-cyan-500/30 bg-black/50 backdrop-blur-md shadow-[0_0_30px_rgba(0,255,255,0.05)]">
+    <aside className="flex h-full min-h-[420px] flex-col overflow-hidden rounded-2xl border border-cyan-500/30 bg-black/50 backdrop-blur-md shadow-[0_0_30px_rgba(0,255,255,0.05)]">
       {/* ヘッダー */}
       <div className="flex items-center justify-between border-b border-cyan-500/30 bg-cyan-950/20 px-5 py-4 relative">
         <div className="absolute top-0 left-0 w-full h-[1px] bg-gradient-to-r from-cyan-400 to-transparent opacity-50" />
