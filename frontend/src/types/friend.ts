@@ -1,3 +1,5 @@
+import type { PresenceStatus } from '@ft_transcendence/shared/realtime-events.types'
+
 /**
  * Friend type definition
  * Represents a user's friend
@@ -6,6 +8,7 @@ export interface Friend {
   id: string
   username: string
   avatarUrl?: string
+  status: PresenceStatus
 }
 
 /**

@@ -4,12 +4,14 @@ import { GameGateway } from './game.gateway';
 import { GameService } from './game.service';
 import { SocketAuthService } from '../websocket/socket-auth.service';
 import { SocketPresenceService } from '../websocket/socket-presence.service';
+import { RealtimeGateway } from '../websocket/realtime.gateway';
 
 describe('GameGateway', () => {
   let gateway: GameGateway;
   let gameService: jest.Mocked<GameService>;
   let socketAuthService: jest.Mocked<SocketAuthService>;
   let socketPresenceService: SocketPresenceService;
+  let realtimeGateway: jest.Mocked<RealtimeGateway>;
 
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
@@ -28,6 +30,10 @@ describe('GameGateway', () => {
         },
         { provide: SocketAuthService, useValue: { authenticate: jest.fn() } },
         SocketPresenceService,
+        {
+          provide: RealtimeGateway,
+          useValue: { emitPresenceUpdatedIfChanged: jest.fn() },
+        },
       ],
     }).compile();
 
@@ -35,6 +41,7 @@ describe('GameGateway', () => {
     gameService = module.get(GameService);
     socketAuthService = module.get(SocketAuthService);
     socketPresenceService = module.get(SocketPresenceService);
+    realtimeGateway = module.get(RealtimeGateway);
   });
 
   // モックのソケットオブジェクトを作成するヘルパー関数

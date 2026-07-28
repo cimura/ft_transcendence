@@ -15,6 +15,7 @@ import { GameService } from './game.service';
 import { GameExceptionFilter } from './game-exception.filter';
 import { SocketAuthService } from '../websocket/socket-auth.service';
 import { SocketPresenceService } from '../websocket/socket-presence.service';
+import { RealtimeGateway } from '../websocket/realtime.gateway';
 import { getSocketCorsOrigins } from '../websocket/socket-cors';
 import type { GameSocket } from '../common/types/game.type';
 import type {
@@ -38,6 +39,7 @@ export class GameGateway
     private readonly gameService: GameService,
     private readonly socketAuthService: SocketAuthService,
     private readonly socketPresenceService: SocketPresenceService,
+    private readonly realtimeGateway: RealtimeGateway,
   ) {}
 
   afterInit(server: Server<ClientToServerEvents, ServerToClientEvents>) {
@@ -66,6 +68,9 @@ export class GameGateway
     if (!user) return;
 
     const previousRoomId = client.data.roomId;
+    const previousPresenceStatus = this.socketPresenceService.getStatus(
+      user.id,
+    );
 
     try {
       await client.join(data.roomId);
@@ -103,7 +108,7 @@ export class GameGateway
     }
 
     if (previousRoomId && previousRoomId !== data.roomId) {
-      this.cleanupPlayerConnection(previousRoomId, user.id, client.id);
+      this.cleanupPlayerConnection(previousRoomId, user.id, client.id, false);
       try {
         await client.leave(previousRoomId);
       } catch (error) {
@@ -113,6 +118,10 @@ export class GameGateway
           data.roomId,
           user.id,
           client.id,
+        );
+        this.realtimeGateway.emitPresenceUpdatedIfChanged(
+          user.id,
+          previousPresenceStatus,
         );
         throw error;
       }
@@ -126,6 +135,10 @@ export class GameGateway
       userId: user.id,
       socketId: client.id,
     });
+    this.realtimeGateway.emitPresenceUpdatedIfChanged(
+      user.id,
+      previousPresenceStatus,
+    );
 
     client.emit('game:init', initData);
     this.gameService.handleGameStart(data.roomId);
@@ -224,7 +237,9 @@ export class GameGateway
     roomId: string,
     userId: string,
     clientId: string,
+    notifyPresence = true,
   ): void {
+    const previousPresenceStatus = this.socketPresenceService.getStatus(userId);
     const remaining = this.socketPresenceService.unregister({
       namespace: 'game',
       roomId,
@@ -234,6 +249,13 @@ export class GameGateway
 
     if (remaining === 0) {
       this.gameService.handleGameLeave(roomId, userId, clientId);
+    }
+
+    if (notifyPresence) {
+      this.realtimeGateway.emitPresenceUpdatedIfChanged(
+        userId,
+        previousPresenceStatus,
+      );
     }
   }
 }

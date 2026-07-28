@@ -11,6 +11,18 @@ interface FriendCardProps {
  * Displays a single friend's information with profile navigation and delete button
  */
 export function FriendCard({ friend, onDelete }: FriendCardProps) {
+  const statusLabel = {
+    online: 'オンライン',
+    in_game: 'ゲーム中',
+    offline: 'オフライン',
+  }[friend.status]
+
+  const statusColor = {
+    online: 'bg-green-400',
+    in_game: 'bg-yellow-400',
+    offline: 'bg-gray-500',
+  }[friend.status]
+
   return (
     <div className="flex items-center gap-4 bg-black border-2 border-white/40 rounded-full px-6 py-4 hover:border-white/60 transition-all">
       <Link
@@ -39,6 +51,13 @@ export function FriendCard({ friend, onDelete }: FriendCardProps) {
           <p className="truncate text-white text-2xl font-medium">
             {friend.username}
           </p>
+          <div className="mt-1 flex items-center gap-2 text-sm text-white/70">
+            <span
+              className={`h-2.5 w-2.5 rounded-full ${statusColor}`}
+              aria-hidden="true"
+            />
+            <span>{statusLabel}</span>
+          </div>
         </div>
       </Link>
 

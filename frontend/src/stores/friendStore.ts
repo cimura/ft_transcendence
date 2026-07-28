@@ -11,6 +11,7 @@ interface FriendState {
 
   // Actions - フレンド関連
   setFriends: (friends: Friend[]) => void
+  updateFriendStatus: (friendId: string, status: Friend['status']) => void
   addFriend: (friend: Friend) => void
   removeFriend: (friendId: string) => void
 
@@ -45,6 +46,13 @@ export const useFriendStore = create<FriendState>((set, get) => ({
 
   // フレンド関連のアクション
   setFriends: (friends) => set({ friends }),
+
+  updateFriendStatus: (friendId, status) =>
+    set((state) => ({
+      friends: state.friends.map((friend) =>
+        friend.id === friendId ? { ...friend, status } : friend
+      ),
+    })),
 
   addFriend: (friend) =>
     set((state) => ({

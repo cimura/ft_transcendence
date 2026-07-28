@@ -1,5 +1,9 @@
 import { ApiProperty } from '@nestjs/swagger';
 import { FriendRequestStatus } from 'src/generated/prisma/enums';
+import {
+  PRESENCE_STATUSES,
+  type PresenceStatus,
+} from '@ft_transcendence/shared/realtime-events.types';
 
 /**
  * フレンドの基本情報を表すDTO（GET /api/friends）
@@ -23,6 +27,13 @@ export class FriendInfoDto {
     nullable: true,
   })
   avatarUrl: string | null;
+
+  @ApiProperty({
+    enum: PRESENCE_STATUSES,
+    example: 'offline',
+    description: 'フレンドのオンライン状態',
+  })
+  status: PresenceStatus;
 }
 
 /**

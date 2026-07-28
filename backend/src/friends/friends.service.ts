@@ -18,11 +18,13 @@ import {
 } from './dto/friends-response.dto';
 import { FriendRequestResponseDto } from './dto/friends-response.dto';
 import { RealtimeGateway } from '../websocket/realtime.gateway';
+import { SocketPresenceService } from '../websocket/socket-presence.service';
 
 @Injectable()
 export class FriendsService {
   constructor(
     private readonly prisma: PrismaService,
+    private readonly socketPresenceService: SocketPresenceService,
     @Optional() private readonly realtimeGateway?: RealtimeGateway,
   ) {}
 
@@ -60,6 +62,7 @@ export class FriendsService {
         id: friend.id,
         username: friend.username,
         avatarUrl: friend.avatarUrl,
+        status: this.socketPresenceService.getStatus(friend.id),
       };
     });
   }

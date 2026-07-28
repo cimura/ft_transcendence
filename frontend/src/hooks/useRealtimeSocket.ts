@@ -6,6 +6,7 @@ import type {
 } from '@ft_transcendence/shared/realtime-events.types'
 import { useAuthStore } from '../stores/authStore'
 import { useNotificationStore } from '../stores/notificationStore'
+import { useFriendStore } from '../stores/friendStore'
 
 const BACKEND_URL = import.meta.env.VITE_BACKEND_URL || window.location.origin
 const REALTIME_NAMESPACE = `${BACKEND_URL.replace(/\/$/, '')}/realtime`
@@ -24,8 +25,14 @@ export function useRealtimeSocket() {
       auth: { token: `Bearer ${accessToken}` },
     })
 
+    let hasConnected = false
+
     const handleConnect = () => {
       void useNotificationStore.getState().fetchNotifications()
+      if (hasConnected) {
+        void useFriendStore.getState().fetchFriends()
+      }
+      hasConnected = true
     }
 
     const handleNewNotification = (
@@ -36,8 +43,15 @@ export function useRealtimeSocket() {
       useNotificationStore.getState().addNotification(notification)
     }
 
+    const handlePresenceUpdated = (
+      update: Parameters<RealtimeServerToClientEvents['presence:updated']>[0]
+    ) => {
+      useFriendStore.getState().updateFriendStatus(update.userId, update.status)
+    }
+
     socket.on('connect', handleConnect)
     socket.on('notification:new', handleNewNotification)
+    socket.on('presence:updated', handlePresenceUpdated)
     socket.on('connect_error', (error: Error) => {
       console.error('[RealtimeSocket] connection error:', error)
     })
@@ -47,6 +61,7 @@ export function useRealtimeSocket() {
     return () => {
       socket.off('connect', handleConnect)
       socket.off('notification:new', handleNewNotification)
+      socket.off('presence:updated', handlePresenceUpdated)
       socket.disconnect()
     }
   }, [accessToken])
