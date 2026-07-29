@@ -69,6 +69,19 @@ export class GameService {
       this.logger.log(
         `Player joined { roomId: '${session.roomId}', playerId: '${playerId}' }`,
       );
+    } else if (
+      session.phase === 'countdown' &&
+      session.players[playerId] &&
+      !session.players[playerId].isDisconnected
+    ) {
+      // The last required player can move the session to countdown before
+      // React StrictMode's duplicate socket finishes joining. Treat that
+      // second connection like the idempotent waiting-phase join and make it
+      // the active socket instead of showing a false game error.
+      addPlayerToRoom(session, playerId, clientId, username);
+      this.logger.debug(
+        `Player socket replaced during countdown { roomId: '${session.roomId}', playerId: '${playerId}' }`,
+      );
     } else if (session.phase === 'countdown' || session.phase === 'playing') {
       const result = reconnectPlayerToRoom(session, playerId, clientId);
       if (!result.success) {
@@ -220,6 +233,9 @@ export class GameService {
 
     const player = session.players[playerId];
     if (session.phase === 'waiting') return true;
+    if (session.phase === 'countdown' && player && !player.isDisconnected) {
+      return true;
+    }
 
     if (!player) return false;
     if (!player.isDisconnected) return false;

@@ -2,6 +2,7 @@ import { useEffect, useRef } from 'react'
 import { io, Socket } from 'socket.io-client'
 import { useRoomStore } from '../stores/roomStore'
 import { toGameRoom } from '../utils/roomSnapshot'
+import { getStoredAccessToken } from '../utils/accessToken'
 import type {
   RoomClientToServerEvents,
   RoomServerToClientEvents,
@@ -23,7 +24,7 @@ export function useLobbySocket() {
 
   useEffect(() => {
     const { setRooms, upsertRoom, removeRoom } = useRoomStore.getState()
-    const accessToken = localStorage.getItem('accessToken')
+    const accessToken = getStoredAccessToken()
 
     const socket = io(ROOMS_NAMESPACE, {
       autoConnect: false,

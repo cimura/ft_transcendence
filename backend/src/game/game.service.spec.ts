@@ -122,6 +122,21 @@ describe('GameService', () => {
 
       expect(emit).toHaveBeenCalledWith('game:countdown', expect.any(Object));
     });
+
+    it('最後の参加者によるカウントダウン開始直後の多重 join を許可すること', () => {
+      service.handleGameJoin('room-1', 'player-1', 'client-1');
+      service.handleGameJoin('room-1', 'player-2', 'client-2');
+      service.handleGameStart('room-1');
+
+      expect(() => {
+        service.handleGameJoin('room-1', 'player-2', 'client-2-new');
+      }).not.toThrow();
+
+      // 置き換え前のソケットが遅れて切断してもプレイヤーを切断扱いにしない
+      service.handleGameLeave('room-1', 'player-2', 'client-2');
+      const session = roomsState.getRoom('room-1')?.gameSession;
+      expect(session?.players['player-2'].isDisconnected).toBe(false);
+    });
   });
 
   describe('Game Lifecycle & Disconnection', () => {

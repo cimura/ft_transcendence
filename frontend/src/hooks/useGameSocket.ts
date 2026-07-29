@@ -1,6 +1,7 @@
 import { useEffect, useRef } from 'react'
 import { io, Socket } from 'socket.io-client'
 import { useGameStore } from '../stores/gameStore'
+import { getStoredAccessToken } from '../utils/accessToken'
 import type { ServerToClientEvents } from '@ft_transcendence/shared/game-events.types'
 
 const BACKEND_URL = import.meta.env.VITE_BACKEND_URL || window.location.origin
@@ -19,7 +20,7 @@ export function useGameSocket(roomId: string) {
 
   useEffect(() => {
     if (!socketRef.current) {
-      const token = localStorage.getItem('accessToken')
+      const token = getStoredAccessToken()
 
       socketRef.current = io(GAME_NAMESPACE, {
         transports: ['websocket'],

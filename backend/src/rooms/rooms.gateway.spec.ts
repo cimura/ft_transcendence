@@ -101,6 +101,7 @@ describe('RoomsGateway', () => {
           provide: RoomsService,
           useValue: {
             leave: jest.fn(),
+            findOne: jest.fn(),
           },
         },
         {
@@ -157,10 +158,11 @@ describe('RoomsGateway', () => {
   });
 
   describe('handleRoomJoin', () => {
-    it('指定のルームに参加する', () => {
+    it('指定のルームに参加して最新スナップショットを返す', async () => {
       const client = createMockSocket();
       client.data.user = { id: 'user-1' };
-      gateway.handleRoomJoin(client, { roomId: 'room-1' });
+      roomsService.findOne.mockReturnValue(mockRoomResponse);
+      await gateway.handleRoomJoin(client, { roomId: 'room-1' });
       expect(client.join).toHaveBeenCalledWith('room-1');
       expect(client.data.roomId).toBe('room-1');
       expect(socketPresenceService.register).toHaveBeenCalledWith({
@@ -169,13 +171,18 @@ describe('RoomsGateway', () => {
         userId: 'user-1',
         socketId: 'socket-1',
       });
+      expect(client.emit).toHaveBeenCalledWith(
+        'room:updated',
+        toSnapshot(mockRoomResponse),
+      );
     });
 
-    it('既に別のルームに参加している場合は退出してから新しいルームに参加する', () => {
+    it('既に別のルームに参加している場合は退出してから新しいルームに参加する', async () => {
       const client = createMockSocket();
       client.data.user = { id: 'user-1' };
       client.data.roomId = 'room-0';
-      gateway.handleRoomJoin(client, { roomId: 'room-1' });
+      roomsService.findOne.mockReturnValue(mockRoomResponse);
+      await gateway.handleRoomJoin(client, { roomId: 'room-1' });
       expect(client.leave).toHaveBeenCalledWith('room-0');
       expect(client.join).toHaveBeenCalledWith('room-1');
     });
