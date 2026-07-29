@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { searchUsers } from '../../api/friend'
 import { getApiErrorMessage } from '../../api/errors'
 import { useFriendStore } from '../../stores/friendStore'
@@ -9,15 +9,18 @@ import type { SearchResult } from '../../types/friend'
  * Provides search functionality and friend request sending
  */
 export function useUserSearch() {
-  const [query, setQuery] = useState('')
+  const [query, setSearchQuery] = useState('')
   const [results, setResults] = useState<SearchResult[]>([])
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const searchSequence = useRef(0)
 
   const { sendRequest } = useFriendStore()
 
   // デバウンス処理：入力が止まってから500ms後に検索実行
   useEffect(() => {
+    const sequence = ++searchSequence.current
+
     // クエリが空ならタイマーをセットせずに終了
     if (!query.trim()) {
       return
@@ -30,18 +33,32 @@ export function useUserSearch() {
 
       try {
         const searchResults = await searchUsers(query)
+        if (sequence !== searchSequence.current) return
         setResults(searchResults)
       } catch (err) {
+        if (sequence !== searchSequence.current) return
         setError(getApiErrorMessage(err, 'ユーザー検索に失敗しました。'))
         setResults([])
       } finally {
-        setLoading(false)
+        if (sequence === searchSequence.current) {
+          setLoading(false)
+        }
       }
     }, 500)
 
     // クリーンアップ：次の入力があったらタイマーをキャンセル
     return () => clearTimeout(timeoutId)
   }, [query])
+
+  const setQuery = (nextQuery: string) => {
+    setSearchQuery(nextQuery)
+    if (!nextQuery.trim()) {
+      searchSequence.current += 1
+      setResults([])
+      setLoading(false)
+      setError(null)
+    }
+  }
 
   // フレンド申請を送信
   const handleSendRequest = async (userId: string) => {

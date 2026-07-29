@@ -92,14 +92,14 @@ export class RoomsGateway implements OnGatewayConnection, OnGatewayDisconnect {
   }
 
   @SubscribeMessage('room:join')
-  handleRoomJoin(
+  async handleRoomJoin(
     @ConnectedSocket() client: RoomsSocket,
     @MessageBody() dto: RoomJoinDto,
   ) {
     if (client.data.roomId && client.data.roomId !== dto.roomId) {
       this.leaveCurrentRoom(client);
     }
-    void client.join(dto.roomId);
+    await client.join(dto.roomId);
     client.data.roomId = dto.roomId;
 
     if (client.data.user) {
@@ -109,6 +109,16 @@ export class RoomsGateway implements OnGatewayConnection, OnGatewayDisconnect {
         userId: client.data.user.id,
         socketId: client.id,
       });
+    }
+
+    // REST mutations can happen before this socket has finished joining the
+    // Socket.IO room. Always send an authoritative snapshot on subscription so
+    // a missed join/ready broadcast cannot leave the squad count stale.
+    try {
+      const room = this.roomsService.findOne(dto.roomId);
+      client.emit('room:updated', this.roomsLobbyService.toSnapshot(room));
+    } catch {
+      client.emit('room:error', { message: 'Room not found' });
     }
 
     this.logger.log(`Client ${client.id} joined room ${dto.roomId}`);
