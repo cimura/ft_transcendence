@@ -4,6 +4,7 @@ import { RoomsService } from './rooms.service';
 import { RoomsStateService } from './rooms-state.service';
 import { RoomsInvitationService } from './rooms-invitation.service';
 import type { Room } from '../common/types/room.type';
+import { RealtimeGateway } from '../websocket/realtime.gateway';
 
 const user = {
   id: 'user-host',
@@ -20,6 +21,7 @@ describe('RoomsInvitationService', () => {
   let service: RoomsInvitationService;
   let roomsState: RoomsStateService;
   let roomsService: jest.Mocked<RoomsService>;
+  let realtimeGateway: jest.Mocked<RealtimeGateway>;
 
   const prisma = {
     user: { findMany: jest.fn() },
@@ -65,10 +67,15 @@ describe('RoomsInvitationService', () => {
       join: jest.fn(),
     } as any;
 
+    realtimeGateway = {
+      emitNotificationForUser: jest.fn(),
+    } as any;
+
     service = new RoomsInvitationService(
       prisma as unknown as PrismaService,
       roomsService,
       roomsState,
+      realtimeGateway,
     );
   });
 
@@ -85,6 +92,21 @@ describe('RoomsInvitationService', () => {
     expect(result.invitee.username).toBe('Guest');
     expect(result.room).toEqual({ id: 'room-1', name: 'Test Room' });
     expect(roomsState.getRoom('room-1')?.invitations[guest.id]).toBeDefined();
+    expect(realtimeGateway.emitNotificationForUser).toHaveBeenCalledWith(
+      guest.id,
+      {
+        id: result.id,
+        type: 'room_invitation',
+        createdAt: result.createdAt.toISOString(),
+        actor: {
+          id: user.id,
+          username: user.username,
+          avatarUrl: user.avatarUrl,
+        },
+        room: { id: 'room-1', name: 'Test Room' },
+        invitationId: result.id,
+      },
+    );
   });
 
   it('returns the same invitation when invited twice', async () => {
@@ -99,6 +121,7 @@ describe('RoomsInvitationService', () => {
     });
 
     expect(second.id).toBe(first.id);
+    expect(realtimeGateway.emitNotificationForUser).toHaveBeenCalledTimes(1);
   });
 
   it('rejects room invitations to users who are not friends', async () => {

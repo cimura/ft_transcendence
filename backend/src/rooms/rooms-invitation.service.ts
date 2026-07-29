@@ -11,6 +11,7 @@ import { FriendRequestStatus } from '../generated/prisma/enums';
 import { CreateRoomInvitationDto } from './dto/create-room-invitation.dto';
 import { RoomsService } from './rooms.service';
 import { RoomsStateService } from './rooms-state.service';
+import { RealtimeGateway } from '../websocket/realtime.gateway';
 import type {
   RoomInvitation,
   RoomInvitationUserSnapshot,
@@ -25,6 +26,7 @@ export class RoomsInvitationService {
     private readonly prisma: PrismaService,
     private readonly roomsService: RoomsService,
     private readonly roomsState: RoomsStateService,
+    private readonly realtimeGateway: RealtimeGateway,
   ) {}
 
   async createInvitation(
@@ -107,6 +109,22 @@ export class RoomsInvitationService {
       createdAt: new Date(),
     };
     this.roomsState.addInvitation(roomId, invitation);
+
+    this.realtimeGateway.emitNotificationForUser(inviteeId, {
+      id: invitation.id,
+      type: 'room_invitation',
+      createdAt: invitation.createdAt.toISOString(),
+      actor: {
+        id: invitation.inviter.id,
+        username: invitation.inviter.username,
+        avatarUrl: invitation.inviter.avatarUrl,
+      },
+      room: {
+        id: invitation.roomId,
+        name: currentRoom.name,
+      },
+      invitationId: invitation.id,
+    });
 
     return this.toInvitationResponse(invitation, currentRoom.name);
   }
