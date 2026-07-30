@@ -2,19 +2,24 @@ import {
   Body,
   Controller,
   Get,
+  HttpCode,
+  HttpStatus,
   Param,
   Post,
   Put,
   Query,
   Request,
+  Res,
   UseGuards,
 } from '@nestjs/common';
 import {
   ApiBearerAuth,
+  ApiNoContentResponse,
   ApiOperation,
   ApiResponse,
   ApiTags,
 } from '@nestjs/swagger';
+import type { Response } from 'express';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import type { UserRequest } from '../users/interfaces/user-request.interface';
 import { CreateRoomInvitationDto } from './dto/create-room-invitation.dto';
@@ -25,6 +30,7 @@ import { ReadyRoomDto } from './dto/ready-room.dto';
 import { RoomsService } from './rooms.service';
 import { RoomsInvitationService } from './rooms-invitation.service';
 import { RoomsChatService } from './rooms-chat.service';
+import type { RoomSnapshot } from '@ft_transcendence/shared/rooms-events.types';
 
 @ApiTags('rooms')
 @ApiBearerAuth()
@@ -107,16 +113,26 @@ export class RoomsController {
   }
 
   @Post(':roomId/leave')
+  @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'ルームから退出' })
-  @ApiResponse({ status: 201, description: '成功時' })
-  leave(@Request() req: UserRequest, @Param('roomId') roomId: string) {
-    const result = this.roomsService.leave(roomId, req.user.userId);
+  @ApiResponse({ status: 200, description: '成功時。退出後のルーム情報を返す' })
+  @ApiNoContentResponse({
+    description: '最後の参加者が退出し、ルームごと削除された時',
+  })
+  leave(
+    @Request() req: UserRequest,
+    @Param('roomId') roomId: string,
+    @Res({ passthrough: true }) res: Response,
+  ): RoomSnapshot | undefined {
+    const room = this.roomsService.leave(roomId, req.user.userId);
 
-    if (result === null) {
-      return { deleted: true, roomId };
+    // 削除された場合、どのルームかは呼び出し側が URL で指定済みなので返すものが無い
+    if (room === null) {
+      res.status(HttpStatus.NO_CONTENT);
+      return undefined;
     }
 
-    return result;
+    return room;
   }
 
   @Post(':roomId/ready')

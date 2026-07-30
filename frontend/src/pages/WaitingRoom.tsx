@@ -146,10 +146,10 @@ export function WaitingRoom() {
   const handleLeaveRoom = async () => {
     try {
       const result = await leaveRoom(currentRoom.id)
-      if ('deleted' in result) {
-        removeRoom(result.roomId)
-      } else {
+      if (result) {
         upsertRoom(result)
+      } else {
+        removeRoom(currentRoom.id)
       }
       emitRoomLeave()
       isLeavingRef.current = true

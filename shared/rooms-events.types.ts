@@ -26,6 +26,12 @@ export type RoomSnapshot = {
   finishedAt?: Date | string | null;
 };
 
+// ルーム削除の通知。broadcast されるため、受信側は「どのルームが消えたか」を
+// この payload からしか知り得ない。
+export type RoomDeletedPayload = {
+  roomId: string;
+};
+
 export interface ChatMessagePayload {
   id: string;
   roomId: string;
@@ -59,7 +65,7 @@ export interface RoomClientToServerEvents {
 export interface RoomServerToClientEvents {
   "room:created": (room: RoomSnapshot) => void;
   "room:updated": (room: RoomSnapshot) => void;
-  "room:deleted": (data: { roomId: string }) => void;
+  "room:deleted": (data: RoomDeletedPayload) => void;
   "room:error": (data: { message: string }) => void;
   "lobby:rooms": (rooms: RoomSnapshot[]) => void;
   "chat:message": (data: ChatMessagePayload) => void;

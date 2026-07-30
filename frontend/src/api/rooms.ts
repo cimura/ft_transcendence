@@ -28,9 +28,10 @@ export const joinRoom = async (roomId: string): Promise<RoomSnapshot> => {
 
 export const leaveRoom = async (
   roomId: string
-): Promise<{ deleted: true; roomId: string } | RoomSnapshot> => {
+): Promise<RoomSnapshot | undefined> => {
   const response = await api.post(`/rooms/${roomId}/leave`)
-  return response.data
+  // 204 No Content = 最後の1人が退出し、ルームごと削除された
+  return response.status === 204 ? undefined : response.data
 }
 
 export const setRoomReady = async (
