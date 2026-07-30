@@ -50,12 +50,16 @@ export function NotificationsPage() {
 
   const handleAcceptFriend = (item: NotificationItem) => {
     if (item.type !== 'friend_request') return
-    runAction(item.id, () => acceptFriendRequest(item.friendRequestId))
+    runAction(item.id, () => acceptFriendRequest(item.friendRequestId), {
+      skipRefetch: true,
+    })
   }
 
   const handleRejectFriend = (item: NotificationItem) => {
     if (item.type !== 'friend_request') return
-    runAction(item.id, () => rejectFriendRequest(item.friendRequestId))
+    runAction(item.id, () => rejectFriendRequest(item.friendRequestId), {
+      skipRefetch: true,
+    })
   }
 
   const handleAcceptInvite = (item: NotificationItem) => {

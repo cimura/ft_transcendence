@@ -49,7 +49,7 @@ export class GameService {
     clientId: string,
   ): Parameters<ServerToClientEvents['game:init']>[0] {
     if (!this.checkRoomEntryPermission(roomId, playerId)) {
-      throw new WsException('Cannot join the room');
+      throw new WsException('ルームに参加できません。');
     }
 
     const session = this.getOrCreateSession(roomId);
@@ -118,7 +118,7 @@ export class GameService {
           this.handleGameError(
             session.roomId,
             error,
-            'Failed to start game loop.',
+            'ゲームの開始に失敗しました。',
           );
         }
       });
@@ -129,7 +129,7 @@ export class GameService {
         .emit('game:countdown', { seconds: GAME_COUNTDOWN_SEC, startsAt });
       this.logger.log(`Countdown started { roomId: '${session.roomId}' }`);
     } catch (error) {
-      this.handleGameError(roomId, error, 'Failed to start countdown.');
+      this.handleGameError(roomId, error, 'ゲームの開始に失敗しました。');
     }
   }
 

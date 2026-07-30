@@ -234,6 +234,48 @@ describe('RoomsService', () => {
     expect(roomsState.getRoom('room-1')).toBeUndefined();
   });
 
+  it('deletes the room after the transferred host is the last to leave', () => {
+    setupRoom({
+      participants: {
+        [user.id]: {
+          userId: user.id,
+          username: 'Host',
+          avatarUrl: null,
+          isHost: true,
+          isReady: true,
+          joinedAt: new Date(Date.now() - 1000),
+        },
+        [guest.id]: {
+          userId: guest.id,
+          username: 'Guest',
+          avatarUrl: null,
+          isHost: false,
+          isReady: false,
+          joinedAt: new Date(),
+        },
+      },
+    });
+
+    const roomAfterHostLeaves = service.leave('room-1', user.id);
+
+    expect(roomAfterHostLeaves).toEqual(
+      expect.objectContaining({
+        hostId: guest.id,
+        players: [
+          expect.objectContaining({
+            userId: guest.id,
+            isHost: true,
+          }),
+        ],
+      }),
+    );
+
+    const result = service.leave('room-1', guest.id);
+
+    expect(result).toEqual({ deleted: true, roomId: 'room-1' });
+    expect(roomsState.getRoom('room-1')).toBeUndefined();
+  });
+
   it('does not start until the room is full', () => {
     setupRoom({ maxPlayers: 2 });
 

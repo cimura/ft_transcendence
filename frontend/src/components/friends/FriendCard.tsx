@@ -1,4 +1,5 @@
 import type { Friend } from '../../types/friend'
+import { Link } from 'react-router-dom'
 
 interface FriendCardProps {
   friend: Friend
@@ -7,43 +8,39 @@ interface FriendCardProps {
 
 /**
  * FriendCard component
- * Displays a single friend's information with online status and delete button
+ * Displays a single friend's information with profile navigation and delete button
  */
 export function FriendCard({ friend, onDelete }: FriendCardProps) {
   return (
     <div className="flex items-center gap-4 bg-black border-2 border-white/40 rounded-full px-6 py-4 hover:border-white/60 transition-all">
-      {/* アバター */}
-      <div className="flex-shrink-0">
-        {friend.avatarUrl ? (
-          <img
-            src={friend.avatarUrl}
-            alt={friend.username}
-            className="w-12 h-12 rounded-full"
-          />
-        ) : (
-          <div className="w-12 h-12 rounded-full bg-gradient-to-br from-green-400 to-green-600 flex items-center justify-center">
-            <span className="text-2xl">🐦</span>
-          </div>
-        )}
-      </div>
+      <Link
+        to={`/profile/${friend.id}`}
+        state={{ from: '/friends/list' }}
+        className="flex min-w-0 flex-1 items-center gap-4 rounded-full focus:outline-none focus:ring-2 focus:ring-white/60"
+        aria-label={`${friend.username}のプロフィールを表示`}
+      >
+        {/* アバター */}
+        <div className="flex-shrink-0">
+          {friend.avatarUrl ? (
+            <img
+              src={friend.avatarUrl}
+              alt={friend.username}
+              className="w-12 h-12 rounded-full"
+            />
+          ) : (
+            <div className="w-12 h-12 rounded-full bg-gradient-to-br from-green-400 to-green-600 flex items-center justify-center">
+              <span className="text-2xl">🐦</span>
+            </div>
+          )}
+        </div>
 
-      {/* ユーザー名 */}
-      <div className="flex-1">
-        <p className="text-white text-2xl font-medium">{friend.username}</p>
-      </div>
-
-      {/* オンラインステータス */}
-      <div className="flex-shrink-0">
-        {friend.status === 'online' && (
-          <div className="w-3 h-3 bg-green-400 rounded-full animate-pulse" />
-        )}
-        {friend.status === 'offline' && (
-          <div className="w-3 h-3 bg-gray-400 rounded-full" />
-        )}
-        {friend.status === 'in_game' && (
-          <div className="w-3 h-3 bg-yellow-400 rounded-full animate-pulse" />
-        )}
-      </div>
+        {/* ユーザー名 */}
+        <div className="min-w-0 flex-1">
+          <p className="truncate text-white text-2xl font-medium">
+            {friend.username}
+          </p>
+        </div>
+      </Link>
 
       {/* 削除ボタン */}
       <button
