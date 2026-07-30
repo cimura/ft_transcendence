@@ -38,6 +38,7 @@ export function WaitingRoom() {
     let cancelled = false
 
     const loadRoom = async () => {
+      setIsLoadingRoom(true)
       try {
         // A room held in the store may only be a lobby snapshot. It can also
         // be overwritten by an older lobby event while navigation is in
