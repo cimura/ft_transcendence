@@ -108,7 +108,12 @@ export class GameGateway
     }
 
     if (previousRoomId && previousRoomId !== data.roomId) {
-      this.cleanupPlayerConnection(previousRoomId, user.id, client.id, false);
+      await this.cleanupPlayerConnection(
+        previousRoomId,
+        user.id,
+        client.id,
+        false,
+      );
       try {
         await client.leave(previousRoomId);
       } catch (error) {
@@ -119,7 +124,7 @@ export class GameGateway
           user.id,
           client.id,
         );
-        this.realtimeGateway.emitPresenceUpdatedIfChanged(
+        await this.realtimeGateway.emitPresenceUpdatedIfChanged(
           user.id,
           previousPresenceStatus,
         );
@@ -135,7 +140,7 @@ export class GameGateway
       userId: user.id,
       socketId: client.id,
     });
-    this.realtimeGateway.emitPresenceUpdatedIfChanged(
+    await this.realtimeGateway.emitPresenceUpdatedIfChanged(
       user.id,
       previousPresenceStatus,
     );
@@ -152,7 +157,7 @@ export class GameGateway
     clientId: string,
   ) {
     // 新しいゲーム状態とSocket.IO roomへの参加を取り消す。
-    this.cleanupPlayerConnection(nextRoomId, userId, clientId);
+    await this.cleanupPlayerConnection(nextRoomId, userId, clientId);
     try {
       await client.leave(nextRoomId);
     } catch (error) {
@@ -192,7 +197,7 @@ export class GameGateway
     await client.leave(roomId);
     client.data.roomId = undefined;
 
-    this.cleanupPlayerConnection(roomId, client.data.user.id, client.id);
+    await this.cleanupPlayerConnection(roomId, client.data.user.id, client.id);
   }
 
   @SubscribeMessage('player:input')
@@ -225,20 +230,20 @@ export class GameGateway
     this.gameService.handleBombPlace(roomId, client.data.user.id);
   }
 
-  handleDisconnect(client: GameSocket) {
+  async handleDisconnect(client: GameSocket) {
     const roomId = client.data.roomId;
     const userId = client.data.user?.id;
     if (!roomId || !userId) return;
 
-    this.cleanupPlayerConnection(roomId, userId, client.id);
+    await this.cleanupPlayerConnection(roomId, userId, client.id);
   }
 
-  private cleanupPlayerConnection(
+  private async cleanupPlayerConnection(
     roomId: string,
     userId: string,
     clientId: string,
     notifyPresence = true,
-  ): void {
+  ): Promise<void> {
     const previousPresenceStatus = this.socketPresenceService.getStatus(userId);
     const remaining = this.socketPresenceService.unregister({
       namespace: 'game',
@@ -252,7 +257,7 @@ export class GameGateway
     }
 
     if (notifyPresence) {
-      this.realtimeGateway.emitPresenceUpdatedIfChanged(
+      await this.realtimeGateway.emitPresenceUpdatedIfChanged(
         userId,
         previousPresenceStatus,
       );

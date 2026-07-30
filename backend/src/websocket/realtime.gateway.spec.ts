@@ -1,6 +1,7 @@
 import { SocketAuthService } from './socket-auth.service';
 import { RealtimeGateway } from './realtime.gateway';
 import { SocketPresenceService } from './socket-presence.service';
+import { PrismaService } from '../prisma.service';
 
 describe('RealtimeGateway', () => {
   const authService = {
@@ -20,6 +21,9 @@ describe('RealtimeGateway', () => {
     to: jest.fn().mockReturnValue(roomEmitter),
     emit: jest.fn(),
   };
+  const prisma = {
+    friendship: { findMany: jest.fn() },
+  };
   let presenceService: SocketPresenceService;
 
   let gateway: RealtimeGateway;
@@ -28,10 +32,12 @@ describe('RealtimeGateway', () => {
     jest.clearAllMocks();
     presenceService = new SocketPresenceService();
     authService.authenticate.mockReturnValue({ id: 'user-1' });
+    prisma.friendship.findMany.mockResolvedValue([]);
 
     gateway = new RealtimeGateway(
       authService as unknown as SocketAuthService,
       presenceService,
+      prisma as unknown as PrismaService,
     );
     gateway.server = server as never;
     client.data = {};
@@ -48,7 +54,8 @@ describe('RealtimeGateway', () => {
     await gateway.handleConnection(client as never);
 
     expect(presenceService.getStatus('user-1')).toBe('online');
-    expect(server.emit).toHaveBeenCalledWith('presence:updated', {
+    expect(server.to).toHaveBeenCalledWith(['user:user-1']);
+    expect(roomEmitter.emit).toHaveBeenCalledWith('presence:updated', {
       userId: 'user-1',
       status: 'online',
     });
@@ -56,15 +63,37 @@ describe('RealtimeGateway', () => {
 
   it('unregisters realtime presence after disconnecting', async () => {
     await gateway.handleConnection(client as never);
-    server.emit.mockClear();
+    server.to.mockClear();
+    roomEmitter.emit.mockClear();
 
-    gateway.handleDisconnect(client as never);
+    await gateway.handleDisconnect(client as never);
 
     expect(presenceService.getStatus('user-1')).toBe('offline');
-    expect(server.emit).toHaveBeenCalledWith('presence:updated', {
+    expect(server.to).toHaveBeenCalledWith(['user:user-1']);
+    expect(roomEmitter.emit).toHaveBeenCalledWith('presence:updated', {
       userId: 'user-1',
       status: 'offline',
     });
+  });
+
+  it('sends presence updates only to the user and their friends', async () => {
+    prisma.friendship.findMany.mockResolvedValue([
+      { requesterId: 'user-1', receiverId: 'friend-1' },
+      { requesterId: 'friend-2', receiverId: 'user-1' },
+    ]);
+
+    await gateway.handleConnection(client as never);
+
+    expect(server.to).toHaveBeenCalledWith([
+      'user:user-1',
+      'user:friend-1',
+      'user:friend-2',
+    ]);
+    expect(roomEmitter.emit).toHaveBeenCalledWith('presence:updated', {
+      userId: 'user-1',
+      status: 'online',
+    });
+    expect(server.emit).not.toHaveBeenCalled();
   });
 
   it('sends a notification only to the requested user room', () => {

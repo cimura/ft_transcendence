@@ -374,7 +374,7 @@ describe('GameGateway', () => {
         socketId: 'socket-123',
       });
 
-      gateway.handleDisconnect(client);
+      await gateway.handleDisconnect(client);
       await jest.advanceTimersByTimeAsync(2000);
 
       // userId と clientId を渡しているか
@@ -386,10 +386,10 @@ describe('GameGateway', () => {
       jest.useRealTimers();
     });
 
-    it('ユーザー情報がない場合、何もしないこと', () => {
+    it('ユーザー情報がない場合、何もしないこと', async () => {
       const client = createMockSocket();
 
-      gateway.handleDisconnect(client);
+      await gateway.handleDisconnect(client);
 
       expect(gameService.handleGameLeave).not.toHaveBeenCalled();
     });

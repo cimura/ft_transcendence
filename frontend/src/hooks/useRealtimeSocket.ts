@@ -25,14 +25,9 @@ export function useRealtimeSocket() {
       auth: { token: `Bearer ${accessToken}` },
     })
 
-    let hasConnected = false
-
     const handleConnect = () => {
       void useNotificationStore.getState().fetchNotifications()
-      if (hasConnected) {
-        void useFriendStore.getState().fetchFriends()
-      }
-      hasConnected = true
+      void useFriendStore.getState().fetchFriends()
     }
 
     const handleNewNotification = (

@@ -1,10 +1,14 @@
-import { ForbiddenException, NotFoundException } from '@nestjs/common';
+import {
+  ForbiddenException,
+  NotFoundException,
+  ServiceUnavailableException,
+} from '@nestjs/common';
 import { PrismaService } from '../prisma.service';
 import { RoomsService } from './rooms.service';
 import { RoomsStateService } from './rooms-state.service';
 import { RoomsInvitationService } from './rooms-invitation.service';
 import type { Room } from '../common/types/room.type';
-import { RealtimeGateway } from '../websocket/realtime.gateway';
+import type { RealtimeNotificationPort } from '../websocket/realtime.gateway';
 
 const user = {
   id: 'user-host',
@@ -17,11 +21,18 @@ const guest = {
   avatarUrl: null,
 };
 
+type RealtimeGatewayMock = RealtimeNotificationPort & {
+  emitNotificationForUser: jest.Mock<
+    ReturnType<RealtimeNotificationPort['emitNotificationForUser']>,
+    Parameters<RealtimeNotificationPort['emitNotificationForUser']>
+  >;
+};
+
 describe('RoomsInvitationService', () => {
   let service: RoomsInvitationService;
   let roomsState: RoomsStateService;
   let roomsService: jest.Mocked<RoomsService>;
-  let realtimeGateway: jest.Mocked<RealtimeGateway>;
+  let realtimeGateway: RealtimeGatewayMock;
 
   const prisma = {
     user: { findMany: jest.fn() },
@@ -68,8 +79,11 @@ describe('RoomsInvitationService', () => {
     } as any;
 
     realtimeGateway = {
-      emitNotificationForUser: jest.fn(),
-    } as any;
+      emitNotificationForUser: jest.fn<
+        void,
+        Parameters<RealtimeNotificationPort['emitNotificationForUser']>
+      >(),
+    };
 
     service = new RoomsInvitationService(
       prisma as unknown as PrismaService,
@@ -122,6 +136,22 @@ describe('RoomsInvitationService', () => {
 
     expect(second.id).toBe(first.id);
     expect(realtimeGateway.emitNotificationForUser).toHaveBeenCalledTimes(1);
+  });
+
+  it('rolls back the invitation when notification delivery fails', async () => {
+    prisma.user.findMany.mockResolvedValue([user, guest]);
+    prisma.friendship.findFirst.mockResolvedValue({ id: 'friendship-1' });
+    realtimeGateway.emitNotificationForUser.mockImplementation(() => {
+      throw new Error('Realtime server unavailable');
+    });
+
+    await expect(
+      service.createInvitation('room-1', user.id, {
+        inviteeId: guest.id,
+      }),
+    ).rejects.toThrow(ServiceUnavailableException);
+
+    expect(roomsState.getRoom('room-1')?.invitations[guest.id]).toBeUndefined();
   });
 
   it('rejects room invitations to users who are not friends', async () => {

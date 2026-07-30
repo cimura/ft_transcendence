@@ -3,8 +3,11 @@ import {
   BadRequestException,
   ConflictException,
   ForbiddenException,
+  Inject,
   Injectable,
+  Logger,
   NotFoundException,
+  ServiceUnavailableException,
 } from '@nestjs/common';
 import { PrismaService } from '../prisma.service';
 import { FriendRequestStatus } from '../generated/prisma/enums';
@@ -12,6 +15,7 @@ import { CreateRoomInvitationDto } from './dto/create-room-invitation.dto';
 import { RoomsService } from './rooms.service';
 import { RoomsStateService } from './rooms-state.service';
 import { RealtimeGateway } from '../websocket/realtime.gateway';
+import type { RealtimeNotificationPort } from '../websocket/realtime.gateway';
 import type {
   RoomInvitation,
   RoomInvitationUserSnapshot,
@@ -22,11 +26,14 @@ type InvitationStatusResponse = 'pending' | 'accepted' | 'declined' | 'expired';
 
 @Injectable()
 export class RoomsInvitationService {
+  private readonly logger = new Logger(RoomsInvitationService.name);
+
   constructor(
     private readonly prisma: PrismaService,
     private readonly roomsService: RoomsService,
     private readonly roomsState: RoomsStateService,
-    private readonly realtimeGateway: RealtimeGateway,
+    @Inject(RealtimeGateway)
+    private readonly realtimeGateway: RealtimeNotificationPort,
   ) {}
 
   async createInvitation(
@@ -108,23 +115,36 @@ export class RoomsInvitationService {
       invitee: this.toSnapshot(inviteeUser),
       createdAt: new Date(),
     };
-    this.roomsState.addInvitation(roomId, invitation);
+    if (!this.roomsState.addInvitation(roomId, invitation)) {
+      throw new NotFoundException('Room not found');
+    }
 
-    this.realtimeGateway.emitNotificationForUser(inviteeId, {
-      id: invitation.id,
-      type: 'room_invitation',
-      createdAt: invitation.createdAt.toISOString(),
-      actor: {
-        id: invitation.inviter.id,
-        username: invitation.inviter.username,
-        avatarUrl: invitation.inviter.avatarUrl,
-      },
-      room: {
-        id: invitation.roomId,
-        name: currentRoom.name,
-      },
-      invitationId: invitation.id,
-    });
+    try {
+      this.realtimeGateway.emitNotificationForUser(inviteeId, {
+        id: invitation.id,
+        type: 'room_invitation',
+        createdAt: invitation.createdAt.toISOString(),
+        actor: {
+          id: invitation.inviter.id,
+          username: invitation.inviter.username,
+          avatarUrl: invitation.inviter.avatarUrl,
+        },
+        room: {
+          id: invitation.roomId,
+          name: currentRoom.name,
+        },
+        invitationId: invitation.id,
+      });
+    } catch (error) {
+      this.roomsState.removeInvitation(roomId, inviteeId);
+      this.logger.error(
+        `Failed to notify room invitation { invitationId: '${invitation.id}', inviteeId: '${inviteeId}' }`,
+        error instanceof Error ? error.stack : String(error),
+      );
+      throw new ServiceUnavailableException(
+        'Room invitation notification could not be delivered',
+      );
+    }
 
     return this.toInvitationResponse(invitation, currentRoom.name);
   }
