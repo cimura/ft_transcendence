@@ -1,4 +1,5 @@
 import { Test, TestingModule } from '@nestjs/testing';
+import { NotFoundException } from '@nestjs/common';
 import { RoomsGateway } from './rooms.gateway';
 import { SocketAuthService } from '../websocket/socket-auth.service';
 import { SocketPresenceService } from '../websocket/socket-presence.service';
@@ -41,6 +42,30 @@ describe('RoomsGateway', () => {
         joinedAt: new Date('2026-07-01T00:00:00.000Z'),
       },
     ],
+  };
+
+  const mockRoom: Room = {
+    id: 'room-1',
+    gameId: 'game-1',
+    name: 'test room',
+    hostId: 'user-1',
+    maxPlayers: 2,
+    status: 'WAITING',
+    mode: 'ONLINE',
+    participants: {
+      'user-1': {
+        userId: 'user-1',
+        username: 'hostuser',
+        avatarUrl: null,
+        isReady: true,
+        isHost: true,
+        joinedAt: new Date('2026-07-01T00:00:00.000Z'),
+      },
+    },
+    messages: [],
+    invitations: {},
+    createdAt: new Date('2026-07-01T00:00:00.000Z'),
+    updatedAt: new Date('2026-07-01T00:00:00.000Z'),
   };
 
   const toSnapshot = (room: RoomResponse) => ({
@@ -107,7 +132,7 @@ describe('RoomsGateway', () => {
         {
           provide: RoomsStateService,
           useValue: {
-            getRoom: jest.fn(),
+            getRoom: jest.fn().mockReturnValue(mockRoom),
           },
         },
       ],
@@ -185,6 +210,80 @@ describe('RoomsGateway', () => {
       await gateway.handleRoomJoin(client, { roomId: 'room-1' });
       expect(client.leave).toHaveBeenCalledWith('room-0');
       expect(client.join).toHaveBeenCalledWith('room-1');
+    });
+
+    it('参加権限がない場合は現在のルームを退出せず、指定のルームにも参加しない', async () => {
+      const client = createMockSocket();
+      client.data.user = { id: 'user-2' };
+      client.data.roomId = 'room-0';
+      roomsState.getRoom.mockReturnValue({
+        ...mockRoom,
+        status: 'PLAYING',
+      });
+
+      await gateway.handleRoomJoin(client, { roomId: 'room-1' });
+
+      expect(client.leave).not.toHaveBeenCalled();
+      expect(client.join).not.toHaveBeenCalled();
+      expect(client.data.roomId).toBe('room-0');
+      expect(socketPresenceService.register).not.toHaveBeenCalled();
+      expect(client.emit).toHaveBeenCalledWith('room:error', {
+        message: 'Cannot join room',
+      });
+    });
+
+    it('ルーム取得失敗時は参加状態を変更せず not found を通知する', async () => {
+      const client = createMockSocket();
+      client.data.user = { id: 'user-1' };
+      roomsService.findOne.mockImplementation(() => {
+        throw new NotFoundException('Room not found');
+      });
+
+      await gateway.handleRoomJoin(client, { roomId: 'room-1' });
+
+      expect(client.join).not.toHaveBeenCalled();
+      expect(socketPresenceService.register).not.toHaveBeenCalled();
+      expect(client.emit).toHaveBeenCalledWith('room:error', {
+        message: 'Room not found',
+      });
+    });
+
+    it('Socket.IO room への参加失敗を通知する', async () => {
+      const client = createMockSocket();
+      client.data.user = { id: 'user-1' };
+      client.join.mockRejectedValue(new Error('join failed'));
+      roomsService.findOne.mockReturnValue(mockRoomResponse);
+
+      await gateway.handleRoomJoin(client, { roomId: 'room-1' });
+
+      expect(client.data.roomId).toBeUndefined();
+      expect(socketPresenceService.register).not.toHaveBeenCalled();
+      expect(client.emit).toHaveBeenCalledWith('room:error', {
+        message: 'Failed to join room',
+      });
+    });
+
+    it('presence 登録後の失敗時は room と presence をロールバックする', async () => {
+      const client = createMockSocket();
+      client.data.user = { id: 'user-1' };
+      client.emit.mockImplementation((event: string) => {
+        if (event === 'room:updated') throw new Error('emit failed');
+      });
+      roomsService.findOne.mockReturnValue(mockRoomResponse);
+
+      await gateway.handleRoomJoin(client, { roomId: 'room-1' });
+
+      expect(client.leave).toHaveBeenCalledWith('room-1');
+      expect(client.data.roomId).toBeUndefined();
+      expect(socketPresenceService.unregister).toHaveBeenCalledWith({
+        namespace: 'rooms',
+        roomId: 'room-1',
+        userId: 'user-1',
+        socketId: 'socket-1',
+      });
+      expect(client.emit).toHaveBeenCalledWith('room:error', {
+        message: 'Failed to join room',
+      });
     });
   });
 

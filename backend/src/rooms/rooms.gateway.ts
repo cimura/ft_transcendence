@@ -8,7 +8,12 @@ import {
   WebSocketServer,
 } from '@nestjs/websockets';
 import { Server, Socket } from 'socket.io';
-import { UsePipes, ValidationPipe, Logger } from '@nestjs/common';
+import {
+  UsePipes,
+  ValidationPipe,
+  Logger,
+  NotFoundException,
+} from '@nestjs/common';
 import { SocketAuthService } from '../websocket/socket-auth.service';
 import { SocketPresenceService } from '../websocket/socket-presence.service';
 import { RoomsChatService } from './rooms-chat.service';
@@ -96,29 +101,95 @@ export class RoomsGateway implements OnGatewayConnection, OnGatewayDisconnect {
     @ConnectedSocket() client: RoomsSocket,
     @MessageBody() dto: RoomJoinDto,
   ) {
-    if (client.data.roomId && client.data.roomId !== dto.roomId) {
-      this.leaveCurrentRoom(client);
-    }
-    await client.join(dto.roomId);
-    client.data.roomId = dto.roomId;
+    const userId = client.data.user?.id;
+    const room = this.roomsState.getRoom(dto.roomId);
+    const isParticipant = userId ? Boolean(room?.participants[userId]) : false;
+    const canJoin =
+      room?.status === 'WAITING' &&
+      room.mode === 'ONLINE' &&
+      Object.keys(room.participants).length < room.maxPlayers;
 
-    if (client.data.user) {
+    if (!userId || (!isParticipant && !canJoin)) {
+      client.emit('room:error', { message: 'Cannot join room' });
+      return;
+    }
+
+    let snapshot: ReturnType<RoomsLobbyService['toSnapshot']>;
+    try {
+      const roomResponse = this.roomsService.findOne(dto.roomId);
+      snapshot = this.roomsLobbyService.toSnapshot(roomResponse);
+    } catch (error) {
+      if (error instanceof NotFoundException) {
+        client.emit('room:error', { message: 'Room not found' });
+      } else {
+        this.logger.error(
+          `Failed to prepare room subscription { roomId: '${dto.roomId}', userId: '${userId}' }`,
+          error instanceof Error ? error.stack : String(error),
+        );
+        client.emit('room:error', { message: 'Failed to join room' });
+      }
+      return;
+    }
+
+    let joined = false;
+    let presenceRegistrationAttempted = false;
+    try {
+      await client.join(dto.roomId);
+      joined = true;
+
+      if (client.data.roomId && client.data.roomId !== dto.roomId) {
+        this.leaveCurrentRoom(client);
+      }
+      client.data.roomId = dto.roomId;
+
+      presenceRegistrationAttempted = true;
       this.socketPresenceService.register({
         namespace: 'rooms',
         roomId: dto.roomId,
-        userId: client.data.user.id,
+        userId,
         socketId: client.id,
       });
-    }
 
-    // REST mutations can happen before this socket has finished joining the
-    // Socket.IO room. Always send an authoritative snapshot on subscription so
-    // a missed join/ready broadcast cannot leave the squad count stale.
-    try {
-      const room = this.roomsService.findOne(dto.roomId);
-      client.emit('room:updated', this.roomsLobbyService.toSnapshot(room));
-    } catch {
-      client.emit('room:error', { message: 'Room not found' });
+      // REST mutations can happen before this socket has finished joining the
+      // Socket.IO room. Always send an authoritative snapshot on subscription so
+      // a missed join/ready broadcast cannot leave the squad count stale.
+      client.emit('room:updated', snapshot);
+    } catch (error) {
+      if (client.data.roomId === dto.roomId) {
+        client.data.roomId = undefined;
+      }
+      if (presenceRegistrationAttempted) {
+        try {
+          this.unregisterRoomPresence(dto.roomId, userId, client.id);
+        } catch (rollbackError) {
+          this.logger.warn(
+            `Failed to roll back room presence { roomId: '${dto.roomId}', userId: '${userId}', error: '${
+              rollbackError instanceof Error
+                ? rollbackError.message
+                : String(rollbackError)
+            }' }`,
+          );
+        }
+      }
+      if (joined) {
+        try {
+          await client.leave(dto.roomId);
+        } catch (rollbackError) {
+          this.logger.warn(
+            `Failed to leave room during rollback { roomId: '${dto.roomId}', userId: '${userId}', error: '${
+              rollbackError instanceof Error
+                ? rollbackError.message
+                : String(rollbackError)
+            }' }`,
+          );
+        }
+      }
+      this.logger.error(
+        `Failed to join room subscription { roomId: '${dto.roomId}', userId: '${userId}' }`,
+        error instanceof Error ? error.stack : String(error),
+      );
+      client.emit('room:error', { message: 'Failed to join room' });
+      return;
     }
 
     this.logger.log(`Client ${client.id} joined room ${dto.roomId}`);
