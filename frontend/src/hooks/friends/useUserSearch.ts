@@ -19,7 +19,7 @@ export function useUserSearch() {
 
   // デバウンス処理：入力が止まってから500ms後に検索実行
   useEffect(() => {
-    const sequence = ++searchSequence.current
+    const sequence = searchSequence.current
 
     // クエリが空ならタイマーをセットせずに終了
     if (!query.trim()) {
@@ -51,9 +51,9 @@ export function useUserSearch() {
   }, [query])
 
   const setQuery = (nextQuery: string) => {
+    searchSequence.current += 1
     setSearchQuery(nextQuery)
     if (!nextQuery.trim()) {
-      searchSequence.current += 1
       setResults([])
       setLoading(false)
       setError(null)
