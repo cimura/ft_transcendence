@@ -11,9 +11,7 @@ export const getRooms = async (
   return response.data
 }
 
-export const createRoom = async (
-  dto: CreateRoomDto
-): Promise<RoomSnapshot> => {
+export const createRoom = async (dto: CreateRoomDto): Promise<RoomSnapshot> => {
   const response = await api.post('/rooms', dto)
   return response.data
 }
