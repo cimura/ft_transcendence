@@ -9,7 +9,7 @@ import type { SearchResult } from '../../types/friend'
  * Provides search functionality and friend request sending
  */
 export function useUserSearch() {
-  const [query, setSearchQuery] = useState('')
+  const [query, setQueryState] = useState('')
   const [results, setResults] = useState<SearchResult[]>([])
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -28,9 +28,6 @@ export function useUserSearch() {
 
     // 500msのデバウンスタイマーを設定
     const timeoutId = setTimeout(async () => {
-      setLoading(true)
-      setError(null)
-
       try {
         const searchResults = await searchUsers(query)
         if (sequence !== searchSequence.current) return
@@ -52,12 +49,10 @@ export function useUserSearch() {
 
   const setQuery = (nextQuery: string) => {
     searchSequence.current += 1
-    setSearchQuery(nextQuery)
-    if (!nextQuery.trim()) {
-      setResults([])
-      setLoading(false)
-      setError(null)
-    }
+    setQueryState(nextQuery)
+    setResults([])
+    setError(null)
+    setLoading(Boolean(nextQuery.trim()))
   }
 
   // フレンド申請を送信
