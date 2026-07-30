@@ -11,7 +11,6 @@ describe('GameGateway', () => {
   let gameService: jest.Mocked<GameService>;
   let socketAuthService: jest.Mocked<SocketAuthService>;
   let socketPresenceService: SocketPresenceService;
-  let realtimeGateway: jest.Mocked<RealtimeGateway>;
 
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
@@ -41,7 +40,6 @@ describe('GameGateway', () => {
     gameService = module.get(GameService);
     socketAuthService = module.get(SocketAuthService);
     socketPresenceService = module.get(SocketPresenceService);
-    realtimeGateway = module.get(RealtimeGateway);
   });
 
   // モックのソケットオブジェクトを作成するヘルパー関数

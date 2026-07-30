@@ -32,7 +32,9 @@ export class SocketPresenceService {
     sockets.add(input.socketId);
     this.activeSockets.set(key, sockets);
 
-    const users = this.activeUserSockets.get(input.namespace) ?? new Map();
+    const users =
+      this.activeUserSockets.get(input.namespace) ??
+      new Map<string, Set<string>>();
     const userSockets = users.get(input.userId) ?? new Set<string>();
     userSockets.add(input.socketId);
     users.set(input.userId, userSockets);
