@@ -193,20 +193,12 @@ export class RoomsService {
     // 空室のルームは削除する。
     if (remainingParticipants.length === 0) {
       this.roomsState.deleteRoom(roomId);
-      return { deleted: true as const, roomId };
+      this.eventEmitter.emit(ROOM_DELETED_EVENT, new RoomDeletedEvent(roomId));
+      return null;
     }
 
     // ホストが退出した場合の処理
     if (participant.isHost) {
-      if (remainingParticipants.length === 0) {
-        this.roomsState.deleteRoom(roomId);
-        this.eventEmitter.emit(
-          ROOM_DELETED_EVENT,
-          new RoomDeletedEvent(roomId),
-        );
-        return null;
-      }
-
       // 残っている参加者の中で一番古く入室した人を次のホストにする
       remainingParticipants.sort(
         (a, b) => a.joinedAt.getTime() - b.joinedAt.getTime(),

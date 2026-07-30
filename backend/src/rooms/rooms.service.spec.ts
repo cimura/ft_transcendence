@@ -1,5 +1,4 @@
 import { ConflictException, NotFoundException } from '@nestjs/common';
-import type { EventEmitter2 } from '@nestjs/event-emitter';
 import { PrismaService } from '../prisma.service';
 import { bombermanGame } from '../games/games.constants';
 import { GamesService } from '../games/games.service';
@@ -53,7 +52,7 @@ describe('RoomsService', () => {
       prisma as unknown as PrismaService,
       gamesService as unknown as GamesService,
       roomsState,
-      eventEmitter as unknown as EventEmitter2,
+      eventEmitter,
     );
   });
 
