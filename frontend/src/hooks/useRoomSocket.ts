@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react'
+import { useCallback, useEffect, useRef } from 'react'
 import { io, Socket } from 'socket.io-client'
 import { useRoomStore } from '../stores/roomStore'
 import { toGameRoom } from '../utils/roomSnapshot'
@@ -66,4 +66,12 @@ export function useRoomSocket(roomId?: string) {
       socketRef.current = null
     }
   }, [roomId])
+
+  // 明示的な退出操作(退出ボタン)専用。unmount(リロード/タブ閉じ/ゲーム開始遷移など)には
+  // 紐付けない — それらは切断として扱われ、バックエンド側の猶予付き自動退出に委ねる。
+  const leaveRoom = useCallback(() => {
+    socketRef.current?.emit('room:leave')
+  }, [])
+
+  return { leaveRoom }
 }
