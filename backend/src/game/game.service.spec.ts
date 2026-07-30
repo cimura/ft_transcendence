@@ -128,9 +128,8 @@ describe('GameService', () => {
       service.handleGameJoin('room-1', 'player-2', 'client-2');
       service.handleGameStart('room-1');
 
-      expect(() => {
-        service.handleGameJoin('room-1', 'player-2', 'client-2-new');
-      }).not.toThrow();
+      const init = service.handleGameJoin('room-1', 'player-2', 'client-2-new');
+      expect(init.phase).toBe('countdown');
 
       // 置き換え前のソケットが遅れて切断してもプレイヤーを切断扱いにしない
       service.handleGameLeave('room-1', 'player-2', 'client-2');
