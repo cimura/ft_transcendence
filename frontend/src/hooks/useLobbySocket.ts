@@ -1,8 +1,8 @@
 import { useEffect, useRef } from 'react'
 import { io, Socket } from 'socket.io-client'
 import { useRoomStore } from '../stores/roomStore'
+import { useAuthStore } from '../stores/authStore'
 import { toGameRoom } from '../utils/roomSnapshot'
-import { getStoredAccessToken } from '../utils/accessToken'
 import type {
   RoomClientToServerEvents,
   RoomServerToClientEvents,
@@ -17,18 +17,20 @@ const ROOMS_NAMESPACE = `${BACKEND_URL.replace(/\/$/, '')}/rooms`
  * 待機中(online)ルームの作成・更新・削除をリアルタイムに roomStore へ反映する。
  */
 export function useLobbySocket() {
+  const accessToken = useAuthStore((state) => state.accessToken)
   const socketRef = useRef<Socket<
     RoomServerToClientEvents,
     RoomClientToServerEvents
   > | null>(null)
 
   useEffect(() => {
+    if (!accessToken) return
+
     const { setRooms, upsertRoom, removeRoom } = useRoomStore.getState()
-    const accessToken = getStoredAccessToken()
 
     const socket = io(ROOMS_NAMESPACE, {
       autoConnect: false,
-      auth: accessToken ? { token: `Bearer ${accessToken}` } : undefined,
+      auth: { token: `Bearer ${accessToken}` },
     })
     socketRef.current = socket
 
@@ -65,5 +67,5 @@ export function useLobbySocket() {
       socket.disconnect()
       socketRef.current = null
     }
-  }, [])
+  }, [accessToken])
 }
