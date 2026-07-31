@@ -4,6 +4,7 @@ import { GameCanvas } from '../components/game/GameCanvas'
 import { GameResultOverlay } from '../components/game/GameResultOverlay'
 import { useRoomStore } from '../stores/roomStore'
 import { getRoom } from '../api/rooms'
+import BackgroundVideo from '../components/common/BackgroundVideo' // ★ 追加
 
 export function GameRoomPage() {
   const { roomId } = useParams<{ roomId: string }>()
@@ -78,15 +79,24 @@ export function GameRoomPage() {
   }
 
   return (
-    <div className="fixed inset-0 flex flex-col overflow-hidden bg-gray-950 text-white">
-      <header className="shrink-0 border-b border-gray-800 bg-gray-900">
+    // ★ 変更: 背景色(bg-gray-950)を削除し、全体を透過。テキストカラーをHomeに合わせる
+    <div className="fixed inset-0 flex flex-col overflow-hidden text-cyan-50 select-none">
+      
+      {/* ★ 追加: 背景動画とHome画面共通のサイバーエフェクト */}
+      <BackgroundVideo />
+      <div className="absolute inset-0 bg-[linear-gradient(transparent_50%,rgba(0,255,255,0.05)_50%)] bg-[size:100%_4px] pointer-events-none z-0" />
+      <div className="absolute top-0 inset-x-0 h-40 bg-gradient-to-b from-cyan-500/20 to-transparent pointer-events-none z-0" />
+
+      {/* ★ 変更: ヘッダーもサイバー調（半透明＋ブラー＋ネオンボーダー）に変更 */}
+      <header className="shrink-0 border-b border-cyan-400/60 bg-black/40 backdrop-blur-md shadow-[0_4px_20px_rgba(0,255,255,0.2)] z-10 relative">
         <div className="mx-auto flex max-w-7xl flex-wrap items-center justify-between gap-4 px-4 py-4 sm:px-6 lg:px-8">
           <div>
-            <p className="text-sm font-semibold text-cyan-300">ボンバーマン</p>
-            <h1 className="text-2xl font-bold">{currentRoom.name}</h1>
+            <p className="text-xs font-mono font-semibold text-cyan-300 tracking-widest">
+              BOMBERMAN_SYSTEM //
+            </p>
+            <h1 className="text-2xl font-bold tracking-wider">{currentRoom.name}</h1>
           </div>
           
-          {/* ホーム画面に合わせたサイバーなカスタムボタン */}
           <button
             onClick={() => navigate('/home')}
             className="group relative px-6 py-2 bg-cyan-900/40 backdrop-blur-md border border-cyan-400/60 transition-all duration-300 hover:border-cyan-300 hover:bg-cyan-800/60 hover:shadow-[0_0_15px_rgba(0,255,255,0.4)] hover:-translate-y-0.5"
@@ -104,7 +114,8 @@ export function GameRoomPage() {
         </div>
       </header>
 
-      <main className="relative min-h-0 flex-1">
+      {/* メイン (ゲーム領域) */}
+      <main className="relative min-h-0 flex-1 z-10">
         <GameCanvas roomId={currentRoom.id} />
 
         <GameResultOverlay />
