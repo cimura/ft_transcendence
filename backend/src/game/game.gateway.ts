@@ -127,43 +127,6 @@ export class GameGateway
     this.gameService.handleGameStart(data.roomId);
   }
 
-  private async rollbackRoomTransition(
-    client: GameSocket,
-    previousRoomId: string,
-    nextRoomId: string,
-    userId: string,
-    clientId: string,
-  ) {
-    // 新しいゲーム状態とSocket.IO roomへの参加を取り消す。
-    this.cleanupPlayerConnection(nextRoomId, userId, clientId);
-    try {
-      await client.leave(nextRoomId);
-    } catch (error) {
-      this.logger.error(
-        `Failed to rollback new socket room { roomId: '${nextRoomId}', userId: '${userId}' }`,
-        error instanceof Error ? error.stack : String(error),
-      );
-    }
-
-    // 旧ルームのゲーム状態とpresenceを復元する。旧roomからのleaveに
-    // 失敗しているため、Socket.IO上では旧roomに残ったままになる。
-    try {
-      this.gameService.handleGameJoin(previousRoomId, userId);
-      this.socketPresenceService.register({
-        namespace: 'game',
-        roomId: previousRoomId,
-        userId,
-        socketId: clientId,
-      });
-      client.data.roomId = previousRoomId;
-    } catch (error) {
-      this.logger.error(
-        `Failed to restore previous game room { roomId: '${previousRoomId}', userId: '${userId}' }`,
-        error instanceof Error ? error.stack : String(error),
-      );
-    }
-  }
-
   @SubscribeMessage('game:leave')
   async handleLeave(
     @ConnectedSocket()
@@ -214,6 +177,43 @@ export class GameGateway
     if (!roomId || !userId) return;
 
     this.cleanupPlayerConnection(roomId, userId, client.id);
+  }
+
+  private async rollbackRoomTransition(
+    client: GameSocket,
+    previousRoomId: string,
+    nextRoomId: string,
+    userId: string,
+    clientId: string,
+  ) {
+    // 新しいゲーム状態とSocket.IO roomへの参加を取り消す。
+    this.cleanupPlayerConnection(nextRoomId, userId, clientId);
+    try {
+      await client.leave(nextRoomId);
+    } catch (error) {
+      this.logger.error(
+        `Failed to rollback new socket room { roomId: '${nextRoomId}', userId: '${userId}' }`,
+        error instanceof Error ? error.stack : String(error),
+      );
+    }
+
+    // 旧ルームのゲーム状態とpresenceを復元する。旧roomからのleaveに
+    // 失敗しているため、Socket.IO上では旧roomに残ったままになる。
+    try {
+      this.gameService.handleGameJoin(previousRoomId, userId);
+      this.socketPresenceService.register({
+        namespace: 'game',
+        roomId: previousRoomId,
+        userId,
+        socketId: clientId,
+      });
+      client.data.roomId = previousRoomId;
+    } catch (error) {
+      this.logger.error(
+        `Failed to restore previous game room { roomId: '${previousRoomId}', userId: '${userId}' }`,
+        error instanceof Error ? error.stack : String(error),
+      );
+    }
   }
 
   private cleanupPlayerConnection(
