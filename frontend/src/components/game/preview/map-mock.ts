@@ -1,7 +1,7 @@
 import {
   MAP_PATTERN,
   BOMBERMAN_GRID_SIZE,
-} from '../../../constants/game-constants'
+} from '@ft_transcendence/shared/game-constants'
 import type {
   TileType,
   WorldPosition,

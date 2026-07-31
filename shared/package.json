@@ -20,6 +20,10 @@
     "./realtime-events.types": {
       "types": "./realtime-events.types.ts",
       "default": "./realtime-events.types.ts"
+    },
+    "./game-constants": {
+      "types": "./game-constants.ts",
+      "default": "./game-constants.ts"
     }
   }
 }

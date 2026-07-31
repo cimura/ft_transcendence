@@ -1,6 +1,5 @@
 /**
  * ボンバーマン ゲーム全体で共有される定数群
- * TODO: shared/ へ移行し、frontendと共有する
  */
 
 // ==========================================
@@ -30,6 +29,7 @@ export const BOMBERMAN_TILE_SIZE = 1;
 // ==========================================
 /** ゲーム開始時のカウントダウン秒数 */
 export const GAME_COUNTDOWN_SEC = 5;
+
 /** サーバーの更新頻度 (1秒あたりのフレーム数) */
 export const GAME_TICK_RATE = 30;
 

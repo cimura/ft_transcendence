@@ -1,4 +1,4 @@
-import { BOMBERMAN_GRID_SIZE } from '../../../constants/game-constants'
+import { BOMBERMAN_GRID_SIZE } from '@ft_transcendence/shared/game-constants'
 
 const BREAKABLE_COLOR_X_WEIGHT = 7
 const BREAKABLE_COLOR_Y_WEIGHT = 11
