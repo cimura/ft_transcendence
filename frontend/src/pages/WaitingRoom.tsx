@@ -144,6 +144,7 @@ export function WaitingRoom() {
   }
 
   const handleLeaveRoom = async () => {
+    if (isLeavingRef.current) return
     isLeavingRef.current = true
     try {
       const result = await leaveRoom(currentRoom.id)
