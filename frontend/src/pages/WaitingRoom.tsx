@@ -17,7 +17,7 @@ import { useRoomSocket } from '../hooks/useRoomSocket'
 import axios from 'axios'
 import { getApiErrorMessage } from '../api/errors'
 import { useFriends } from '../hooks/friends/useFriends'
-import type { GameRoom } from '../types/room'
+import type { RoomSnapshot } from '@ft_transcendence/shared/rooms-events.types'
 
 export function WaitingRoom() {
   const { roomId } = useParams<{ roomId: string }>()
@@ -144,15 +144,16 @@ export function WaitingRoom() {
   }
 
   const handleLeaveRoom = async () => {
+    if (isLeavingRef.current) return
+    isLeavingRef.current = true
     try {
       const result = await leaveRoom(currentRoom.id)
-      if (result.deleted) {
-        removeRoom(result.roomId)
-      } else {
+      if (result) {
         upsertRoom(result)
+      } else {
+        removeRoom(currentRoom.id)
       }
       emitRoomLeave()
-      isLeavingRef.current = true
       navigate('/home')
       setCurrentRoom(null)
     } catch (error) {
@@ -162,11 +163,11 @@ export function WaitingRoom() {
       ) {
         emitRoomLeave()
         removeRoom(currentRoom.id)
-        isLeavingRef.current = true
         navigate('/home')
         setCurrentRoom(null)
         return
       }
+      isLeavingRef.current = false
       console.error('Failed to leave room:', error)
     }
   }
@@ -384,7 +385,7 @@ export function WaitingRoom() {
   )
 }
 
-function RoomInviteSection({ currentRoom }: { currentRoom: GameRoom }) {
+function RoomInviteSection({ currentRoom }: { currentRoom: RoomSnapshot }) {
   const { friends } = useFriends()
   const [selectedInviteeId, setSelectedInviteeId] = useState('')
   const [inviteMessage, setInviteMessage] = useState<string | null>(null)

@@ -2,7 +2,6 @@ import { useCallback, useEffect, useRef } from 'react'
 import { io, Socket } from 'socket.io-client'
 import { useRoomStore } from '../stores/roomStore'
 import { useAuthStore } from '../stores/authStore'
-import { toGameRoom } from '../utils/roomSnapshot'
 import type {
   RoomClientToServerEvents,
   RoomServerToClientEvents,
@@ -43,7 +42,7 @@ export function useRoomSocket(roomId?: string) {
     })
 
     socket.on('room:updated', (snapshot: RoomSnapshot) => {
-      upsertRoom(toGameRoom(snapshot))
+      upsertRoom(snapshot)
     })
 
     socket.on(
