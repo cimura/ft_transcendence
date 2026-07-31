@@ -46,7 +46,6 @@ export class GameService {
   handleGameJoin(
     roomId: string,
     playerId: string,
-    clientId: string,
   ): Parameters<ServerToClientEvents['game:init']>[0] {
     if (!this.checkRoomEntryPermission(roomId, playerId)) {
       throw new WsException('ルームに参加できません。');
@@ -58,7 +57,7 @@ export class GameService {
     const username = roomState.participants[playerId].username;
 
     if (session.phase === 'waiting') {
-      const result = addPlayerToRoom(session, playerId, clientId, username);
+      const result = addPlayerToRoom(session, playerId, username);
       if (!result.success) {
         throw new WsException('Cannot join the room');
       }
@@ -69,21 +68,9 @@ export class GameService {
       this.logger.log(
         `Player joined { roomId: '${session.roomId}', playerId: '${playerId}' }`,
       );
-    } else if (
-      session.phase === 'countdown' &&
-      session.players[playerId] &&
-      !session.players[playerId].isDisconnected
-    ) {
-      // The last required player can move the session to countdown before
-      // React StrictMode's duplicate socket finishes joining. Treat that
-      // second connection like the idempotent waiting-phase join and make it
-      // the active socket instead of showing a false game error.
-      addPlayerToRoom(session, playerId, clientId, username);
-      this.logger.debug(
-        `Player socket replaced during countdown { roomId: '${session.roomId}', playerId: '${playerId}' }`,
-      );
-    } else if (session.phase === 'countdown' || session.phase === 'playing') {
-      const result = reconnectPlayerToRoom(session, playerId, clientId);
+    } else if (session.players[playerId]?.isDisconnected) {
+      // countdown/playing 中の切断からの復帰
+      const result = reconnectPlayerToRoom(session, playerId);
       if (!result.success) {
         throw new WsException('Cannot join the room');
       }
@@ -93,6 +80,12 @@ export class GameService {
       });
       this.logger.debug(
         `Player reconnected { roomId: '${session.roomId}', playerId: '${playerId}' }`,
+      );
+    } else {
+      // 接続中プレイヤーの追加ソケット (React StrictMode の二重effect実行、
+      // 別タブなど)。セッション状態は変わらないため何もブロードキャストしない。
+      this.logger.debug(
+        `Additional socket for already-connected player { roomId: '${session.roomId}', playerId: '${playerId}' }`,
       );
     }
 
@@ -146,16 +139,9 @@ export class GameService {
     }
   }
 
-  handleGameLeave(roomId: string, playerId: string, clientId: string) {
+  handleGameLeave(roomId: string, playerId: string) {
     const session = this.roomsState.getRoom(roomId)?.gameSession;
     if (!session || !session.players[playerId]) return;
-
-    if (session.playerConnections[playerId].clientId !== clientId) {
-      this.logger.debug(
-        `Ignored disconnect from different socket { roomId: '${session.roomId}', playerId: '${playerId}' }`,
-      );
-      return;
-    }
 
     if (session.phase === 'waiting' || session.phase === 'ended') {
       const result = removePlayerFromRoom(session, playerId);
@@ -233,13 +219,16 @@ export class GameService {
 
     const player = session.players[playerId];
     if (session.phase === 'waiting') return true;
-    if (session.phase === 'countdown' && player && !player.isDisconnected) {
-      return true;
-    }
 
+    // countdown/playing: セッション開始時にいなかった人は入れない
     if (!player) return false;
-    if (!player.isDisconnected) return false;
 
+    // 接続中プレイヤーの追加ソケット (StrictMode の二重接続や別タブ) は許可する。
+    // ソケットの多重ログイン防止はしない — 誰がどのソケットを持つかは
+    // SocketPresenceService の責務であり、ここでは関知しない。
+    if (!player.isDisconnected) return true;
+
+    // 切断中は猶予時間内の再接続のみ許可する
     const connection = session.playerConnections[playerId];
     if (!connection) return false;
 
