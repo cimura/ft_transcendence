@@ -576,7 +576,7 @@ describe('RoomsGateway', () => {
       expect(result).toEqual({ ok: true });
     });
 
-    it('ドメイン例外はそのメッセージを返し、内部エラー文言は漏らさない', async () => {
+    it('想定外の例外は内部エラー文言を漏らさず汎用エラーを返し、ログを残す', async () => {
       const client = createMockSocket();
       client.data.user = { id: 'user-1' };
       roomsChatService.createMessage.mockRejectedValue(new Error('db down'));
