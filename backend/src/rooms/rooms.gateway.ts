@@ -14,6 +14,7 @@ import {
   Logger,
   NotFoundException,
 } from '@nestjs/common';
+import { OnEvent } from '@nestjs/event-emitter';
 import { SocketAuthService } from '../websocket/socket-auth.service';
 import { SocketPresenceService } from '../websocket/socket-presence.service';
 import { RoomsChatService } from './rooms-chat.service';
@@ -31,7 +32,14 @@ import {
   RoomClientToServerEvents,
   RoomServerToClientEvents,
 } from '@ft_transcendence/shared/rooms-events.types';
-import type { RoomResponse } from '../common/types/room.type';
+import {
+  ROOM_CREATED_EVENT,
+  ROOM_UPDATED_EVENT,
+  ROOM_DELETED_EVENT,
+  RoomCreatedEvent,
+  RoomUpdatedEvent,
+  RoomDeletedEvent,
+} from './events/room-domain-events';
 
 // room:leave / disconnect からこの猶予内に再接続(room:join)しなければ自動退出させる。
 // game 側の DISCONNECT_TIMEOUT_MS (30秒) と揃えている。
@@ -88,10 +96,12 @@ export class RoomsGateway implements OnGatewayConnection, OnGatewayDisconnect {
   handleDisconnect(client: RoomsSocket) {
     this.logger.log(`Client disconnected: ${client.id}`);
     if (client.data.roomId && client.data.user) {
+      // 切断は一時的な可能性がある(リロード等)ため猶予を挟んで自動退出させる
       this.unregisterRoomPresence(
         client.data.roomId,
         client.data.user.id,
         client.id,
+        /* explicit */ false,
       );
     }
   }
@@ -138,7 +148,8 @@ export class RoomsGateway implements OnGatewayConnection, OnGatewayDisconnect {
       joined = true;
 
       if (client.data.roomId && client.data.roomId !== dto.roomId) {
-        this.leaveCurrentRoom(client);
+        // 別ルームへの乗り換え: 切断相当なので猶予付きで後始末する
+        this.leaveCurrentRoom(client, /* explicit */ false);
       }
       client.data.roomId = dto.roomId;
 
@@ -160,7 +171,13 @@ export class RoomsGateway implements OnGatewayConnection, OnGatewayDisconnect {
       }
       if (presenceRegistrationAttempted) {
         try {
-          this.unregisterRoomPresence(dto.roomId, userId, client.id);
+          // 購読が失敗して socket が部屋に居ない状態なので、切断と同じく猶予付きで扱う
+          this.unregisterRoomPresence(
+            dto.roomId,
+            userId,
+            client.id,
+            /* explicit */ false,
+          );
         } catch (rollbackError) {
           this.logger.warn(
             `Failed to roll back room presence { roomId: '${dto.roomId}', userId: '${userId}', error: '${
@@ -197,7 +214,9 @@ export class RoomsGateway implements OnGatewayConnection, OnGatewayDisconnect {
 
   @SubscribeMessage('room:leave')
   handleRoomLeave(@ConnectedSocket() client: RoomsSocket) {
-    this.leaveCurrentRoom(client);
+    // 明示的な退出操作: ドメインからの退出は REST の /rooms/:id/leave が担うため、
+    // ここでは presence 解除と socket ルーム離脱のみを即座に行う
+    this.leaveCurrentRoom(client, /* explicit */ true);
   }
 
   @SubscribeMessage('lobby:join')
@@ -279,14 +298,19 @@ export class RoomsGateway implements OnGatewayConnection, OnGatewayDisconnect {
     }
   }
 
-  emitRoomCreated(room: RoomResponse) {
+  // ルームのドメイン状態が変化するたびに RoomsService が発行するイベントを購読し、
+  // 該当クライアントへブロードキャストする。状態変更と通知の対応付けをここに一本化することで、
+  // 呼び出し元(REST コントローラや切断時の自動退出)ごとに emit し忘れる/二重に emit する事故を防ぐ。
+  @OnEvent(ROOM_CREATED_EVENT)
+  private handleRoomCreatedEvent({ room }: RoomCreatedEvent) {
     if (!this.roomsLobbyService.isLobbyVisible(room)) return;
     this.server
       .to(LOBBY_ROOM)
       .emit('room:created', this.roomsLobbyService.toSnapshot(room));
   }
 
-  emitRoomUpdated(room: RoomResponse) {
+  @OnEvent(ROOM_UPDATED_EVENT)
+  private handleRoomUpdatedEvent({ room }: RoomUpdatedEvent) {
     const snapshot = this.roomsLobbyService.toSnapshot(room);
 
     this.server.to(room.id).emit('room:updated', snapshot);
@@ -297,12 +321,17 @@ export class RoomsGateway implements OnGatewayConnection, OnGatewayDisconnect {
     }
   }
 
-  emitRoomDeleted(roomId: string) {
+  @OnEvent(ROOM_DELETED_EVENT)
+  private handleRoomDeletedEvent({ roomId }: RoomDeletedEvent) {
     this.server.to(roomId).emit('room:deleted', { roomId });
     this.server.to(LOBBY_ROOM).emit('room:deleted', { roomId });
   }
 
-  private leaveCurrentRoom(client: RoomsSocket) {
+  // explicit=true: 明示的な退出(room:leave)。ドメインからの退出は REST の /rooms/:id/leave
+  // が既に担っているため、ここでは presence 解除のみを即座に行い、猶予は挟まない。
+  // explicit=false: 切断/ルーム乗り換え。REST 呼び出しを伴わないため、再接続の可能性を
+  // 考慮して猶予付きでドメインからも自動退出させる。
+  private leaveCurrentRoom(client: RoomsSocket, explicit: boolean) {
     const roomId = client.data.roomId;
     if (!roomId) return;
 
@@ -310,7 +339,12 @@ export class RoomsGateway implements OnGatewayConnection, OnGatewayDisconnect {
     client.data.roomId = undefined;
 
     if (client.data.user) {
-      this.unregisterRoomPresence(roomId, client.data.user.id, client.id);
+      this.unregisterRoomPresence(
+        roomId,
+        client.data.user.id,
+        client.id,
+        explicit,
+      );
     }
 
     this.logger.log(`Client ${client.id} left room ${roomId}`);
@@ -320,6 +354,7 @@ export class RoomsGateway implements OnGatewayConnection, OnGatewayDisconnect {
     roomId: string,
     userId: string,
     socketId: string,
+    explicit: boolean,
   ) {
     const remaining = this.socketPresenceService.unregister({
       namespace: 'rooms',
@@ -328,36 +363,39 @@ export class RoomsGateway implements OnGatewayConnection, OnGatewayDisconnect {
       socketId,
     });
 
-    if (remaining === 0) {
+    // 同一ユーザーの別タブがまだ接続中なら、まだルームに残っているとみなす
+    if (remaining !== 0) return;
+
+    // 明示的な退出は REST /leave がドメイン退出を担うため、ここでは何もしない。
+    // 非同意切断(explicit=false)のみ、REST が飛ばないので猶予後にドメインからも自動退出させる。
+    if (!explicit) {
       this.socketPresenceService.scheduleIfInactive(
         { namespace: 'rooms', roomId, userId },
         ROOMS_DISCONNECT_GRACE_MS,
-        () => this.autoLeaveRoom(roomId, userId),
+        () => this.evictParticipant(roomId, userId),
       );
     }
   }
 
-  // 猶予時間内に再接続 (room:join) がなかった参加者を自動退出させ、
-  // ホストが戻らないまま部屋だけが残り続ける「ゴーストルーム」を防ぐ
-  private autoLeaveRoom(roomId: string, userId: string) {
+  // 猶予時間内に再接続(room:join)がなかった参加者をドメイン状態から退出させ、結果を配信する。
+  // handleDisconnect の猶予経路からのみ呼ばれる、非同意切断(タブ閉じ等)専用の後始末で、
+  // ホストが戻らないまま部屋だけが残り続ける「ゴーストルーム」を防ぐ役割を持つ。
+  private evictParticipant(roomId: string, userId: string) {
     const room = this.roomsState.getRoom(roomId);
     if (!room || room.status !== 'WAITING' || !room.participants[userId]) {
       return;
     }
 
     try {
-      const result = this.roomsService.leave(roomId, userId);
-      if ('id' in result) {
-        this.emitRoomUpdated(result);
-      } else {
-        this.emitRoomDeleted(result.roomId);
-      }
+      // ドメイン退出とクライアントへのブロードキャストは RoomsService が発行する
+      // イベント(handleRoomUpdatedEvent/handleRoomDeletedEvent)経由で行われる
+      this.roomsService.leave(roomId, userId);
       this.logger.log(
-        `Auto-left inactive participant { roomId: '${roomId}', userId: '${userId}' }`,
+        `Participant left room { roomId: '${roomId}', userId: '${userId}' }`,
       );
     } catch (error) {
       this.logger.warn(
-        `Failed to auto-leave inactive participant { roomId: '${roomId}', userId: '${userId}', error: '${
+        `Failed to remove participant { roomId: '${roomId}', userId: '${userId}', error: '${
           error instanceof Error ? error.message : String(error)
         }' }`,
       );

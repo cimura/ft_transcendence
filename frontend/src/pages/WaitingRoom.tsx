@@ -1,6 +1,6 @@
 import { useNavigate, useParams } from 'react-router-dom'
 import { useRoomStore } from '../stores/roomStore'
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { PlayerCard } from '../components/waitingRoom/PlayerCard'
 import { ChatPanel } from '../components/waitingRoom/ChatPanel'
 import { GameMapPreview } from '../components/game/preview/GameMapPreview'
@@ -27,7 +27,11 @@ export function WaitingRoom() {
   const [isLoadingRoom, setIsLoadingRoom] = useState(true)
   const currentUserId = currentUser?.id
 
-  useRoomSocket(roomId)
+  const { leaveRoom: emitRoomLeave } = useRoomSocket(roomId)
+
+  // 明示的な退出中は、currentRoom が空になったことをトリガーに再joinしないようにするフラグ
+  // (ホストが部屋を削除した等の外部要因による currentRoom クリアとは区別する必要がある)
+  const isLeavingRef = useRef(false)
 
   useEffect(() => {
     if (!roomId) {
@@ -38,6 +42,11 @@ export function WaitingRoom() {
     let cancelled = false
 
     const loadRoom = async () => {
+      if (isLeavingRef.current) {
+        setIsLoadingRoom(false)
+        return
+      }
+
       setIsLoadingRoom(true)
       try {
         // A room held in the store may only be a lobby snapshot. It can also
@@ -135,7 +144,6 @@ export function WaitingRoom() {
   }
 
   const handleLeaveRoom = async () => {
-    console.log('部屋を退出')
     try {
       const result = await leaveRoom(currentRoom.id)
       if (result.deleted) {
@@ -143,16 +151,20 @@ export function WaitingRoom() {
       } else {
         upsertRoom(result)
       }
-      setCurrentRoom(null)
+      emitRoomLeave()
+      isLeavingRef.current = true
       navigate('/home')
+      setCurrentRoom(null)
     } catch (error) {
       if (
         axios.isAxiosError(error) &&
         (error.response?.status === 403 || error.response?.status === 404)
       ) {
+        emitRoomLeave()
         removeRoom(currentRoom.id)
-        setCurrentRoom(null)
+        isLeavingRef.current = true
         navigate('/home')
+        setCurrentRoom(null)
         return
       }
       console.error('Failed to leave room:', error)
