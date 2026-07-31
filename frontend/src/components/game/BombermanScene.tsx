@@ -1,6 +1,7 @@
 import { Canvas } from '@react-three/fiber'
 import { Edges, Grid } from '@react-three/drei'
 import { useMemo } from 'react'
+import { RockBlock } from './models/RockBlock'
 import {
   BoxGeometry,
   MeshBasicMaterial,
@@ -135,19 +136,12 @@ export function BombermanScene({ gameState }: BombermanSceneProps) {
         row.map((tile, x) => {
           if (tile === 'empty') return null
 
+          // 壊れないブロックを自作の RockBlock に置き換え
           if (tile === 'solid') {
             return (
-              <group key={`${x}-${y}`} position={[x, 0.5, y]}>
-                <mesh
-                  geometry={assets.solidBlockGeometry}
-                  material={assets.solidBlockMaterial}
-                >
-                  <Edges
-                    color={colors.solidEdge}
-                    opacity={0.8}
-                    transparent
-                  />
-                </mesh>
+              // position={[x, 0.3, y]} scale={[0.5, 0.3, 0.6]}
+              <group key={`${x}-${y}`} position={[x, 0.3, y]} scale={[0.5, 0.5, 0.6]}> 
+                <RockBlock />
               </group>
             )
           }
