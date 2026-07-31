@@ -9,6 +9,7 @@ import {
   useNavigate,
   useLocation,
 } from 'react-router-dom'
+import { LobbyPage } from './pages/LobbyPage'
 import { WaitingRoom } from './pages/WaitingRoom'
 import { GameRoomPage } from './pages/GameRoomPage'
 import { FriendsMenuPage } from './pages/friends/FriendsMenuPage'
@@ -127,6 +128,7 @@ function AuthenticatedRoutes() {
     <Routes>
       <Route path="/" element={<Navigate to="/home" replace />} />
       <Route path="/home" element={<Home />} />
+      <Route path="/lobby" element={<LobbyPage />} />
       <Route path="/room/:roomId" element={<WaitingRoom />} />
       <Route path="/game/:roomId" element={<GameRoomPage />} />
       <Route path="/rankings" element={<RankingsPage />} />

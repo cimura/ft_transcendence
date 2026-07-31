@@ -1,6 +1,13 @@
 import api from './client'
 import type { CreateRoomDto } from '../types'
 
+export const getRooms = async (status?: 'waiting' | 'playing' | 'finished') => {
+  const response = await api.get('/rooms', {
+    params: status ? { status } : undefined,
+  })
+  return response.data
+}
+
 export const createRoom = async (dto: CreateRoomDto) => {
   const response = await api.post('/rooms', dto)
   return response.data

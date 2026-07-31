@@ -69,6 +69,15 @@ export function GameRoomPage() {
     currentRoom?.status,
   ])
 
+  // ゲーム中は画面が1ビューポートに収まるため、縦スクロールを止める
+  useEffect(() => {
+    const previousOverflow = document.body.style.overflow
+    document.body.style.overflow = 'hidden'
+    return () => {
+      document.body.style.overflow = previousOverflow
+    }
+  }, [])
+
   if (!currentRoom) {
     return null
   }
@@ -78,27 +87,12 @@ export function GameRoomPage() {
   ).length
 
   return (
-    <div className="relative min-h-screen overflow-hidden font-sans text-cyan-50 select-none">
-      {/* 1. 背景動画の導入 */}
-      <BackgroundVideo />
-
-      {/* 2. ホーム画面と統一感のあるオーバーレイ（走査線エフェクト） */}
-      <div className="absolute inset-0 bg-[linear-gradient(rgba(0,255,255,0.05)_1px,transparent_1px),linear-gradient(90deg,rgba(0,255,255,0.05)_1px,transparent_1px)] bg-[size:60px_60px] pointer-events-none z-0" />
-      <div className="absolute top-0 inset-x-0 h-40 bg-gradient-to-b from-cyan-500/20 to-transparent pointer-events-none z-0" />
-
-      {/* 3. グラスモーフィズムなヘッダー */}
-      <header className="absolute top-0 inset-x-0 h-16 bg-black/30 backdrop-blur-md border-b border-cyan-400/60 flex items-center justify-between px-8 z-30 shadow-[0_4px_20px_rgba(0,255,255,0.2)]">
-        <div className="flex flex-col">
-          <span className="text-[10px] text-cyan-300 font-mono tracking-widest font-bold drop-shadow-md">
-            ボンバーマン //
-          </span>
-          <h1 className="text-xl font-bold text-white tracking-widest drop-shadow-md">
-            {currentRoom.name}
-          </h1>
-        </div>
-        <div className="flex items-center gap-6">
-          <div className="flex h-8 px-4 items-center justify-center rounded border border-cyan-400/50 bg-cyan-900/40 font-mono text-xs font-bold text-cyan-300 shadow-[0_0_10px_rgba(0,255,255,0.2)]">
-            生存 {livingPlayers}
+    <div className="fixed inset-0 flex flex-col overflow-hidden bg-gray-950 text-white">
+      <header className="shrink-0 border-b border-gray-800 bg-gray-900">
+        <div className="mx-auto flex max-w-7xl flex-wrap items-center justify-between gap-4 px-4 py-4 sm:px-6 lg:px-8">
+          <div>
+            <p className="text-sm font-semibold text-cyan-300">ボンバーマン</p>
+            <h1 className="text-2xl font-bold">{currentRoom.name}</h1>
           </div>
           
           {/* ホーム画面に合わせたサイバーなカスタムボタン */}
@@ -119,11 +113,9 @@ export function GameRoomPage() {
         </div>
       </header>
 
-      {/* 4. メインコンテンツ領域 */}
-      <main className="relative z-10 w-full h-screen pt-16 flex flex-col justify-center items-center">
-        <div className="w-full max-w-7xl px-4 sm:px-6 lg:px-8">
-          <GameCanvas roomId={currentRoom.id} />
-        </div>
+      <main className="relative min-h-0 flex-1">
+        <GameCanvas roomId={currentRoom.id} />
+
         <GameResultOverlay />
       </main>
     </div>

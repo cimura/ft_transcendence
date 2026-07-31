@@ -9,6 +9,11 @@ export const SCENE_CONFIG = {
     height: 8,
     distanceFromCenter: 7,
     fov: 58,
+    targetY: 0,
+    /** フィット距離に掛ける倍率。1.0で地面の縁が画面端ちょうどになる */
+    fitMargin: 1.0,
+    /** フィット計算に含める最大高さ（キャラクターの頭頂あたり） */
+    contentTopY: 1.0,
   },
   light: {
     ambientIntensity: 0.42,
@@ -17,11 +22,6 @@ export const SCENE_CONFIG = {
     pointHeight: 3,
     pointIntensity: 4,
     pointDistance: 15,
-  },
-  orbit: {
-    minDistance: 6,
-    maxDistance: 14,
-    maxPolarAngleRatio: 0.46,
   },
   ground: {
     y: -0.5,

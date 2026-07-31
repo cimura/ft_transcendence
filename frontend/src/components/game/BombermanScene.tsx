@@ -1,18 +1,12 @@
-import { Canvas, useThree } from '@react-three/fiber'
-import {
-  Box,
-  Edges,
-  Grid,
-  OrbitControls,
-} from '@react-three/drei'
-import { useEffect, useMemo } from 'react'
+import { Canvas } from '@react-three/fiber'
+import { Edges, Grid } from '@react-three/drei'
+import { useMemo } from 'react'
 import {
   BoxGeometry,
   MeshBasicMaterial,
   MeshStandardMaterial,
   SphereGeometry,
   IcosahedronGeometry,
-  PerspectiveCamera,
 } from 'three'
 import {
   BREAKABLE_COLORS,
@@ -22,31 +16,9 @@ import { BOMBERMAN_GRID_SIZE } from '../../constants/game-constants'
 import type { ClientGameState } from '../../types/game'
 import { BombermanCharacter } from './BombermanCharacter'
 import { BombermanEffects } from './BombermanEffects'
+import { CameraRig } from './CameraRig'
 import { SCENE_CONFIG } from '../../components/game/constants/scene-constants'
 import { useGameStore } from '../../stores/gameStore'
-
-function ResponsiveCamera() {
-  const { camera, size } = useThree()
-
-  useEffect(() => {
-    // カメラがPerspectiveCameraである場合のみfovを操作する（TypeScriptのエラー回避）
-    if (camera instanceof PerspectiveCamera) {
-      const aspect = size.width / size.height
-      
-      if (aspect < 1.0) {
-        camera.fov = 110
-      } else if (aspect < 1.5) {
-        camera.fov = 95
-      } else {
-        camera.fov = 85
-      }
-      
-      camera.updateProjectionMatrix()
-    }
-  }, [size, camera])
-
-  return null
-}
 
 type BombermanSceneProps = {
   gameState: ClientGameState
@@ -126,20 +98,19 @@ export function BombermanScene({ gameState }: BombermanSceneProps) {
         ],
       }}
     >
-      <ResponsiveCamera />
-      
-      <ambientLight intensity={0.4} />
-      <directionalLight position={[10, 20, 5]} intensity={1.5} color="#ffffff" />
-      <directionalLight position={[-10, 10, -10]} intensity={1.0} color="#00ffff" />
-      <directionalLight position={[0, -10, 10]} intensity={0.5} color="#ff00ff" />
-      
-      <OrbitControls
-        target={[center, 0, center]}
-        enablePan={false}
-        enableRotate={true}
-        enableZoom={true}
-        maxPolarAngle={Math.PI / 2.2}
+      <color attach="background" args={[colors.background]} />
+      <ambientLight intensity={SCENE_CONFIG.light.ambientIntensity} />
+      <directionalLight
+        position={SCENE_CONFIG.light.directionalPosition}
+        intensity={SCENE_CONFIG.light.directionalIntensity}
       />
+      <pointLight
+        position={[center, SCENE_CONFIG.light.pointHeight, center]}
+        color={colors.pointLight}
+        intensity={SCENE_CONFIG.light.pointIntensity}
+        distance={SCENE_CONFIG.light.pointDistance}
+      />
+      <CameraRig />
 
       <mesh position={[center, -0.6, center]}>
         <boxGeometry args={[BOMBERMAN_GRID_SIZE + 1.5, 1, BOMBERMAN_GRID_SIZE + 1.5]} />
