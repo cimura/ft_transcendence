@@ -22,6 +22,7 @@ describe('GameGateway', () => {
             handleGameJoin: jest.fn(),
             handleGameStart: jest.fn(),
             handleGameLeave: jest.fn(),
+            handleGameRetire: jest.fn(),
             handlePlayerInput: jest.fn(),
             handleBombPlace: jest.fn(),
           },
@@ -296,6 +297,36 @@ describe('GameGateway', () => {
       );
     });
 
+    it('明示的な離脱はリタイア扱いとしてhandleGameRetireを呼ぶこと', async () => {
+      const client = createMockSocket();
+      client.data.user = { id: 'user-1' };
+      client.data.roomId = 'room-1';
+      socketPresenceService.register({
+        namespace: 'game',
+        roomId: 'room-1',
+        userId: 'user-1',
+        socketId: 'socket-123',
+      });
+
+      await gateway.handleLeave(client);
+
+      expect(gameService.handleGameRetire).toHaveBeenCalledWith(
+        'room-1',
+        'user-1',
+        'socket-123',
+      );
+
+      // リタイア処理 → Socket.IOルーム退出 → 通常のcleanup、の順で呼ばれること
+      const retireOrder =
+        gameService.handleGameRetire.mock.invocationCallOrder[0];
+      const leaveOrder = (client.leave as jest.Mock).mock
+        .invocationCallOrder[0];
+      const cleanupOrder =
+        gameService.handleGameLeave.mock.invocationCallOrder[0];
+      expect(retireOrder).toBeLessThan(leaveOrder);
+      expect(leaveOrder).toBeLessThan(cleanupOrder);
+    });
+
     it('ルームに参加していない場合は何もしないこと', async () => {
       const client = createMockSocket();
       client.data.user = { id: 'user-1' };
@@ -304,6 +335,7 @@ describe('GameGateway', () => {
 
       expect(client.leave).not.toHaveBeenCalled();
       expect(gameService.handleGameLeave).not.toHaveBeenCalled();
+      expect(gameService.handleGameRetire).not.toHaveBeenCalled();
     });
   });
 
@@ -378,6 +410,8 @@ describe('GameGateway', () => {
         'user-1',
         'socket-123',
       );
+      // 意図しない切断はリタイア扱いにせず、猶予付きの通常切断処理に委ねること
+      expect(gameService.handleGameRetire).not.toHaveBeenCalled();
       jest.useRealTimers();
     });
 
