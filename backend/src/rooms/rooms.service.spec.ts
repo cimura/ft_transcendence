@@ -1,4 +1,5 @@
 import { ConflictException, NotFoundException } from '@nestjs/common';
+import type { EventEmitter2 } from '@nestjs/event-emitter';
 import { PrismaService } from '../prisma.service';
 import { bombermanGame } from '../games/games.constants';
 import { GamesService } from '../games/games.service';
@@ -52,7 +53,7 @@ describe('RoomsService', () => {
       prisma as unknown as PrismaService,
       gamesService as unknown as GamesService,
       roomsState,
-      eventEmitter,
+      eventEmitter as unknown as EventEmitter2,
     );
   });
 
@@ -297,8 +298,12 @@ describe('RoomsService', () => {
 
     const result = service.leave('room-1', guest.id);
 
-    expect(result).toEqual({ deleted: true, roomId: 'room-1' });
+    expect(result).toBeNull();
     expect(roomsState.getRoom('room-1')).toBeUndefined();
+    expect(eventEmitter.emit).toHaveBeenCalledWith(
+      ROOM_DELETED_EVENT,
+      expect.any(RoomDeletedEvent),
+    );
   });
 
   it('does not start until the room is full', () => {
