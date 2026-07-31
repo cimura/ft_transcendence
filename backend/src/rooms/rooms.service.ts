@@ -117,7 +117,7 @@ export class RoomsService {
     const currentRoom = this.getRoomOrThrow(roomId);
     // await 後に同期的に再チェックしてから追加し、同時 join による定員超過を防ぐ
     if (currentRoom.participants[userId]) {
-      return this.emitRoomUpdated(room);
+      return this.emitRoomUpdated(currentRoom);
     }
     this.assertJoinable(currentRoom);
 
@@ -131,7 +131,7 @@ export class RoomsService {
     };
 
     this.roomsState.addParticipant(roomId, participant);
-    return this.emitRoomUpdated(room);
+    return this.emitRoomUpdated(currentRoom);
   }
 
   leave(roomId: string, userId: string): RoomSnapshot | null {
