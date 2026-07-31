@@ -90,7 +90,6 @@ export function BombermanScene({ gameState }: BombermanSceneProps) {
   return (
     <Canvas
       camera={{
-        // 前回は 0.85 でしたが、今回は 1.2 倍にしてカメラを遠くに配置します
         position: [
           center,
           SCENE_CONFIG.camera.height * 1.2,
@@ -98,7 +97,7 @@ export function BombermanScene({ gameState }: BombermanSceneProps) {
         ],
       }}
     >
-      <color attach="background" args={[colors.background]} />
+      {/*変更: <color attach="background" ... /> の行を丸ごと削除しました */}
       <ambientLight intensity={SCENE_CONFIG.light.ambientIntensity} />
       <directionalLight
         position={SCENE_CONFIG.light.directionalPosition}
