@@ -1,11 +1,5 @@
 import { Canvas } from '@react-three/fiber'
-import {
-  Box,
-  Edges,
-  Grid,
-  MeshReflectorMaterial,
-  OrbitControls,
-} from '@react-three/drei'
+import { Box, Edges, Grid, MeshReflectorMaterial } from '@react-three/drei'
 import { useMemo } from 'react'
 import {
   BoxGeometry,
@@ -21,6 +15,7 @@ import { BOMBERMAN_GRID_SIZE } from '../../constants/game-constants'
 import type { ClientGameState } from '../../types/game'
 import { BombermanCharacter } from './BombermanCharacter'
 import { BombermanEffects } from './BombermanEffects'
+import { CameraRig } from './CameraRig'
 import { SCENE_CONFIG } from '../../components/game/constants/scene-constants'
 import { useGameStore } from '../../stores/gameStore'
 
@@ -122,15 +117,7 @@ export function BombermanScene({ gameState }: BombermanSceneProps) {
         intensity={SCENE_CONFIG.light.pointIntensity}
         distance={SCENE_CONFIG.light.pointDistance}
       />
-      <OrbitControls
-        target={[center, 0, center]}
-        enablePan={false}
-        enableRotate={false}
-        enableZoom={false}
-        minDistance={SCENE_CONFIG.orbit.minDistance}
-        maxDistance={SCENE_CONFIG.orbit.maxDistance}
-        maxPolarAngle={Math.PI * SCENE_CONFIG.orbit.maxPolarAngleRatio}
-      />
+      <CameraRig />
 
       <mesh
         rotation={[-Math.PI / SCENE_CONFIG.grid.centerDivisor, 0, 0]}
