@@ -4,7 +4,7 @@ import { updatePlayerMovements } from '../mechanics/movement.logic';
 import { processExplosions, ExplosionResult } from '../mechanics/bomb.logic';
 import { processTimeouts } from '../session/timeout.logic';
 import { evaluateGameEnd } from '../session/end.logic';
-import { GAME_TICK_RATE } from '../../constants/game-constants';
+import { GAME_TICK_RATE } from '@ft_transcendence/shared/game-constants';
 
 export interface TickResult {
   explosions: ExplosionResult[];

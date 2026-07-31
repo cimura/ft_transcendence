@@ -8,7 +8,7 @@ import {
 import {
   GAME_COUNTDOWN_SEC,
   DISCONNECT_TIMEOUT_MS,
-} from './constants/game-constants';
+} from '@ft_transcendence/shared/game-constants';
 import { GameSession } from '../common/types/game.type';
 import { RoomsStateService } from '../rooms/rooms-state.service';
 import { advanceGameTick } from './logic/core/loop.logic';

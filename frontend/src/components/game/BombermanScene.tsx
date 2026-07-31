@@ -17,7 +17,7 @@ import {
   BREAKABLE_COLORS,
   getBreakableColor,
 } from '../../components/game/utils/map-colors'
-import { BOMBERMAN_GRID_SIZE } from '../../constants/game-constants'
+import { BOMBERMAN_GRID_SIZE } from '@ft_transcendence/shared/game-constants'
 import type { ClientGameState } from '../../types/game'
 import { BombermanCharacter } from './BombermanCharacter'
 import { BombermanEffects } from './BombermanEffects'

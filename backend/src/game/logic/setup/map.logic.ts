@@ -2,7 +2,7 @@ import type { TileType } from '@ft_transcendence/shared/game-events.types';
 import {
   BOMBERMAN_GRID_SIZE,
   MAP_PATTERN,
-} from '../../constants/game-constants';
+} from '@ft_transcendence/shared/game-constants';
 
 // マップ生成のファイル
 // TODO: shared/ へ移行するか、設定ファイルから読み込む
