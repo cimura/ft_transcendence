@@ -116,8 +116,7 @@ export function WaitingRoom() {
   const isHost = currentPlayer?.isHost || false
   const isReady = currentPlayer?.isReady || false
   const allReady = currentRoom.players.every((p) => p.isReady)
-  const hasEnoughPlayers =
-    currentRoom.players.length === currentRoom.maxPlayers
+  const hasEnoughPlayers = currentRoom.players.length === currentRoom.maxPlayers
   const canStart = isHost && allReady && hasEnoughPlayers
 
   const handleToggleReady = async () => {
