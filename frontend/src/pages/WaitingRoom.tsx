@@ -144,6 +144,7 @@ export function WaitingRoom() {
   }
 
   const handleLeaveRoom = async () => {
+    isLeavingRef.current = true
     try {
       const result = await leaveRoom(currentRoom.id)
       if (result) {
@@ -152,7 +153,6 @@ export function WaitingRoom() {
         removeRoom(currentRoom.id)
       }
       emitRoomLeave()
-      isLeavingRef.current = true
       navigate('/home')
       setCurrentRoom(null)
     } catch (error) {
@@ -162,11 +162,11 @@ export function WaitingRoom() {
       ) {
         emitRoomLeave()
         removeRoom(currentRoom.id)
-        isLeavingRef.current = true
         navigate('/home')
         setCurrentRoom(null)
         return
       }
+      isLeavingRef.current = false
       console.error('Failed to leave room:', error)
     }
   }
