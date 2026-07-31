@@ -2,19 +2,18 @@ const ACCESS_TOKEN_KEY = 'accessToken'
 
 export const getStoredAccessToken = () => {
   if (typeof window === 'undefined') return null
-  return window.sessionStorage.getItem(ACCESS_TOKEN_KEY)
+  return window.localStorage.getItem(ACCESS_TOKEN_KEY)
 }
 
 export const storeAccessToken = (token: string | null) => {
   if (typeof window === 'undefined') return
 
-  // Authentication is tab-scoped so multiple local players can use separate
-  // accounts in different tabs. Remove the legacy shared value as well.
-  window.localStorage.removeItem(ACCESS_TOKEN_KEY)
+  // タブ単位の認証だった頃の値が残っていると混乱の元になるため掃除する
+  window.sessionStorage.removeItem(ACCESS_TOKEN_KEY)
 
   if (token) {
-    window.sessionStorage.setItem(ACCESS_TOKEN_KEY, token)
+    window.localStorage.setItem(ACCESS_TOKEN_KEY, token)
   } else {
-    window.sessionStorage.removeItem(ACCESS_TOKEN_KEY)
+    window.localStorage.removeItem(ACCESS_TOKEN_KEY)
   }
 }
