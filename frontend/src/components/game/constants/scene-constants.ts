@@ -6,13 +6,14 @@ export const SCENE_CONFIG = {
     y: -0.48,
   },
   camera: {
-    height: 8,
-    distanceFromCenter: 7,
+    
+    height: 10,               // カメラの高さを少し下げる
+    distanceFromCenter: 9,   // カメラを少し手前に引いて斜め感を強める
     fov: 58,
     targetY: 0,
-    /** フィット距離に掛ける倍率。1.0で地面の縁が画面端ちょうどになる */
-    fitMargin: 1.0,
-    /** フィット計算に含める最大高さ（キャラクターの頭頂あたり） */
+    
+    fitMargin: 0.85, 
+    
     contentTopY: 1.0,
   },
   light: {
