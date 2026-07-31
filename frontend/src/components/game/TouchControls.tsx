@@ -6,7 +6,6 @@ type TouchControlsProps = {
   activeControl: ActiveControl
 }
 
-// 線の太さを 3.5 にして、目標画像のようなクッキリとした太いアイコンに変更
 const directions: {
   label: string
   direction: Direction
@@ -59,23 +58,22 @@ const directions: {
   },
 ]
 
-// パネルを画面いっぱいに広げず、コンテンツの幅(w-max)に合わせてコンパクトに
+// パネルの背景透過度を少し下げて、後ろのゲーム画面を見やすく調整
 const panelStyles =
-  'relative flex flex-col items-center justify-center gap-4 p-6 bg-cyan-950/30 backdrop-blur-md rounded-[1.5rem] border border-cyan-500/40 shadow-[0_0_30px_rgba(0,255,255,0.15)] w-max mx-auto'
+  'relative flex flex-col items-center justify-center gap-4 p-5 bg-black/40 backdrop-blur-md rounded-[1.5rem] border border-cyan-500/30 shadow-[0_0_30px_rgba(0,255,255,0.1)] w-max mx-auto select-none touch-none'
 
-// ボーダーを border-[3px] に太くし、角の丸みを調整してサイバー感を強調
 const directionButtonStyles = {
   base: 'w-[4.5rem] h-[4.5rem] touch-none rounded-2xl flex items-center justify-center transition-all duration-100 border-[3px]',
-  idle: 'border-cyan-400 text-cyan-400 bg-transparent shadow-[0_0_15px_rgba(0,255,255,0.3),inset_0_0_15px_rgba(0,255,255,0.2)]',
-  active: 'border-cyan-200 text-white bg-cyan-400/40 shadow-[0_0_25px_rgba(0,255,255,0.7),inset_0_0_20px_rgba(0,255,255,0.5)] scale-95',
-  inactive: 'border-cyan-900/60 text-cyan-800 bg-transparent',
+  idle: 'border-cyan-400/60 text-cyan-300 bg-cyan-950/40 shadow-[0_0_15px_rgba(0,255,255,0.2),inset_0_0_10px_rgba(0,255,255,0.1)] hover:bg-cyan-900/60',
+  active: 'border-cyan-200 text-white bg-cyan-400/50 shadow-[0_0_25px_rgba(0,255,255,0.6),inset_0_0_20px_rgba(0,255,255,0.4)] scale-95',
+  inactive: 'border-cyan-900/40 text-cyan-800 bg-transparent',
 }
 
 const bombButtonStyles = {
   base: 'w-full h-[4.5rem] touch-none rounded-2xl flex items-center justify-center transition-all duration-100 border-[3px]',
-  idle: 'border-red-500 text-red-500 bg-transparent shadow-[0_0_15px_rgba(255,0,0,0.3),inset_0_0_15px_rgba(255,0,0,0.2)]',
-  active: 'border-red-300 text-white bg-red-500/40 shadow-[0_0_25px_rgba(255,0,0,0.7),inset_0_0_20px_rgba(255,0,0,0.5)] scale-95',
-  inactive: 'border-red-900/60 text-red-800 bg-transparent',
+  idle: 'border-red-500/60 text-red-400 bg-red-950/40 shadow-[0_0_15px_rgba(255,0,0,0.2),inset_0_0_10px_rgba(255,0,0,0.1)] hover:bg-red-900/60',
+  active: 'border-red-300 text-white bg-red-500/50 shadow-[0_0_25px_rgba(255,0,0,0.6),inset_0_0_20px_rgba(255,0,0,0.4)] scale-95',
+  inactive: 'border-red-900/40 text-red-800 bg-transparent',
 }
 
 export function TouchControls({ onInput, activeControl }: TouchControlsProps) {
@@ -106,13 +104,13 @@ export function TouchControls({ onInput, activeControl }: TouchControlsProps) {
   return (
     <div className={panelStyles}>
       {/* HUD風の四隅のアクセント装飾 */}
-      <div className="absolute top-3 left-3 w-4 h-4 border-t-[3px] border-l-[3px] border-cyan-400 opacity-80 rounded-tl-sm pointer-events-none" />
-      <div className="absolute top-3 right-3 w-4 h-4 border-t-[3px] border-r-[3px] border-cyan-400 opacity-80 rounded-tr-sm pointer-events-none" />
-      <div className="absolute bottom-3 left-3 w-4 h-4 border-b-[3px] border-l-[3px] border-cyan-400 opacity-80 rounded-bl-sm pointer-events-none" />
-      <div className="absolute bottom-3 right-3 w-4 h-4 border-b-[3px] border-r-[3px] border-cyan-400 opacity-80 rounded-br-sm pointer-events-none" />
+      <div className="absolute top-2 left-2 w-3 h-3 border-t-[3px] border-l-[3px] border-cyan-400 opacity-80 rounded-tl-sm pointer-events-none" />
+      <div className="absolute top-2 right-2 w-3 h-3 border-t-[3px] border-r-[3px] border-cyan-400 opacity-80 rounded-tr-sm pointer-events-none" />
+      <div className="absolute bottom-2 left-2 w-3 h-3 border-b-[3px] border-l-[3px] border-cyan-400 opacity-80 rounded-bl-sm pointer-events-none" />
+      <div className="absolute bottom-2 right-2 w-3 h-3 border-b-[3px] border-r-[3px] border-cyan-400 opacity-80 rounded-br-sm pointer-events-none" />
 
       {/* 十字キーエリア */}
-      <div className="grid grid-cols-3 grid-rows-2 gap-3 relative z-10">
+      <div className="grid grid-cols-3 grid-rows-2 gap-2 relative z-10">
         {directions.map(({ label, direction, className, icon }) => (
           <button
             key={direction}
@@ -141,7 +139,7 @@ export function TouchControls({ onInput, activeControl }: TouchControlsProps) {
       <button
         type="button"
         aria-label="爆弾"
-        className={`${bombButtonStyles.base} ${getBombClassName()} relative z-10`}
+        className={`${bombButtonStyles.base} ${getBombClassName()} relative z-10 mt-1`}
         onPointerDown={(event) => {
           event.preventDefault()
           onInput({ type: 'place_bomb' })
