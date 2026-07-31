@@ -300,15 +300,16 @@ export class RoomsGateway implements OnGatewayConnection, OnGatewayDisconnect {
         userId,
         socketId: client.id,
       });
-      // 購読が確立できなかった socket は「居ない」扱いなので、切断と同じく猶予付きで戻す
-      rollbacks.push(() =>
-        this.unregisterRoomPresence(
+      // 購読処理中の一時的な失敗であり実際の切断ではないため、presence の登録だけを取り消し、
+      // 猶予付き自動退出(evictIfWaiting)は予約しない
+      rollbacks.push(() => {
+        this.socketPresenceService.unregister({
+          namespace: 'rooms',
           roomId,
           userId,
-          client.id,
-          /* explicit */ false,
-        ),
-      );
+          socketId: client.id,
+        });
+      });
 
       client.data.roomId = roomId;
       rollbacks.push(() => {
