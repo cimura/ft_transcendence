@@ -1,8 +1,11 @@
+// frontend/src/components/game/BombermanScene.tsx
+
 import { Canvas } from '@react-three/fiber'
 import { Edges, Grid } from '@react-three/drei'
 import { useMemo } from 'react'
 import { RockBlock } from './models/RockBlock'
-import { BreakBlock } from './models/Break_Block'
+// ★ 修正: インポートするファイル名を変更
+import { BreakRock1 } from './models/Break_Rock1'
 import {
   BoxGeometry,
   MeshBasicMaterial,
@@ -98,7 +101,6 @@ export function BombermanScene({ gameState }: BombermanSceneProps) {
         ],
       }}
     >
-      {/*変更: <color attach="background" ... /> の行を丸ごと削除しました */}
       <ambientLight intensity={SCENE_CONFIG.light.ambientIntensity} />
       <directionalLight
         position={SCENE_CONFIG.light.directionalPosition}
@@ -136,18 +138,15 @@ export function BombermanScene({ gameState }: BombermanSceneProps) {
         row.map((tile, x) => {
           if (tile === 'empty') return null
 
-          // 壊れないブロックを自作の RockBlock に置き換え
           if (tile === 'solid') {
             return (
-              // position={[x, 0.3, y]} scale={[0.5, 0.3, 0.6]}
               <group key={`${x}-${y}`} position={[x, 0.3, y]} scale={[0.5, 0.5, 0.6]}> 
                 <RockBlock />
               </group>
             )
           }
 
-          const BREAKABLE_COLORS = ['#6b9e57', '#b57b4c', '#5388b5'];
-          // XとYの座標を使った計算で、毎回同じ場所に同じ色が来るように「擬似ランダム」にする
+          const BREAKABLE_COLORS = ['#86a37a', '#964706', '#0861af'];
           const colorIndex = (x * 7 + y * 13) % 3; 
           const blockColor = BREAKABLE_COLORS[colorIndex];
 
@@ -155,15 +154,15 @@ export function BombermanScene({ gameState }: BombermanSceneProps) {
             <group 
               key={`${x}-${y}`} 
               position={[x, 0.3, y]} 
-              scale={[0.5, 0.5, 0.5]} // ★ ここで大きさを調整 (RockBlockと同じくらいが目安)
-              rotation={[ // ゴツゴツ感を出すためにランダムな向きに回転させる
+              scale={[0.5, 0.5, 0.5]} 
+              rotation={[
                 Math.sin(x * y) * Math.PI,
                 Math.cos(x + y) * Math.PI,
                 Math.sin(x - y) * Math.PI
               ]}
             >
-              {/* 作成した BreakBlock に color を渡す */}
-              <BreakBlock color={blockColor} />
+              {/* ★ 修正: BreakRock1 に変更 */}
+              <BreakRock1 color={blockColor} />
             </group>
           )
         })
