@@ -69,6 +69,15 @@ export function GameRoomPage() {
     currentRoom?.status,
   ])
 
+  // ゲーム中は画面が1ビューポートに収まるため、縦スクロールを止める
+  useEffect(() => {
+    const previousOverflow = document.body.style.overflow
+    document.body.style.overflow = 'hidden'
+    return () => {
+      document.body.style.overflow = previousOverflow
+    }
+  }, [])
+
   if (!currentRoom) {
     return null
   }
@@ -78,8 +87,8 @@ export function GameRoomPage() {
   ).length
 
   return (
-    <div className="min-h-screen bg-gray-950 text-white">
-      <header className="border-b border-gray-800 bg-gray-900">
+    <div className="fixed inset-0 flex flex-col overflow-hidden bg-gray-950 text-white">
+      <header className="shrink-0 border-b border-gray-800 bg-gray-900">
         <div className="mx-auto flex max-w-7xl flex-wrap items-center justify-between gap-4 px-4 py-4 sm:px-6 lg:px-8">
           <div>
             <p className="text-sm font-semibold text-cyan-300">ボンバーマン</p>
@@ -100,7 +109,7 @@ export function GameRoomPage() {
         </div>
       </header>
 
-      <main className="relative mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8">
+      <main className="relative min-h-0 flex-1">
         <GameCanvas roomId={currentRoom.id} />
 
         <GameResultOverlay />

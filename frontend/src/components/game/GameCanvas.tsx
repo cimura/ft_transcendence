@@ -15,12 +15,17 @@ export function GameCanvas({ roomId }: GameCanvasProps) {
   const { activeControl, handleTouchInput } = useGameInput(socketRef)
 
   return (
-    <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_180px]">
-      <div className="relative min-h-[560px] overflow-hidden rounded-lg border border-cyan-500/20 bg-gray-950">
+    <div className="flex h-full w-full">
+      <div className="relative min-w-0 flex-1 overflow-hidden bg-gray-950">
         <BombermanScene gameState={gameState} />
         <GameCountdownOverlay />
       </div>
-      <TouchControls onInput={handleTouchInput} activeControl={activeControl} />
+      <div className="flex w-[180px] shrink-0 items-center justify-center p-2">
+        <TouchControls
+          onInput={handleTouchInput}
+          activeControl={activeControl}
+        />
+      </div>
     </div>
   )
 }
