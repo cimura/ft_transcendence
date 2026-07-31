@@ -340,6 +340,8 @@ describe('RoomsGateway', () => {
         userId: 'user-1',
         socketId: 'socket-1',
       });
+      // 購読処理中の一時的な失敗は実際の切断ではないため、猶予付き自動退出を予約しない
+      expect(socketPresenceService.scheduleIfInactive).not.toHaveBeenCalled();
       expect(client.emit).toHaveBeenCalledWith('room:error', {
         message: 'Failed to join room',
       });
