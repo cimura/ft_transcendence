@@ -106,7 +106,17 @@ describe('RoomsGateway', () => {
     } as any;
   });
 
-  const createMockSocket = (id = 'socket-1'): any => ({
+  type MockSocket = {
+    id: string;
+    data: { user?: { id: string }; roomId?: string };
+    handshake: { auth: Record<string, unknown> };
+    join: jest.Mock;
+    leave: jest.Mock;
+    emit: jest.Mock;
+    disconnect: jest.Mock;
+  };
+
+  const createMockSocket = (id = 'socket-1'): MockSocket => ({
     id,
     data: {},
     handshake: { auth: {} },
