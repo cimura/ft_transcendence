@@ -65,7 +65,6 @@ describe('RoomsService', () => {
       hostId: user.id,
       maxPlayers: 2,
       status: 'waiting',
-      mode: 'online',
       participants: {
         [user.id]: {
           userId: user.id,
@@ -93,7 +92,6 @@ describe('RoomsService', () => {
       name: 'Test Room',
       gameId: 'bomberman',
       maxPlayers: 2,
-      mode: 'online',
     });
 
     expect(result.name).toBe('Test Room');
@@ -312,20 +310,6 @@ describe('RoomsService', () => {
     expect(() => service.start('room-1', user.id)).toThrow(ConflictException);
   });
 
-  it('creates a local CPU room when requested', async () => {
-    prisma.user.findUnique.mockResolvedValue(user);
-
-    const result = await service.create(user.id, {
-      name: 'CPU Practice',
-      gameId: 'bomberman',
-      maxPlayers: 4,
-      mode: 'local_cpu',
-    });
-
-    expect(result.mode).toBe('local_cpu');
-    expect(roomsState.getAllRooms()[0].mode).toBe('local_cpu');
-  });
-
   it('starts when the host requests it and all participants are ready', () => {
     setupRoom({
       maxPlayers: 2,
@@ -353,41 +337,5 @@ describe('RoomsService', () => {
 
     expect(result.status).toBe('playing');
     expect(roomsState.getRoom('room-1')?.status).toBe('playing');
-  });
-
-  it('starts a local CPU room with only the host participant', () => {
-    setupRoom({ mode: 'local_cpu', maxPlayers: 4 });
-
-    const result = service.start('room-1', user.id);
-
-    expect(result.status).toBe('playing');
-    expect(result.mode).toBe('local_cpu');
-  });
-
-  it('does not start a local CPU room after another human has joined', () => {
-    setupRoom({
-      mode: 'local_cpu',
-      maxPlayers: 4,
-      participants: {
-        [user.id]: {
-          userId: user.id,
-          username: 'Host',
-          avatarUrl: null,
-          isHost: true,
-          isReady: true,
-          joinedAt: new Date(),
-        },
-        [guest.id]: {
-          userId: guest.id,
-          username: 'Guest',
-          avatarUrl: null,
-          isHost: false,
-          isReady: true,
-          joinedAt: new Date(),
-        },
-      },
-    });
-
-    expect(() => service.start('room-1', user.id)).toThrow(ConflictException);
   });
 });

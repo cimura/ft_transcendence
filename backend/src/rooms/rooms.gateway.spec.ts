@@ -36,7 +36,6 @@ describe('RoomsGateway', () => {
     hostName: 'hostuser',
     maxPlayers: 2,
     status: 'waiting',
-    mode: 'online',
     createdAt: '2026-07-01T00:00:00.000Z',
     updatedAt: '2026-07-01T00:00:00.000Z',
     startedAt: undefined,
@@ -59,7 +58,6 @@ describe('RoomsGateway', () => {
     hostId: 'user-1',
     maxPlayers: 2,
     status: 'waiting',
-    mode: 'online',
     participants: {
       'user-1': {
         userId: 'user-1',
@@ -102,8 +100,7 @@ describe('RoomsGateway', () => {
           useValue: {
             getLobbyRooms: jest.fn().mockReturnValue([]),
             isLobbyVisible: jest.fn(
-              (room: RoomSnapshot) =>
-                room.status === 'waiting' && room.mode === 'online',
+              (room: RoomSnapshot) => room.status === 'waiting',
             ),
           },
         },
@@ -356,7 +353,6 @@ describe('RoomsGateway', () => {
         hostId: 'user-1',
         maxPlayers: 2,
         status: 'waiting',
-        mode: 'online',
         participants: {
           'user-1': {
             userId: 'user-1',
@@ -409,7 +405,6 @@ describe('RoomsGateway', () => {
         hostId: 'user-2',
         maxPlayers: 2,
         status: 'waiting',
-        mode: 'online',
         participants: {},
         messages: [],
         invitations: {},
@@ -510,7 +505,7 @@ describe('RoomsGateway', () => {
 
   describe('ドメインイベント → ブロードキャスト', () => {
     describe(`${ROOM_CREATED_EVENT} → room:created`, () => {
-      it('online かつ waiting のルームは lobby へ配信する', () => {
+      it('waiting のルームは lobby へ配信する', () => {
         const toMock = { emit: jest.fn() };
         jest.spyOn(gateway.server, 'to').mockReturnValue(toMock as any);
 
@@ -526,14 +521,14 @@ describe('RoomsGateway', () => {
         );
       });
 
-      it('ロビーに表示すべきでないルーム(local_cpu 等)は配信しない', () => {
+      it('ロビーに表示すべきでないルームは配信しない', () => {
         const toMock = { emit: jest.fn() };
         jest.spyOn(gateway.server, 'to').mockReturnValue(toMock as any);
         roomsLobbyService.isLobbyVisible.mockReturnValueOnce(false);
 
         eventEmitter.emit(
           ROOM_CREATED_EVENT,
-          new RoomCreatedEvent({ ...mockRoomSnapshot, mode: 'local_cpu' }),
+          new RoomCreatedEvent(mockRoomSnapshot),
         );
 
         expect(toMock.emit).not.toHaveBeenCalled();
@@ -541,7 +536,7 @@ describe('RoomsGateway', () => {
     });
 
     describe(`${ROOM_UPDATED_EVENT} → room:updated`, () => {
-      it('ルームとロビー双方に RoomSnapshot を emit する(online)', () => {
+      it('ルームとロビー双方に RoomSnapshot を emit する', () => {
         const toMock = { emit: jest.fn() };
         jest.spyOn(gateway.server, 'to').mockReturnValue(toMock as any);
 
@@ -556,19 +551,6 @@ describe('RoomsGateway', () => {
           'room:updated',
           mockRoomSnapshot,
         );
-      });
-
-      it('local_cpu ルームは lobby へは配信しない', () => {
-        const toMock = { emit: jest.fn() };
-        jest.spyOn(gateway.server, 'to').mockReturnValue(toMock as any);
-
-        eventEmitter.emit(
-          ROOM_UPDATED_EVENT,
-          new RoomUpdatedEvent({ ...mockRoomSnapshot, mode: 'local_cpu' }),
-        );
-
-        expect(gateway.server.to).toHaveBeenCalledWith('room-1');
-        expect(gateway.server.to).not.toHaveBeenCalledWith('lobby');
       });
     });
 
