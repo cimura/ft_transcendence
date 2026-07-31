@@ -5,6 +5,7 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
+import { EventEmitter2 } from '@nestjs/event-emitter';
 import { randomUUID } from 'crypto';
 import { PrismaService } from '../prisma.service';
 import { GamesService } from '../games/games.service';
@@ -21,6 +22,14 @@ import type {
   RoomStatusResponse,
   RoomModeResponse,
 } from '../common/types/room.type';
+import {
+  ROOM_CREATED_EVENT,
+  ROOM_UPDATED_EVENT,
+  ROOM_DELETED_EVENT,
+  RoomCreatedEvent,
+  RoomUpdatedEvent,
+  RoomDeletedEvent,
+} from './events/room-domain-events';
 
 @Injectable()
 export class RoomsService {
@@ -28,6 +37,7 @@ export class RoomsService {
     private readonly prisma: PrismaService,
     private readonly gamesService: GamesService,
     private readonly roomsState: RoomsStateService,
+    private readonly eventEmitter: EventEmitter2,
   ) {}
 
   findAll(status?: QueryRoomStatus): RoomResponse[] {
@@ -91,7 +101,9 @@ export class RoomsService {
     };
 
     this.roomsState.addRoom(newRoom);
-    return this.toRoomResponse(newRoom);
+    const response = this.toRoomResponse(newRoom);
+    this.eventEmitter.emit(ROOM_CREATED_EVENT, new RoomCreatedEvent(response));
+    return response;
   }
 
   findOne(roomId: string): RoomResponse {
@@ -111,7 +123,12 @@ export class RoomsService {
 
     // 既に参加している場合はそのまま返す
     if (room.participants[userId]) {
-      return this.toRoomResponse(room);
+      const response = this.toRoomResponse(room);
+      this.eventEmitter.emit(
+        ROOM_UPDATED_EVENT,
+        new RoomUpdatedEvent(response),
+      );
+      return response;
     }
 
     // await を伴うユーザー取得を先に行う
@@ -128,7 +145,12 @@ export class RoomsService {
 
     // await 後に同期的に再チェックしてから追加し、同時 join による定員超過を防ぐ
     if (currentRoom.participants[userId]) {
-      return this.toRoomResponse(room);
+      const response = this.toRoomResponse(room);
+      this.eventEmitter.emit(
+        ROOM_UPDATED_EVENT,
+        new RoomUpdatedEvent(response),
+      );
+      return response;
     }
     if (
       Object.keys(currentRoom.participants).length >= currentRoom.maxPlayers
@@ -146,10 +168,12 @@ export class RoomsService {
     };
 
     this.roomsState.addParticipant(roomId, participant);
-    return this.toRoomResponse(room);
+    const response = this.toRoomResponse(room);
+    this.eventEmitter.emit(ROOM_UPDATED_EVENT, new RoomUpdatedEvent(response));
+    return response;
   }
 
-  leave(roomId: string, userId: string) {
+  leave(roomId: string, userId: string): RoomResponse | null {
     const room = this.getRoomOrThrow(roomId);
 
     if (room.status !== 'WAITING') {
@@ -169,7 +193,8 @@ export class RoomsService {
     // 空室のルームは削除する。
     if (remainingParticipants.length === 0) {
       this.roomsState.deleteRoom(roomId);
-      return { deleted: true as const, roomId };
+      this.eventEmitter.emit(ROOM_DELETED_EVENT, new RoomDeletedEvent(roomId));
+      return null;
     }
 
     // ホストが退出した場合の処理
@@ -186,7 +211,9 @@ export class RoomsService {
       room.updatedAt = new Date();
     }
 
-    return this.toRoomResponse(room);
+    const response = this.toRoomResponse(room);
+    this.eventEmitter.emit(ROOM_UPDATED_EVENT, new RoomUpdatedEvent(response));
+    return response;
   }
 
   setReady(roomId: string, userId: string, isReady: boolean): RoomResponse {
@@ -211,7 +238,9 @@ export class RoomsService {
       participant.isHost ? true : isReady,
     );
 
-    return this.toRoomResponse(room);
+    const response = this.toRoomResponse(room);
+    this.eventEmitter.emit(ROOM_UPDATED_EVENT, new RoomUpdatedEvent(response));
+    return response;
   }
 
   start(roomId: string, userId: string): RoomResponse {
@@ -235,7 +264,9 @@ export class RoomsService {
     this.roomsState.updateRoomStatus(roomId, 'PLAYING');
     room.startedAt = new Date();
 
-    return this.toRoomResponse(room);
+    const response = this.toRoomResponse(room);
+    this.eventEmitter.emit(ROOM_UPDATED_EVENT, new RoomUpdatedEvent(response));
+    return response;
   }
 
   // 他のサービスからルームの存在確認等に使用
