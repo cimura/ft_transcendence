@@ -2,6 +2,7 @@ import { Canvas } from '@react-three/fiber'
 import { Edges, Grid } from '@react-three/drei'
 import { useMemo } from 'react'
 import { RockBlock } from './models/RockBlock'
+import { BreakBlock } from './models/Break_Block'
 import {
   BoxGeometry,
   MeshBasicMaterial,
@@ -11,7 +12,6 @@ import {
 } from 'three'
 import {
   BREAKABLE_COLORS,
-  getBreakableColor,
 } from '../../components/game/utils/map-colors'
 import { BOMBERMAN_GRID_SIZE } from '../../constants/game-constants'
 import type { ClientGameState } from '../../types/game'
@@ -146,21 +146,24 @@ export function BombermanScene({ gameState }: BombermanSceneProps) {
             )
           }
 
-          const color = getBreakableColor(x, y)
-          const breakableMaterial = assets.breakableMaterials.get(color)
+          const BREAKABLE_COLORS = ['#6b9e57', '#b57b4c', '#5388b5'];
+          // XとYの座標を使った計算で、毎回同じ場所に同じ色が来るように「擬似ランダム」にする
+          const colorIndex = (x * 7 + y * 13) % 3; 
+          const blockColor = BREAKABLE_COLORS[colorIndex];
 
           return (
-            <group key={`${x}-${y}`} position={[x, 0.5, y]}>
-              <mesh
-                geometry={assets.breakableBlockGeometry}
-                material={breakableMaterial}
-                rotation={[
-                  Math.sin(x * y) * Math.PI,
-                  Math.cos(x + y) * Math.PI,
-                  Math.sin(x - y) * Math.PI
-                ]}
-              >
-              </mesh>
+            <group 
+              key={`${x}-${y}`} 
+              position={[x, 0.3, y]} 
+              scale={[0.5, 0.5, 0.5]} // ★ ここで大きさを調整 (RockBlockと同じくらいが目安)
+              rotation={[ // ゴツゴツ感を出すためにランダムな向きに回転させる
+                Math.sin(x * y) * Math.PI,
+                Math.cos(x + y) * Math.PI,
+                Math.sin(x - y) * Math.PI
+              ]}
+            >
+              {/* 作成した BreakBlock に color を渡す */}
+              <BreakBlock color={blockColor} />
             </group>
           )
         })
