@@ -3,17 +3,12 @@ import { useNavigate, useParams } from 'react-router-dom'
 import { GameCanvas } from '../components/game/GameCanvas'
 import { GameResultOverlay } from '../components/game/GameResultOverlay'
 import { useRoomStore } from '../stores/roomStore'
-import { useGameStore } from '../stores/gameStore'
-import type { PlayerSnapshot } from '@ft_transcendence/shared/game-events.types'
 import { getRoom } from '../api/rooms'
-import BackgroundVideo from '../components/common/BackgroundVideo'
 
 export function GameRoomPage() {
   const { roomId } = useParams<{ roomId: string }>()
   const navigate = useNavigate()
   const { currentRoom, rooms, setCurrentRoom } = useRoomStore()
-
-  const gameState = useGameStore((state) => state.gameState)
 
   useEffect(() => {
     if (!roomId) {
@@ -81,10 +76,6 @@ export function GameRoomPage() {
   if (!currentRoom) {
     return null
   }
-
-  const livingPlayers = Object.values(gameState?.players ?? {}).filter(
-    (player: PlayerSnapshot) => player.alive
-  ).length
 
   return (
     <div className="fixed inset-0 flex flex-col overflow-hidden bg-gray-950 text-white">
