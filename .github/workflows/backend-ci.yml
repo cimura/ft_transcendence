@@ -12,7 +12,7 @@ on:
       - "backend/**"
 
 jobs:
-  lint-and-format:
+  lint-format-and-test:
     runs-on: ubuntu-latest
 
     env:
@@ -40,3 +40,6 @@ jobs:
 
       - name: Check code formatting
         run: npm --workspace=backend run format:check
+
+      - name: Run test
+        run: npm --workspace=backend run test
