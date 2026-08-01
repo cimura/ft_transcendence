@@ -336,7 +336,7 @@ export class RoomsGateway implements OnGatewayConnection, OnGatewayDisconnect {
   }
 
   private async runRollbacks(rollbacks: Array<() => void | Promise<void>>) {
-    for (const undo of rollbacks.reverse()) {
+    for (const undo of [...rollbacks].reverse()) {
       try {
         await undo();
       } catch (error) {
