@@ -47,7 +47,6 @@ describe('GameService', () => {
       hostId: 'player-1',
       maxPlayers: 2,
       status: 'waiting',
-      mode: 'online',
       participants: {
         'player-1': {
           userId: 'player-1',

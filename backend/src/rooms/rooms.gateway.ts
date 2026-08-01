@@ -117,7 +117,6 @@ export class RoomsGateway implements OnGatewayConnection, OnGatewayDisconnect {
     const isParticipant = userId ? Boolean(room?.participants[userId]) : false;
     const canJoin =
       room?.status === 'waiting' &&
-      room.mode === 'online' &&
       Object.keys(room.participants).length < room.maxPlayers;
 
     if (!userId || (!isParticipant && !canJoin)) {
@@ -309,9 +308,7 @@ export class RoomsGateway implements OnGatewayConnection, OnGatewayDisconnect {
     this.server.to(room.id).emit('room:updated', room);
     // waiting→playing などステータス変化時もロビー側で最新表示にする
     // (waiting でなくなった場合、フロント側でロビー一覧から取り除かれる)
-    if (room.mode === 'online') {
-      this.server.to(LOBBY_ROOM).emit('room:updated', room);
-    }
+    this.server.to(LOBBY_ROOM).emit('room:updated', room);
   }
 
   @OnEvent(ROOM_DELETED_EVENT)

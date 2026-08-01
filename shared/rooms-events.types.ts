@@ -1,5 +1,4 @@
 export type RoomStatus = "waiting" | "playing" | "finished";
-export type RoomMode = "online" | "local_cpu";
 export type RoomMaxPlayers = 2 | 3 | 4;
 
 export type RoomPlayer = {
@@ -18,7 +17,6 @@ export type RoomSnapshot = {
   players: RoomPlayer[];
   maxPlayers: RoomMaxPlayers;
   status: RoomStatus;
-  mode?: RoomMode;
   mapId?: string;
   createdAt: Date | string;
   updatedAt?: Date | string;

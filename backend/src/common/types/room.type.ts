@@ -1,7 +1,6 @@
 import type { GameSession } from './game.type';
 import type {
   RoomStatus,
-  RoomMode,
   RoomMaxPlayers,
 } from '@ft_transcendence/shared/rooms-events.types';
 
@@ -48,7 +47,6 @@ export interface Room {
   hostId: string;
   maxPlayers: RoomMaxPlayers;
   status: RoomStatus;
-  mode: RoomMode;
 
   participants: Record<string, RoomParticipant>;
   messages: RoomMessage[];

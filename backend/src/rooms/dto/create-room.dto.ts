@@ -28,16 +28,4 @@ export class CreateRoomDto {
   @Min(2)
   @Max(4)
   maxPlayers: 2 | 3 | 4;
-
-  @ApiPropertyOptional({
-    example: 'online',
-    default: 'online',
-    enum: ['online', 'local_cpu'],
-    description:
-      'online requires all human players to join and be ready; local_cpu starts with one host and CPU opponents',
-  })
-  @IsOptional()
-  @IsString()
-  @IsIn(['online', 'local_cpu'])
-  mode?: 'online' | 'local_cpu';
 }
