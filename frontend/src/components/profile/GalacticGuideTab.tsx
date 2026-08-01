@@ -5,12 +5,12 @@ interface GalacticGuideTabProps {
 }
 
 const ACHIEVEMENT_ICONS: Record<string, string> = {
-  planet: '◉',
-  towel: '▤',
-  thumb: '★',
-  trophy: '♛',
-  'answer-42': '42',
-  flame: '▲',
+  planet: '/achievements/planet.png',
+  towel: '/achievements/towel.png',
+  thumb: '/achievements/thumb.png',
+  trophy: '/achievements/trophy.png',
+  'answer-42': '/achievements/answer-42.png',
+  flame: '/achievements/flame.png',
 }
 
 export const GalacticGuideTab = ({ userId }: GalacticGuideTabProps) => {
@@ -124,7 +124,17 @@ export const GalacticGuideTab = ({ userId }: GalacticGuideTabProps) => {
                         : 'border-white/20 bg-black/40 text-white/30'
                     }`}
                   >
-                    {ACHIEVEMENT_ICONS[achievement.icon] ?? '?'}
+                    {ACHIEVEMENT_ICONS[achievement.icon] ? (
+                      <img
+                        src={ACHIEVEMENT_ICONS[achievement.icon]}
+                        alt=""
+                        className={`h-10 w-10 object-contain ${
+                          achievement.unlocked ? '' : 'grayscale'
+                        }`}
+                      />
+                    ) : (
+                      <span aria-hidden="true">?</span>
+                    )}
                   </div>
 
                   <div className="min-w-0 flex-1">
