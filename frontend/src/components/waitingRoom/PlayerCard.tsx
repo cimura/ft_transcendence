@@ -1,9 +1,5 @@
-<<<<<<< Updated upstream
 import type { RoomPlayer } from '@ft_transcendence/shared/rooms-events.types'
-=======
-import type { RoomPlayer } from '../../types'
 import { Avatar } from '../common/Avatar'
->>>>>>> Stashed changes
 
 interface Props {
   player: RoomPlayer
