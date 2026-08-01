@@ -1,11 +1,12 @@
 // frontend/src/components/game/BombermanScene.tsx
 
 import { Canvas } from '@react-three/fiber'
-import { Edges, Grid } from '@react-three/drei'
+import { Grid } from '@react-three/drei'
 import { useMemo } from 'react'
 import { RockBlock } from './models/RockBlock'
-// ★ 修正: インポートするファイル名を変更
 import { BreakRock1 } from './models/Break_Rock1'
+// ★ 追加: 作成したフィールドモデルをインポート
+import { Field } from './models/field'
 import {
   BoxGeometry,
   MeshBasicMaterial,
@@ -114,15 +115,8 @@ export function BombermanScene({ gameState }: BombermanSceneProps) {
       />
       <CameraRig />
 
-      <mesh position={[center, -0.6, center]}>
-        <boxGeometry args={[BOMBERMAN_GRID_SIZE + 1.5, 1, BOMBERMAN_GRID_SIZE + 1.5]} />
-        <meshStandardMaterial 
-          color="#2a2a3a" 
-          roughness={0.9} 
-          metalness={0.1}
-        />
-        <Edges color="#00ffff" opacity={0.3} transparent />
-      </mesh>
+      {/* 元々の mesh と boxGeometry による土台を削除し、Field コンポーネントに置き換え */}
+      <Field position={[center, -4.2, center]} scale={[2.6, 4, 2.3]} />
 
       <Grid
         args={[BOMBERMAN_GRID_SIZE, BOMBERMAN_GRID_SIZE]}
@@ -161,7 +155,6 @@ export function BombermanScene({ gameState }: BombermanSceneProps) {
                 Math.sin(x - y) * Math.PI
               ]}
             >
-              {/* ★ 修正: BreakRock1 に変更 */}
               <BreakRock1 color={blockColor} />
             </group>
           )
