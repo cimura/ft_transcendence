@@ -12,6 +12,8 @@ export const useGalacticGuide = (userId: string | undefined) => {
     if (!userId) {
       // eslint-disable-next-line react-hooks/set-state-in-effect
       setGuide(null)
+      setError(null)
+      setLoading(false)
       return
     }
 
