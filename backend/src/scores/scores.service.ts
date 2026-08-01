@@ -8,8 +8,11 @@ import type { PlayerRanking } from '@ft_transcendence/shared/game-events.types';
 import { UserStatsDto } from './dto/user-stats.dto';
 import {
   calculatePlayerMetrics,
+  calculateTravellerProgression,
   findCompletedAchievementIds,
 } from './achievements/progression';
+import { ACHIEVEMENT_DEFINITIONS } from './achievements/achievements-definitions';
+import { GalacticGuideResponseDto } from './dto/galactic-guide.dto';
 
 type RankingAggregateRow = {
   userId: string;
@@ -248,6 +251,76 @@ export class ScoresService {
     }));
 
     return { data };
+  }
+
+  async getGalacticGuide(userId: string): Promise<GalacticGuideResponseDto> {
+    const user = await this.prisma.user.findUnique({
+      where: { id: userId },
+      select: { id: true },
+    });
+
+    if (!user) {
+      throw new NotFoundException('User not found');
+    }
+
+    const [matches, unlockedRecords] = await this.prisma.$transaction([
+      this.prisma.matchParticipant.findMany({
+        where: { userId },
+        select: {
+          result: true,
+          kills: true,
+        },
+        orderBy: [
+          {
+            match: {
+              finishedAt: 'asc',
+            },
+          },
+          {
+            matchId: 'asc',
+          },
+        ],
+      }),
+      this.prisma.userAchievement.findMany({
+        where: { userId },
+        select: {
+          achievementId: true,
+          unlockedAt: true,
+        },
+      }),
+    ]);
+    const metrics = calculatePlayerMetrics(matches);
+    const progression = calculateTravellerProgression(matches);
+
+    const unlockedById = new Map(
+      unlockedRecords.map((record) => [
+        record.achievementId,
+        record.unlockedAt,
+      ]),
+    );
+    const achievements = ACHIEVEMENT_DEFINITIONS.map((definition) => {
+      const unlockedAt = unlockedById.get(definition.id);
+
+      return {
+        id: definition.id,
+        name: definition.name,
+        description: definition.description,
+        icon: definition.icon,
+        category: definition.category,
+        progress: metrics[definition.metric],
+        target: definition.target,
+        unlocked: unlockedAt !== undefined,
+        unlockedAt: unlockedAt?.toISOString() ?? null,
+      };
+    });
+
+    return {
+      progression,
+      unlockedCount: achievements.filter((achievement) => achievement.unlocked)
+        .length,
+      totalCount: achievements.length,
+      achievements,
+    };
   }
 
   private async unlockCompletedAchievements(

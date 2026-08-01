@@ -3,7 +3,6 @@ import { NotFoundException } from '@nestjs/common';
 import { ScoresService } from './scores.service';
 import { PrismaService } from '../prisma.service';
 import { MatchResult } from '../generated/prisma/enums';
-import { IsDataURI } from 'class-validator';
 
 describe('ScoresService', () => {
   let service: ScoresService;
@@ -22,6 +21,7 @@ describe('ScoresService', () => {
     };
     userAchievement: {
       createMany: jest.Mock;
+      findMany: jest.Mock;
     };
   };
 
@@ -41,6 +41,7 @@ describe('ScoresService', () => {
       },
       userAchievement: {
         createMany: jest.fn(),
+        findMany: jest.fn(),
       },
     };
 
