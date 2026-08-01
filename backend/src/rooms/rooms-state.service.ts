@@ -4,8 +4,8 @@ import type {
   RoomInvitation,
   RoomMessage,
   RoomParticipant,
-  RoomStatus,
 } from '../common/types/room.type';
+import type { RoomStatus } from '@ft_transcendence/shared/rooms-events.types';
 
 export const MAX_MESSAGES_PER_ROOM = 50;
 

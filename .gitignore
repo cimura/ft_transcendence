@@ -30,6 +30,9 @@ AGENTS.md
 # Repomix settings
 repomix.config.json
 
+# Claude Code Settings
+CLAUDE.md
+
 # TypeScript generated Prisma files
 backend/prisma.config.js
 backend/prisma.config.js.map

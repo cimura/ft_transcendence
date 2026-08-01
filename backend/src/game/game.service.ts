@@ -47,7 +47,6 @@ export class GameService {
   handleGameJoin(
     roomId: string,
     playerId: string,
-    clientId: string,
   ): Parameters<ServerToClientEvents['game:init']>[0] {
     if (!this.checkRoomEntryPermission(roomId, playerId)) {
       throw new WsException('ルームに参加できません。');
@@ -59,7 +58,7 @@ export class GameService {
     const username = roomState.participants[playerId].username;
 
     if (session.phase === 'waiting') {
-      const result = addPlayerToRoom(session, playerId, clientId, username);
+      const result = addPlayerToRoom(session, playerId, username);
       if (!result.success) {
         throw new WsException('Cannot join the room');
       }
@@ -70,8 +69,9 @@ export class GameService {
       this.logger.log(
         `Player joined { roomId: '${session.roomId}', playerId: '${playerId}' }`,
       );
-    } else if (session.phase === 'countdown' || session.phase === 'playing') {
-      const result = reconnectPlayerToRoom(session, playerId, clientId);
+    } else if (session.players[playerId]?.isDisconnected) {
+      // countdown/playing 中の切断からの復帰
+      const result = reconnectPlayerToRoom(session, playerId);
       if (!result.success) {
         throw new WsException('Cannot join the room');
       }
@@ -81,6 +81,12 @@ export class GameService {
       });
       this.logger.debug(
         `Player reconnected { roomId: '${session.roomId}', playerId: '${playerId}' }`,
+      );
+    } else {
+      // 接続中プレイヤーの追加ソケット (React StrictMode の二重effect実行、
+      // 別タブなど)。セッション状態は変わらないため何もブロードキャストしない。
+      this.logger.debug(
+        `Additional socket for already-connected player { roomId: '${session.roomId}', playerId: '${playerId}' }`,
       );
     }
 
@@ -138,19 +144,12 @@ export class GameService {
    * 明示的なゲーム離脱（ホームへ戻るボタン等）。リタイア扱いとして
    * 切断猶予を与えず即座に死亡させる。
    */
-  handleGameRetire(roomId: string, playerId: string, clientId: string) {
+  handleGameRetire(roomId: string, playerId: string) {
     const session = this.roomsState.getRoom(roomId)?.gameSession;
     if (!session || !session.players[playerId]) return;
 
     // countdown / playing 以外はリタイアの概念がない
     if (session.phase !== 'countdown' && session.phase !== 'playing') return;
-
-    if (session.playerConnections[playerId].clientId !== clientId) {
-      this.logger.debug(
-        `Ignored retire from different socket { roomId: '${session.roomId}', playerId: '${playerId}' }`,
-      );
-      return;
-    }
 
     const result = retirePlayerFromRoom(session, playerId, Date.now());
     if (!result.success) return;
@@ -166,16 +165,9 @@ export class GameService {
     });
   }
 
-  handleGameLeave(roomId: string, playerId: string, clientId: string) {
+  handleGameLeave(roomId: string, playerId: string) {
     const session = this.roomsState.getRoom(roomId)?.gameSession;
     if (!session || !session.players[playerId]) return;
-
-    if (session.playerConnections[playerId].clientId !== clientId) {
-      this.logger.debug(
-        `Ignored disconnect from different socket { roomId: '${session.roomId}', playerId: '${playerId}' }`,
-      );
-      return;
-    }
 
     if (session.phase === 'waiting' || session.phase === 'ended') {
       const result = removePlayerFromRoom(session, playerId);
@@ -247,16 +239,22 @@ export class GameService {
     if (!roomState.participants[playerId]) return false;
 
     const session = roomState.gameSession;
-    if (!session) return true; // まだセッションが作られていない(WAITING)なら参加可能
+    if (!session) return true; // まだセッションが作られていない(waiting)なら参加可能
 
     if (session.phase === 'ended') return false;
 
     const player = session.players[playerId];
     if (session.phase === 'waiting') return true;
 
+    // countdown/playing: セッション開始時にいなかった人は入れない
     if (!player) return false;
-    if (!player.isDisconnected) return false;
 
+    // 接続中プレイヤーの追加ソケット (StrictMode の二重接続や別タブ) は許可する。
+    // ソケットの多重ログイン防止はしない — 誰がどのソケットを持つかは
+    // SocketPresenceService の責務であり、ここでは関知しない。
+    if (!player.isDisconnected) return true;
+
+    // 切断中は猶予時間内の再接続のみ許可する
     const connection = session.playerConnections[playerId];
     if (!connection) return false;
 

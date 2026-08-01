@@ -81,11 +81,7 @@ export class GameGateway
 
     let initData: Parameters<ServerToClientEvents['game:init']>[0];
     try {
-      initData = this.gameService.handleGameJoin(
-        data.roomId,
-        user.id,
-        client.id,
-      );
+      initData = this.gameService.handleGameJoin(data.roomId, user.id);
     } catch (error) {
       if (previousRoomId !== data.roomId) {
         try {
@@ -103,7 +99,7 @@ export class GameGateway
     }
 
     if (previousRoomId && previousRoomId !== data.roomId) {
-      this.cleanupPlayerConnection(previousRoomId, user.id, client.id);
+      this.cleanupPlayerConnection(previousRoomId, user.id, client.id, 'leave');
       try {
         await client.leave(previousRoomId);
       } catch (error) {
@@ -131,43 +127,6 @@ export class GameGateway
     this.gameService.handleGameStart(data.roomId);
   }
 
-  private async rollbackRoomTransition(
-    client: GameSocket,
-    previousRoomId: string,
-    nextRoomId: string,
-    userId: string,
-    clientId: string,
-  ) {
-    // 新しいゲーム状態とSocket.IO roomへの参加を取り消す。
-    this.cleanupPlayerConnection(nextRoomId, userId, clientId);
-    try {
-      await client.leave(nextRoomId);
-    } catch (error) {
-      this.logger.error(
-        `Failed to rollback new socket room { roomId: '${nextRoomId}', userId: '${userId}' }`,
-        error instanceof Error ? error.stack : String(error),
-      );
-    }
-
-    // 旧ルームのゲーム状態とpresenceを復元する。旧roomからのleaveに
-    // 失敗しているため、Socket.IO上では旧roomに残ったままになる。
-    try {
-      this.gameService.handleGameJoin(previousRoomId, userId, clientId);
-      this.socketPresenceService.register({
-        namespace: 'game',
-        roomId: previousRoomId,
-        userId,
-        socketId: clientId,
-      });
-      client.data.roomId = previousRoomId;
-    } catch (error) {
-      this.logger.error(
-        `Failed to restore previous game room { roomId: '${previousRoomId}', userId: '${userId}' }`,
-        error instanceof Error ? error.stack : String(error),
-      );
-    }
-  }
-
   @SubscribeMessage('game:leave')
   async handleLeave(
     @ConnectedSocket()
@@ -178,12 +137,15 @@ export class GameGateway
 
     // 明示的な離脱はリタイア扱い。切断猶予を待たずに即座に死亡させる。
     // 後続のawaitでtickが進んでしまう前に、同期的に処理しておく。
-    this.gameService.handleGameRetire(roomId, client.data.user.id, client.id);
+    this.cleanupPlayerConnection(
+      roomId,
+      client.data.user.id,
+      client.id,
+      'retire',
+    );
 
     await client.leave(roomId);
     client.data.roomId = undefined;
-
-    this.cleanupPlayerConnection(roomId, client.data.user.id, client.id);
   }
 
   @SubscribeMessage('player:input')
@@ -221,13 +183,51 @@ export class GameGateway
     const userId = client.data.user?.id;
     if (!roomId || !userId) return;
 
-    this.cleanupPlayerConnection(roomId, userId, client.id);
+    this.cleanupPlayerConnection(roomId, userId, client.id, 'leave');
+  }
+
+  private async rollbackRoomTransition(
+    client: GameSocket,
+    previousRoomId: string,
+    nextRoomId: string,
+    userId: string,
+    clientId: string,
+  ) {
+    // 新しいゲーム状態とSocket.IO roomへの参加を取り消す。
+    this.cleanupPlayerConnection(nextRoomId, userId, clientId, 'leave');
+    try {
+      await client.leave(nextRoomId);
+    } catch (error) {
+      this.logger.error(
+        `Failed to rollback new socket room { roomId: '${nextRoomId}', userId: '${userId}' }`,
+        error instanceof Error ? error.stack : String(error),
+      );
+    }
+
+    // 旧ルームのゲーム状態とpresenceを復元する。旧roomからのleaveに
+    // 失敗しているため、Socket.IO上では旧roomに残ったままになる。
+    try {
+      this.gameService.handleGameJoin(previousRoomId, userId);
+      this.socketPresenceService.register({
+        namespace: 'game',
+        roomId: previousRoomId,
+        userId,
+        socketId: clientId,
+      });
+      client.data.roomId = previousRoomId;
+    } catch (error) {
+      this.logger.error(
+        `Failed to restore previous game room { roomId: '${previousRoomId}', userId: '${userId}' }`,
+        error instanceof Error ? error.stack : String(error),
+      );
+    }
   }
 
   private cleanupPlayerConnection(
     roomId: string,
     userId: string,
     clientId: string,
+    mode: 'leave' | 'retire',
   ): void {
     const remaining = this.socketPresenceService.unregister({
       namespace: 'game',
@@ -235,9 +235,12 @@ export class GameGateway
       userId,
       socketId: clientId,
     });
+    if (remaining !== 0) return;
 
-    if (remaining === 0) {
-      this.gameService.handleGameLeave(roomId, userId, clientId);
+    if (mode === 'retire') {
+      this.gameService.handleGameRetire(roomId, userId);
+    } else if (mode == 'leave') {
+      this.gameService.handleGameLeave(roomId, userId);
     }
   }
 }

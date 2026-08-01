@@ -1,7 +1,7 @@
-import type { GameRoom } from '../../types/room'
+import type { RoomSnapshot } from '@ft_transcendence/shared/rooms-events.types'
 
 interface Props {
-  room: GameRoom
+  room: RoomSnapshot
   onJoin: (roomId: string) => void
 }
 
