@@ -8,7 +8,7 @@ import { BOMBERMAN_GRID_SIZE, MAP_PATTERN } from './game-constants';
  * 同じマップを得られる。待機中のプレビュー描画もこの関数を直接呼ぶ。
  */
 
-export const START_POSITIONS: WorldPosition[] = [
+export const START_POSITIONS: ReadonlyArray<Readonly<WorldPosition>> = [
   { x: 0, z: 0 },
   { x: BOMBERMAN_GRID_SIZE - 1, z: BOMBERMAN_GRID_SIZE - 1 },
   { x: BOMBERMAN_GRID_SIZE - 1, z: 0 },
