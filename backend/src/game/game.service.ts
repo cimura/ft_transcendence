@@ -23,6 +23,7 @@ import {
   removePlayerFromRoom,
   reconnectPlayerToRoom,
   disconnectPlayerFromRoom,
+  retirePlayerFromRoom,
 } from './logic/session/player.logic';
 import { tryPlaceBomb } from './logic/mechanics/bomb.logic';
 import { ScoresService } from '../scores/scores.service';
@@ -137,6 +138,31 @@ export class GameService {
     } catch (error) {
       this.handleGameError(roomId, error, 'ゲームの開始に失敗しました。');
     }
+  }
+
+  /**
+   * 明示的なゲーム離脱（ホームへ戻るボタン等）。リタイア扱いとして
+   * 切断猶予を与えず即座に死亡させる。
+   */
+  handleGameRetire(roomId: string, playerId: string) {
+    const session = this.roomsState.getRoom(roomId)?.gameSession;
+    if (!session || !session.players[playerId]) return;
+
+    // countdown / playing 以外はリタイアの概念がない
+    if (session.phase !== 'countdown' && session.phase !== 'playing') return;
+
+    const result = retirePlayerFromRoom(session, playerId, Date.now());
+    if (!result.success) return;
+
+    this.logger.log(
+      `Player retired { roomId: '${session.roomId}', playerId: '${playerId}' }`,
+    );
+
+    // countdown 中はtickループが走っていないため、明示的に周知する
+    this.server.to(roomId).emit('game:state', {
+      players: session.players,
+      bombs: session.bombs,
+    });
   }
 
   handleGameLeave(roomId: string, playerId: string) {
