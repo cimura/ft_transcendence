@@ -8,7 +8,7 @@ import { useRoomStore } from '../stores/roomStore'
 import { useGameStore } from '../stores/gameStore'
 import { useGameSocket } from '../hooks/useGameSocket'
 import type { PlayerSnapshot } from '@ft_transcendence/shared/game-events.types'
-import type { GameRoom } from '../types/room'
+import type { RoomSnapshot } from '@ft_transcendence/shared/rooms-events.types'
 import { getRoom } from '../api/rooms'
 
 export function GameRoomPage() {
@@ -78,7 +78,7 @@ export function GameRoomPage() {
 }
 
 type GameRoomViewProps = {
-  room: GameRoom
+  room: RoomSnapshot
 }
 
 function GameRoomView({ room }: GameRoomViewProps) {
