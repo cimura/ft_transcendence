@@ -11,6 +11,9 @@ on:
     paths:
       - "backend/**"
 
+permissions:
+  contents: read
+
 jobs:
   lint-format-and-test:
     runs-on: ubuntu-latest
