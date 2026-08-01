@@ -7,8 +7,8 @@ import { RoomsChatService } from './rooms-chat.service';
 import { RoomsLobbyService } from './rooms-lobby.service';
 import { RoomsService } from './rooms.service';
 import { RoomsStateService } from './rooms-state.service';
-import type { RoomResponse } from '../common/types/room.type';
 import type { Room } from '../common/types/room.type';
+import type { RoomSnapshot } from '@ft_transcendence/shared/rooms-events.types';
 import {
   ROOM_CREATED_EVENT,
   ROOM_UPDATED_EVENT,
@@ -28,53 +28,28 @@ describe('RoomsGateway', () => {
   let roomsState: jest.Mocked<RoomsStateService>;
   let eventEmitter: EventEmitter2;
 
-  const mockRoomResponse: RoomResponse = {
+  const mockRoomSnapshot: RoomSnapshot = {
     id: 'room-1',
-    gameId: 'game-1',
     name: 'test room',
     hostId: 'user-1',
     hostName: 'hostuser',
     maxPlayers: 2,
     status: 'waiting',
     mode: 'online',
-    createdAt: new Date('2026-07-01T00:00:00.000Z'),
-    updatedAt: new Date('2026-07-01T00:00:00.000Z'),
-    startedAt: null,
-    finishedAt: null,
+    createdAt: '2026-07-01T00:00:00.000Z',
+    updatedAt: '2026-07-01T00:00:00.000Z',
+    startedAt: undefined,
+    finishedAt: undefined,
     players: [
       {
         userId: 'user-1',
         username: 'hostuser',
-        avatarUrl: null,
+        avatarUrl: undefined,
         isReady: true,
         isHost: true,
-        joinedAt: new Date('2026-07-01T00:00:00.000Z'),
       },
     ],
   };
-
-  const toSnapshot = (room: RoomResponse) => ({
-    id: room.id,
-    gameId: room.gameId,
-    name: room.name,
-    hostId: room.hostId,
-    hostName: room.hostName,
-    players: room.players.map((p) => ({
-      userId: p.userId,
-      username: p.username,
-      avatarUrl: p.avatarUrl,
-      isReady: p.isReady,
-      isHost: p.isHost,
-      joinedAt: p.joinedAt.toISOString(),
-    })),
-    maxPlayers: room.maxPlayers,
-    status: room.status,
-    mode: room.mode,
-    createdAt: room.createdAt.toISOString(),
-    updatedAt: room.updatedAt.toISOString(),
-    startedAt: room.startedAt?.toISOString(),
-    finishedAt: room.finishedAt?.toISOString(),
-  });
 
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
@@ -102,10 +77,9 @@ describe('RoomsGateway', () => {
           useValue: {
             getLobbyRooms: jest.fn().mockReturnValue([]),
             isLobbyVisible: jest.fn(
-              (room: RoomResponse) =>
+              (room: RoomSnapshot) =>
                 room.status === 'waiting' && room.mode === 'online',
             ),
-            toSnapshot: jest.fn((room: RoomResponse) => toSnapshot(room)),
           },
         },
         {
@@ -275,8 +249,8 @@ describe('RoomsGateway', () => {
         name: 'test room',
         hostId: 'user-1',
         maxPlayers: 2,
-        status: 'WAITING',
-        mode: 'ONLINE',
+        status: 'waiting',
+        mode: 'online',
         participants: {
           'user-1': {
             userId: 'user-1',
@@ -293,7 +267,7 @@ describe('RoomsGateway', () => {
         updatedAt: new Date('2026-07-01T00:00:00.000Z'),
       };
       roomsState.getRoom.mockReturnValue(remainingRoom);
-      roomsService.leave.mockReturnValue(mockRoomResponse);
+      roomsService.leave.mockReturnValue(mockRoomSnapshot);
 
       gateway.handleDisconnect(client);
       void getScheduledCallback()();
@@ -328,8 +302,8 @@ describe('RoomsGateway', () => {
         name: 'test room',
         hostId: 'user-2',
         maxPlayers: 2,
-        status: 'WAITING',
-        mode: 'ONLINE',
+        status: 'waiting',
+        mode: 'online',
         participants: {},
         messages: [],
         invitations: {},
@@ -348,13 +322,13 @@ describe('RoomsGateway', () => {
   describe('lobby:join', () => {
     it('lobby ルームに参加し、現在のロビー一覧を送信する', () => {
       const client = createMockSocket();
-      roomsLobbyService.getLobbyRooms.mockReturnValue([mockRoomResponse]);
+      roomsLobbyService.getLobbyRooms.mockReturnValue([mockRoomSnapshot]);
 
       gateway.handleLobbyJoin(client);
 
       expect(client.join).toHaveBeenCalledWith('lobby');
       expect(client.emit).toHaveBeenCalledWith('lobby:rooms', [
-        toSnapshot(mockRoomResponse),
+        mockRoomSnapshot,
       ]);
     });
   });
@@ -436,13 +410,13 @@ describe('RoomsGateway', () => {
 
         eventEmitter.emit(
           ROOM_CREATED_EVENT,
-          new RoomCreatedEvent(mockRoomResponse),
+          new RoomCreatedEvent(mockRoomSnapshot),
         );
 
         expect(gateway.server.to).toHaveBeenCalledWith('lobby');
         expect(toMock.emit).toHaveBeenCalledWith(
           'room:created',
-          toSnapshot(mockRoomResponse),
+          mockRoomSnapshot,
         );
       });
 
@@ -453,7 +427,7 @@ describe('RoomsGateway', () => {
 
         eventEmitter.emit(
           ROOM_CREATED_EVENT,
-          new RoomCreatedEvent({ ...mockRoomResponse, mode: 'local_cpu' }),
+          new RoomCreatedEvent({ ...mockRoomSnapshot, mode: 'local_cpu' }),
         );
 
         expect(toMock.emit).not.toHaveBeenCalled();
@@ -461,20 +435,20 @@ describe('RoomsGateway', () => {
     });
 
     describe(`${ROOM_UPDATED_EVENT} → room:updated`, () => {
-      it('RoomResponseからRoomSnapshotを生成し、ルームとロビー双方にemitする(online)', () => {
+      it('ルームとロビー双方に RoomSnapshot を emit する(online)', () => {
         const toMock = { emit: jest.fn() };
         jest.spyOn(gateway.server, 'to').mockReturnValue(toMock as any);
 
         eventEmitter.emit(
           ROOM_UPDATED_EVENT,
-          new RoomUpdatedEvent(mockRoomResponse),
+          new RoomUpdatedEvent(mockRoomSnapshot),
         );
 
         expect(gateway.server.to).toHaveBeenCalledWith('room-1');
         expect(gateway.server.to).toHaveBeenCalledWith('lobby');
         expect(toMock.emit).toHaveBeenCalledWith(
           'room:updated',
-          toSnapshot(mockRoomResponse),
+          mockRoomSnapshot,
         );
       });
 
@@ -484,7 +458,7 @@ describe('RoomsGateway', () => {
 
         eventEmitter.emit(
           ROOM_UPDATED_EVENT,
-          new RoomUpdatedEvent({ ...mockRoomResponse, mode: 'local_cpu' }),
+          new RoomUpdatedEvent({ ...mockRoomSnapshot, mode: 'local_cpu' }),
         );
 
         expect(gateway.server.to).toHaveBeenCalledWith('room-1');

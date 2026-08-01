@@ -1,4 +1,4 @@
-import type { RoomPlayer } from '../../types'
+import type { RoomPlayer } from '@ft_transcendence/shared/rooms-events.types'
 
 interface Props {
   player: RoomPlayer

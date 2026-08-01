@@ -214,7 +214,7 @@ export class GameService {
     if (!roomState.participants[playerId]) return false;
 
     const session = roomState.gameSession;
-    if (!session) return true; // まだセッションが作られていない(WAITING)なら参加可能
+    if (!session) return true; // まだセッションが作られていない(waiting)なら参加可能
 
     if (session.phase === 'ended') return false;
 

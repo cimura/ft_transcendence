@@ -35,7 +35,7 @@ export class RoomsChatService {
       throw new ForbiddenException('このルームの参加者ではありません。');
     }
 
-    if (room.status !== 'WAITING') {
+    if (room.status !== 'waiting') {
       throw new ConflictException(
         'メッセージは待機中のルームでのみ送信できます。',
       );

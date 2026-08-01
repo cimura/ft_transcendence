@@ -136,10 +136,7 @@ export class RoomsGateway implements OnGatewayConnection, OnGatewayDisconnect {
   handleLobbyJoin(@ConnectedSocket() client: RoomsSocket) {
     void client.join(LOBBY_ROOM);
     const rooms = this.roomsLobbyService.getLobbyRooms();
-    client.emit(
-      'lobby:rooms',
-      rooms.map((room) => this.roomsLobbyService.toSnapshot(room)),
-    );
+    client.emit('lobby:rooms', rooms);
   }
 
   @SubscribeMessage('chat:join')
@@ -217,20 +214,16 @@ export class RoomsGateway implements OnGatewayConnection, OnGatewayDisconnect {
   @OnEvent(ROOM_CREATED_EVENT)
   private handleRoomCreatedEvent({ room }: RoomCreatedEvent) {
     if (!this.roomsLobbyService.isLobbyVisible(room)) return;
-    this.server
-      .to(LOBBY_ROOM)
-      .emit('room:created', this.roomsLobbyService.toSnapshot(room));
+    this.server.to(LOBBY_ROOM).emit('room:created', room);
   }
 
   @OnEvent(ROOM_UPDATED_EVENT)
   private handleRoomUpdatedEvent({ room }: RoomUpdatedEvent) {
-    const snapshot = this.roomsLobbyService.toSnapshot(room);
-
-    this.server.to(room.id).emit('room:updated', snapshot);
-    // WAITING→PLAYING などステータス変化時もロビー側で最新表示にする
+    this.server.to(room.id).emit('room:updated', room);
+    // waiting→playing などステータス変化時もロビー側で最新表示にする
     // (waiting でなくなった場合、フロント側でロビー一覧から取り除かれる)
     if (room.mode === 'online') {
-      this.server.to(LOBBY_ROOM).emit('room:updated', snapshot);
+      this.server.to(LOBBY_ROOM).emit('room:updated', room);
     }
   }
 
@@ -295,7 +288,7 @@ export class RoomsGateway implements OnGatewayConnection, OnGatewayDisconnect {
   // ホストが戻らないまま部屋だけが残り続ける「ゴーストルーム」を防ぐ役割を持つ。
   private evictParticipant(roomId: string, userId: string) {
     const room = this.roomsState.getRoom(roomId);
-    if (!room || room.status !== 'WAITING' || !room.participants[userId]) {
+    if (!room || room.status !== 'waiting' || !room.participants[userId]) {
       return;
     }
 
