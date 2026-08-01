@@ -1,7 +1,7 @@
 import { useLayoutEffect } from 'react'
 import { useThree } from '@react-three/fiber'
 import { Box3, PerspectiveCamera, Vector3 } from 'three'
-import { BOMBERMAN_GRID_SIZE } from '../../constants/game-constants'
+import { BOMBERMAN_GRID_SIZE } from '../../../../shared/game-constants'
 import { SCENE_CONFIG } from './constants/scene-constants'
 import { computeFitDistance } from './utils/fit-camera'
 
