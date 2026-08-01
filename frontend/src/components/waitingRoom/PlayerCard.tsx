@@ -1,4 +1,9 @@
+<<<<<<< Updated upstream
 import type { RoomPlayer } from '@ft_transcendence/shared/rooms-events.types'
+=======
+import type { RoomPlayer } from '../../types'
+import { Avatar } from '../common/Avatar'
+>>>>>>> Stashed changes
 
 interface Props {
   player: RoomPlayer
@@ -17,15 +22,18 @@ export function PlayerCard({ player }: Props) {
       <div className="flex items-center gap-4">
         {/* アバター */}
         <div className="relative">
-          <div
-            className={`flex h-12 w-12 items-center justify-center rounded-full border-2 font-bold text-lg shadow-[0_0_10px_rgba(0,255,255,0.2)] ${
-              player.isReady
-                ? 'bg-cyan-700/80 border-cyan-300 text-white'
-                : 'bg-cyan-950 border-cyan-700 text-cyan-300'
+          <Avatar
+            avatarUrl={player.avatarUrl}
+            username={player.username}
+            className={`h-12 w-12 rounded-full border-2 shadow-[0_0_10px_rgba(0,255,255,0.2)] ${
+              player.isReady ? 'border-cyan-300' : 'border-cyan-700'
             }`}
-          >
-            {player.username.charAt(0).toUpperCase()}
-          </div>
+            fallbackClassName={`font-bold text-lg ${
+              player.isReady
+                ? 'bg-cyan-700/80 text-white'
+                : 'bg-cyan-950 text-cyan-300'
+            }`}
+          />
           {/* 装飾のリング */}
           {player.isReady && (
             <div className="absolute -inset-1 rounded-full border border-cyan-400/30 animate-[spin_4s_linear_infinite]" />

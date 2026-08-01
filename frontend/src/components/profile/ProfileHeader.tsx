@@ -1,4 +1,5 @@
 import type { UserProfile } from '../../types/user'
+import { Avatar } from '../common/Avatar'
 
 interface ProfileHeaderProps {
   profile: UserProfile
@@ -25,19 +26,12 @@ export const ProfileHeader = ({
           {/* アバターの後光エフェクト */}
           <div className="absolute inset-0 bg-cyan-500 rounded-full blur-md opacity-30 group-hover:opacity-60 transition-opacity duration-300" />
 
-          {profile.avatarUrl ? (
-            <img
-              src={profile.avatarUrl}
-              alt={profile.username}
-              className="relative w-28 h-28 rounded-full border-2 border-cyan-400 object-cover shadow-[0_0_15px_rgba(0,255,255,0.2)]"
-            />
-          ) : (
-            <div className="relative w-28 h-28 rounded-full bg-gradient-to-br from-cyan-900 to-blue-900 flex items-center justify-center border-2 border-cyan-400 shadow-[0_0_15px_rgba(0,255,255,0.2)]">
-              <span className="text-5xl font-bold text-cyan-100 drop-shadow-[0_0_8px_rgba(0,255,255,0.8)]">
-                {profile.username.charAt(0).toUpperCase()}
-              </span>
-            </div>
-          )}
+          <Avatar
+            avatarUrl={profile.avatarUrl}
+            username={profile.username}
+            className="relative w-28 h-28 rounded-full border-2 border-cyan-400 shadow-[0_0_15px_rgba(0,255,255,0.2)]"
+            fallbackClassName="bg-gradient-to-br from-cyan-900 to-blue-900 text-5xl font-bold text-cyan-100 drop-shadow-[0_0_8px_rgba(0,255,255,0.8)]"
+          />
         </div>
 
         {/* ユーザー情報 */}

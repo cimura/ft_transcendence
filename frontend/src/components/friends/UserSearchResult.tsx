@@ -1,4 +1,5 @@
 import type { SearchResult } from '../../types/friend'
+import { Avatar } from '../common/Avatar'
 
 interface UserSearchResultProps {
   user: SearchResult
@@ -47,9 +48,12 @@ export function UserSearchResult({
         {/* ユーザー情報 */}
         <div className="flex items-center gap-4">
           {/* アバター */}
-          <div className="w-12 h-12 rounded-full bg-gradient-to-br from-cyan-500 to-blue-500 flex items-center justify-center text-white font-bold text-xl">
-            {user.username[0].toUpperCase()}
-          </div>
+          <Avatar
+            avatarUrl={user.avatarUrl}
+            username={user.username}
+            className="w-12 h-12 rounded-full"
+            fallbackClassName="bg-gradient-to-br from-cyan-500 to-blue-500 text-white font-bold text-xl"
+          />
 
           {/* ユーザー名 */}
           <div>
