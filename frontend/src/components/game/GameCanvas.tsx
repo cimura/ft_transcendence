@@ -17,7 +17,6 @@ export function GameCanvas({ roomId }: GameCanvasProps) {
   return (
     // 全体をrelativeにして、子要素を重ね合わせられるようにする
     <div className="relative w-full h-full overflow-hidden bg-transparent">
-      
       {/* 3Dシーン（最背面・全画面） */}
       <div className="absolute inset-0 z-0">
         <BombermanScene gameState={gameState} />
@@ -34,7 +33,6 @@ export function GameCanvas({ roomId }: GameCanvasProps) {
           />
         </div>
       </div>
-      
     </div>
   )
 }

@@ -14,7 +14,7 @@ type GLTFResult = GLTF & {
 export function Field(props: ThreeElements['group']) {
   // ★ materials を削除し、 as unknown as GLTFResult に変更
   const { nodes } = useGLTF('/field.glb') as unknown as GLTFResult
-  
+
   return (
     <group {...props} dispose={null}>
       {/* ★ nodes.Plane.material を使うとエラーになる場合は一旦削除し、標準マテリアルを適用します（後述の色問題への暫定対応） */}

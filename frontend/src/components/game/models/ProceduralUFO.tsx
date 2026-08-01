@@ -8,17 +8,16 @@ type ProceduralUFOProps = ThreeElements['group'] & {
   playerColor?: string
 }
 
-export function ProceduralUFO({ 
+export function ProceduralUFO({
   playerColor = '#00ffff',
-  ...props 
+  ...props
 }: ProceduralUFOProps) {
-  
   // マテリアルの設定
   const { hullMaterial, glassMaterial, neonMaterial } = useMemo(() => {
     // A. 装甲（金属）: metallic を metalness に修正
     const hullMaterial = new THREE.MeshStandardMaterial({
       color: '#33333a',
-      metalness: 1.0, 
+      metalness: 1.0,
       roughness: 0.4,
       flatShading: false,
       transparent: true, // 点滅アニメーションのために必要
@@ -51,7 +50,7 @@ export function ProceduralUFO({
       <mesh position={[0, 0, 0]} material={hullMaterial}>
         <cylinderGeometry args={[1.5, 1.8, 0.2, 32]} />
       </mesh>
-      
+
       <mesh position={[0, 0.2, 0]} material={hullMaterial}>
         <cylinderGeometry args={[0.8, 1.5, 0.2, 32]} />
       </mesh>
@@ -68,13 +67,13 @@ export function ProceduralUFO({
 
       {/* ディテール */}
       {useMemo(() => {
-        const detailCount = 8;
-        const details = [];
+        const detailCount = 8
+        const details = []
         for (let i = 0; i < detailCount; i++) {
-          const angle = (i / detailCount) * Math.PI * 2;
-          const radius = 1.6;
+          const angle = (i / detailCount) * Math.PI * 2
+          const radius = 1.6
           details.push(
-            <mesh 
+            <mesh
               key={`detail-${i}`}
               position={[Math.cos(angle) * radius, 0, Math.sin(angle) * radius]}
               rotation={[0, -angle, 0]}
@@ -82,13 +81,17 @@ export function ProceduralUFO({
             >
               <boxGeometry args={[0.2, 0.1, 0.3]} />
             </mesh>
-          );
+          )
         }
-        return details;
+        return details
       }, [hullMaterial])}
 
       {/* エミッション (発光部) */}
-      <mesh position={[0, 0.05, 0]} rotation={[Math.PI / 2, 0, 0]} material={neonMaterial}>
+      <mesh
+        position={[0, 0.05, 0]}
+        rotation={[Math.PI / 2, 0, 0]}
+        material={neonMaterial}
+      >
         <torusGeometry args={[1.5, 0.05, 8, 32]} />
       </mesh>
 

@@ -6,14 +6,13 @@ export const SCENE_CONFIG = {
     y: -0.48,
   },
   camera: {
-    
-    height: 10,               // カメラの高さを少し下げる
-    distanceFromCenter: 9,   // カメラを少し手前に引いて斜め感を強める
+    height: 10, // カメラの高さを少し下げる
+    distanceFromCenter: 9, // カメラを少し手前に引いて斜め感を強める
     fov: 58,
     targetY: 0,
-    
-    fitMargin: 0.85, 
-    
+
+    fitMargin: 0.85,
+
     contentTopY: 1.0,
   },
   light: {

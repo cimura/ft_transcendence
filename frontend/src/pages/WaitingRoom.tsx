@@ -373,10 +373,10 @@ export function WaitingRoom() {
             <div className="mt-6 relative h-24 w-full overflow-hidden rounded-lg border border-cyan-900/50 bg-cyan-950/20 flex items-center justify-center group shadow-[inset_0_0_20px_rgba(0,255,255,0.05)]">
               {/* デジタルグリッド背景 */}
               <div className="absolute inset-0 bg-[linear-gradient(rgba(0,255,255,0.1)_1px,transparent_1px),linear-gradient(90deg,rgba(0,255,255,0.1)_1px,transparent_1px)] bg-[size:12px_12px] opacity-40" />
-              
+
               {/* サイバーパンク風スキャンライン */}
               <div className="absolute inset-0 bg-[linear-gradient(transparent_50%,rgba(0,255,255,0.05)_50%)] bg-[size:100%_4px] pointer-events-none" />
-              
+
               {/* ワイヤーフレーム風マッコウクジラ SVG */}
               <svg
                 className="relative z-10 w-full h-full max-h-16 text-cyan-500/70 drop-shadow-[0_0_5px_rgba(0,255,255,0.4)] group-hover:text-cyan-300 group-hover:drop-shadow-[0_0_10px_rgba(0,255,255,0.8)] transition-all duration-500"
@@ -388,26 +388,57 @@ export function WaitingRoom() {
                 strokeLinejoin="round"
               >
                 {/* 胴体と頭（マッコウクジラ特有の大きな四角い頭部） */}
-                <path d="M 15,15 L 45,12 L 70,16 L 90,22 L 105,18 L 102,24 L 105,30 L 90,26 L 70,32 L 40,32 L 20,29 L 12,25 L 12,18 Z" fill="rgba(0,255,255,0.05)" />
-                
+                <path
+                  d="M 15,15 L 45,12 L 70,16 L 90,22 L 105,18 L 102,24 L 105,30 L 90,26 L 70,32 L 40,32 L 20,29 L 12,25 L 12,18 Z"
+                  fill="rgba(0,255,255,0.05)"
+                />
+
                 {/* 狭い下あご */}
                 <path d="M 12,25 L 30,26 L 40,28" strokeDasharray="1 2" />
-                
+
                 {/* 胸ビレ */}
                 <path d="M 42,28 L 48,36 L 53,29" fill="rgba(0,255,255,0.1)" />
-                
+
                 {/* 尾びれの内側のライン */}
-                <path d="M 90,24 L 102,24" strokeWidth="0.5" strokeDasharray="1 1" />
-                
+                <path
+                  d="M 90,24 L 102,24"
+                  strokeWidth="0.5"
+                  strokeDasharray="1 1"
+                />
+
                 {/* デジタルな装飾要素 */}
                 {/* 目 (四角いセンサー風) */}
-                <rect x="25" y="21" width="1.5" height="1.5" fill="currentColor" />
-                <rect x="23" y="19" width="5" height="5" strokeWidth="0.2" strokeDasharray="1 1" />
-                
+                <rect
+                  x="25"
+                  y="21"
+                  width="1.5"
+                  height="1.5"
+                  fill="currentColor"
+                />
+                <rect
+                  x="23"
+                  y="19"
+                  width="5"
+                  height="5"
+                  strokeWidth="0.2"
+                  strokeDasharray="1 1"
+                />
+
                 {/* ターゲットクロスヘア（スキャン中を演出） */}
-                <path d="M 60,10 L 60,38 M 50,24 L 70,24" stroke="rgba(0,255,255,0.3)" strokeWidth="0.3" strokeDasharray="2 2" />
-                <circle cx="60" cy="24" r="8" stroke="rgba(0,255,255,0.2)" strokeWidth="0.3" />
-                
+                <path
+                  d="M 60,10 L 60,38 M 50,24 L 70,24"
+                  stroke="rgba(0,255,255,0.3)"
+                  strokeWidth="0.3"
+                  strokeDasharray="2 2"
+                />
+                <circle
+                  cx="60"
+                  cy="24"
+                  r="8"
+                  stroke="rgba(0,255,255,0.2)"
+                  strokeWidth="0.3"
+                />
+
                 {/* スキャンデータポイント */}
                 <circle cx="45" cy="12" r="0.5" fill="currentColor" />
                 <circle cx="70" cy="16" r="0.5" fill="currentColor" />

@@ -11,7 +11,7 @@ type BombermanCharacterProps = {
 
 const MOVEMENT_EPSILON = 0.001
 // UFOなので、少しゆっくりフワフワするように調整しています
-const WALK_BOB_FREQUENCY = 10 
+const WALK_BOB_FREQUENCY = 10
 const WALK_BOB_AMPLITUDE = 0.05
 const IDLE_BOB_FREQUENCY = 2
 const IDLE_BOB_AMPLITUDE = 0.08
@@ -102,8 +102,8 @@ export const BombermanCharacter = forwardRef<Group, BombermanCharacterProps>(
     return (
       <group ref={groupRef}>
         {/* 元々のBoxやSphereの代わりに、ProceduralUFOコンポーネントを配置 */}
-        <ProceduralUFO 
-          playerColor={player.color} 
+        <ProceduralUFO
+          playerColor={player.color}
           scale={[0.25, 0.25, 0.25]} // マス目のサイズに合わせて調整（必要なら変更してください）
         />
       </group>

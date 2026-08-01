@@ -64,25 +64,29 @@ export function BombermanScene({ gameState }: BombermanSceneProps) {
 
           if (tile === 'solid') {
             return (
-              <group key={`${x}-${y}`} position={[x, 0.3, y]} scale={[0.5, 0.5, 0.6]}> 
+              <group
+                key={`${x}-${y}`}
+                position={[x, 0.3, y]}
+                scale={[0.5, 0.5, 0.6]}
+              >
                 <RockBlock />
               </group>
             )
           }
 
           // インポートされている BREAKABLE_COLORS を使用
-          const colorIndex = (x * 7 + y * 13) % 3; 
-          const blockColor = BREAKABLE_COLORS[colorIndex];
+          const colorIndex = (x * 7 + y * 13) % 3
+          const blockColor = BREAKABLE_COLORS[colorIndex]
 
           return (
-            <group 
-              key={`${x}-${y}`} 
-              position={[x, 0.3, y]} 
-              scale={[0.5, 0.5, 0.5]} 
+            <group
+              key={`${x}-${y}`}
+              position={[x, 0.3, y]}
+              scale={[0.5, 0.5, 0.5]}
               rotation={[
                 Math.sin(x * y) * Math.PI,
                 Math.cos(x + y) * Math.PI,
-                Math.sin(x - y) * Math.PI
+                Math.sin(x - y) * Math.PI,
               ]}
             >
               <BreakRock1 color={blockColor} />

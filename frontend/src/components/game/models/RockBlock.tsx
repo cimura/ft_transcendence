@@ -13,13 +13,15 @@ type GLTFResult = GLTF & {
 }
 
 export function RockBlock(props: ThreeElements['group']) {
-  const { nodes, materials } = useGLTF('/rock_block.glb') as unknown as GLTFResult
-  
+  const { nodes, materials } = useGLTF(
+    '/rock_block.glb'
+  ) as unknown as GLTFResult
+
   return (
     <group {...props} dispose={null}>
-      <mesh 
-        geometry={nodes.Cube.geometry} 
-        material={materials.Material} 
+      <mesh
+        geometry={nodes.Cube.geometry}
+        material={materials.Material}
         material-color="#888899"
         material-roughness={1.0}
         material-metalness={0.0}
