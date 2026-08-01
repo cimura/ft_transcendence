@@ -238,6 +238,20 @@ describe('GameService', () => {
       );
     });
 
+    it('countdownフェーズ中にリタイアすると即座に死亡扱いになり、game:stateが明示的に発行されること', () => {
+      const session = roomsState.getRoom('room-1')?.gameSession;
+      expect(session?.phase).toBe('countdown');
+
+      emit.mockClear();
+
+      service.handleGameRetire('room-1', 'player-1');
+
+      expect(session?.players['player-1'].alive).toBe(false);
+
+      // countdown中はtickループが走っていないため、明示的にgame:stateが飛ぶこと
+      expect(emit).toHaveBeenCalledWith('game:state', expect.any(Object));
+    });
+
     it('waitingフェーズではリタイアしても死亡扱いにならないこと', () => {
       const testRoom: Room = {
         id: 'room-waiting',
