@@ -54,9 +54,7 @@ export const getRankings = async (
 export const getGalacticGuide = async (
   userId: string
 ): Promise<GalacticGuide> => {
-  const response = await api.get<GalacticGuide>(
-    `/scores/user/${userId}/guide`
-  )
+  const response = await api.get<GalacticGuide>(`/scores/user/${userId}/guide`)
 
   return response.data
 }
