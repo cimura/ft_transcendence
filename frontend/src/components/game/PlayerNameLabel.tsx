@@ -33,11 +33,6 @@ export function PlayerNameLabel({
           >
             {username}
           </span>
-          {isMe && (
-            <span className="font-mono text-[8px] tracking-[0.3em] text-cyan-300/80 select-none">
-              YOU
-            </span>
-          )}
         </div>
       </Html>
     </group>
