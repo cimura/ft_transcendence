@@ -1,6 +1,7 @@
-import { useEffect, useRef } from 'react'
+import { useCallback, useEffect, useRef } from 'react'
 import { io, Socket } from 'socket.io-client'
 import { useGameStore } from '../stores/gameStore'
+import { useAuthStore } from '../stores/authStore'
 import type { ServerToClientEvents } from '@ft_transcendence/shared/game-events.types'
 
 const BACKEND_URL = import.meta.env.VITE_BACKEND_URL || window.location.origin
@@ -8,6 +9,7 @@ const GAME_NAMESPACE = `${BACKEND_URL.replace(/\/$/, '')}/game`
 
 export function useGameSocket(roomId: string) {
   const socketRef = useRef<Socket | null>(null)
+  const accessToken = useAuthStore((state) => state.accessToken)
   const setGameState = useGameStore((state) => state.setGameState)
   const setGamePhase = useGameStore((state) => state.setGamePhase)
   const setCountdown = useGameStore((state) => state.setCountdown)
@@ -18,13 +20,13 @@ export function useGameSocket(roomId: string) {
   const applyBombExplosion = useGameStore((state) => state.applyBombExplosion)
 
   useEffect(() => {
-    if (!socketRef.current) {
-      const token = localStorage.getItem('accessToken')
+    if (!accessToken) return
 
+    if (!socketRef.current) {
       socketRef.current = io(GAME_NAMESPACE, {
         transports: ['websocket'],
         secure: true,
-        auth: { token: `Bearer ${token}` },
+        auth: { token: `Bearer ${accessToken}` },
       })
     }
 
@@ -132,6 +134,7 @@ export function useGameSocket(roomId: string) {
       socketRef.current = null
     }
   }, [
+    accessToken,
     roomId,
     setGameState,
     setCountdown,
@@ -182,5 +185,11 @@ export function useGameSocket(roomId: string) {
     setCountdown,
   ])
 
-  return socketRef
+  // 明示的なリタイア操作(ホームへ戻るボタン)専用。unmount(リロード/タブ閉じなど)には
+  // 紐付けない — それらは切断として扱われ、バックエンド側の猶予付き処理に委ねる。
+  const leaveGame = useCallback(() => {
+    socketRef.current?.emit('game:leave')
+  }, [])
+
+  return { socketRef, leaveGame }
 }

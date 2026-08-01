@@ -28,8 +28,7 @@ describe('RoomsChatService', () => {
       name: 'Test Room',
       hostId: user.id,
       maxPlayers: 2,
-      status: 'WAITING',
-      mode: 'ONLINE',
+      status: 'waiting',
       participants: {
         [user.id]: {
           userId: user.id,

@@ -13,15 +13,8 @@ import { RoomsStateService } from './rooms-state.service';
 import { BOMBERMAN_GAME_ID } from '../games/games.constants';
 import { CreateRoomDto } from './dto/create-room.dto';
 import type { QueryRoomStatus } from './dto/query-rooms.dto';
-import type {
-  Room,
-  RoomParticipant,
-  RoomStatus,
-  RoomMode,
-  RoomResponse,
-  RoomStatusResponse,
-  RoomModeResponse,
-} from '../common/types/room.type';
+import type { Room, RoomParticipant } from '../common/types/room.type';
+import type { RoomSnapshot } from '@ft_transcendence/shared/rooms-events.types';
 import {
   ROOM_CREATED_EVENT,
   ROOM_UPDATED_EVENT,
@@ -40,21 +33,20 @@ export class RoomsService {
     private readonly eventEmitter: EventEmitter2,
   ) {}
 
-  findAll(status?: QueryRoomStatus): RoomResponse[] {
+  findAll(status?: QueryRoomStatus): RoomSnapshot[] {
     let rooms = this.roomsState.getAllRooms();
 
     if (status) {
-      const targetStatus = status.toUpperCase() as RoomStatus;
-      rooms = rooms.filter((room) => room.status === targetStatus);
+      rooms = rooms.filter((room) => room.status === status);
     }
 
     // 作成日時の降順でソート
     rooms.sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
 
-    return rooms.map((room) => this.toRoomResponse(room));
+    return rooms.map((room) => this.toRoomSnapshot(room));
   }
 
-  async create(userId: string, dto: CreateRoomDto): Promise<RoomResponse> {
+  async create(userId: string, dto: CreateRoomDto): Promise<RoomSnapshot> {
     const name = dto.name.trim();
     if (!name) {
       throw new BadRequestException('Room name is required');
@@ -72,7 +64,6 @@ export class RoomsService {
     if (!user) throw new NotFoundException('User not found');
 
     const roomId = randomUUID();
-    const mode: RoomMode = dto.mode === 'local_cpu' ? 'LOCAL_CPU' : 'ONLINE';
 
     const hostParticipant: RoomParticipant = {
       userId,
@@ -89,8 +80,7 @@ export class RoomsService {
       name,
       hostId: userId,
       maxPlayers: dto.maxPlayers,
-      status: 'WAITING',
-      mode,
+      status: 'waiting',
       participants: {
         [userId]: hostParticipant,
       },
@@ -101,62 +91,35 @@ export class RoomsService {
     };
 
     this.roomsState.addRoom(newRoom);
-    const response = this.toRoomResponse(newRoom);
-    this.eventEmitter.emit(ROOM_CREATED_EVENT, new RoomCreatedEvent(response));
-    return response;
+    const snapshot = this.toRoomSnapshot(newRoom);
+    this.eventEmitter.emit(ROOM_CREATED_EVENT, new RoomCreatedEvent(snapshot));
+    return snapshot;
   }
 
-  findOne(roomId: string): RoomResponse {
-    return this.toRoomResponse(this.getRoomOrThrow(roomId));
+  findOne(roomId: string): RoomSnapshot {
+    return this.toRoomSnapshot(this.getRoomOrThrow(roomId));
   }
 
-  async join(roomId: string, userId: string): Promise<RoomResponse> {
+  async join(roomId: string, userId: string): Promise<RoomSnapshot> {
     const room = this.getRoomOrThrow(roomId);
-
-    if (room.status !== 'WAITING') {
-      throw new ConflictException('Only waiting rooms can be joined');
-    }
-
-    if (room.mode === 'LOCAL_CPU' && room.hostId !== userId) {
-      throw new ConflictException('Local CPU rooms cannot be joined');
-    }
 
     // 既に参加している場合はそのまま返す
     if (room.participants[userId]) {
-      const response = this.toRoomResponse(room);
-      this.eventEmitter.emit(
-        ROOM_UPDATED_EVENT,
-        new RoomUpdatedEvent(response),
-      );
-      return response;
+      return this.emitRoomUpdated(room);
     }
+
+    this.assertJoinable(room);
 
     // await を伴うユーザー取得を先に行う
     const user = await this.prisma.user.findUnique({ where: { id: userId } });
     if (!user) throw new NotFoundException('User not found');
 
     const currentRoom = this.getRoomOrThrow(roomId);
-    if (currentRoom.status !== 'WAITING') {
-      throw new ConflictException('Only waiting rooms can be joined');
-    }
-    if (currentRoom.mode === 'LOCAL_CPU' && currentRoom.hostId !== userId) {
-      throw new ConflictException('Local CPU rooms cannot be joined');
-    }
-
     // await 後に同期的に再チェックしてから追加し、同時 join による定員超過を防ぐ
     if (currentRoom.participants[userId]) {
-      const response = this.toRoomResponse(room);
-      this.eventEmitter.emit(
-        ROOM_UPDATED_EVENT,
-        new RoomUpdatedEvent(response),
-      );
-      return response;
+      return this.emitRoomUpdated(currentRoom);
     }
-    if (
-      Object.keys(currentRoom.participants).length >= currentRoom.maxPlayers
-    ) {
-      throw new ConflictException('Room is full');
-    }
+    this.assertJoinable(currentRoom);
 
     const participant: RoomParticipant = {
       userId,
@@ -168,15 +131,13 @@ export class RoomsService {
     };
 
     this.roomsState.addParticipant(roomId, participant);
-    const response = this.toRoomResponse(room);
-    this.eventEmitter.emit(ROOM_UPDATED_EVENT, new RoomUpdatedEvent(response));
-    return response;
+    return this.emitRoomUpdated(currentRoom);
   }
 
-  leave(roomId: string, userId: string): RoomResponse | null {
+  leave(roomId: string, userId: string): RoomSnapshot | null {
     const room = this.getRoomOrThrow(roomId);
 
-    if (room.status !== 'WAITING') {
+    if (room.status !== 'waiting') {
       throw new ConflictException('Only waiting rooms can be left');
     }
 
@@ -211,15 +172,13 @@ export class RoomsService {
       room.updatedAt = new Date();
     }
 
-    const response = this.toRoomResponse(room);
-    this.eventEmitter.emit(ROOM_UPDATED_EVENT, new RoomUpdatedEvent(response));
-    return response;
+    return this.emitRoomUpdated(room);
   }
 
-  setReady(roomId: string, userId: string, isReady: boolean): RoomResponse {
+  setReady(roomId: string, userId: string, isReady: boolean): RoomSnapshot {
     const room = this.getRoomOrThrow(roomId);
 
-    if (room.status !== 'WAITING') {
+    if (room.status !== 'waiting') {
       throw new ConflictException('Ready can only be changed in waiting rooms');
     }
 
@@ -238,15 +197,13 @@ export class RoomsService {
       participant.isHost ? true : isReady,
     );
 
-    const response = this.toRoomResponse(room);
-    this.eventEmitter.emit(ROOM_UPDATED_EVENT, new RoomUpdatedEvent(response));
-    return response;
+    return this.emitRoomUpdated(room);
   }
 
-  start(roomId: string, userId: string): RoomResponse {
+  start(roomId: string, userId: string): RoomSnapshot {
     const room = this.getRoomOrThrow(roomId);
 
-    if (room.status !== 'WAITING') {
+    if (room.status !== 'waiting') {
       throw new ConflictException('Only waiting rooms can be started');
     }
 
@@ -261,12 +218,10 @@ export class RoomsService {
 
     this.assertStartable(room);
 
-    this.roomsState.updateRoomStatus(roomId, 'PLAYING');
+    this.roomsState.updateRoomStatus(roomId, 'playing');
     room.startedAt = new Date();
 
-    const response = this.toRoomResponse(room);
-    this.eventEmitter.emit(ROOM_UPDATED_EVENT, new RoomUpdatedEvent(response));
-    return response;
+    return this.emitRoomUpdated(room);
   }
 
   // 他のサービスからルームの存在確認等に使用
@@ -278,9 +233,53 @@ export class RoomsService {
     return room;
   }
 
+  // Socket購読の認可。REST の /join と socket の room:join は並行に呼ばれ得るため、
+  // 「既に参加済み」または「これから参加できる」のどちらかであれば購読を許可する。
+  canSubscribe(roomId: string, userId: string): boolean {
+    const room = this.getRoomOrThrow(roomId);
+    return (
+      Boolean(room.participants[userId]) || this.checkJoinable(room) === null
+    );
+  }
+
+  // 猶予時間内に再接続がなかった参加者を自動退出させる。
+  // 既に退出済み/ゲーム開始済みなら何もしない(呼び出し側が遅延実行するため正常系)。
+  evictIfWaiting(roomId: string, userId: string): void {
+    const room = this.roomsState.getRoom(roomId);
+    if (!room || room.status !== 'waiting' || !room.participants[userId]) {
+      return;
+    }
+    this.leave(roomId, userId);
+  }
+
   // --- Private Helpers ---
 
-  private toRoomResponse(room: Room): RoomResponse {
+  // 参加を拒否する理由(メッセージ)。null なら参加可能。
+  // join() の例外送出と canSubscribe() の真偽判定で共用する。
+  private checkJoinable(room: Room): string | null {
+    if (room.status !== 'waiting') {
+      return 'Only waiting rooms can be joined';
+    }
+    if (Object.keys(room.participants).length >= room.maxPlayers) {
+      return 'Room is full';
+    }
+    return null;
+  }
+
+  private assertJoinable(room: Room): void {
+    const reason = this.checkJoinable(room);
+    if (reason) {
+      throw new ConflictException(reason);
+    }
+  }
+
+  private emitRoomUpdated(room: Room): RoomSnapshot {
+    const snapshot = this.toRoomSnapshot(room);
+    this.eventEmitter.emit(ROOM_UPDATED_EVENT, new RoomUpdatedEvent(snapshot));
+    return snapshot;
+  }
+
+  private toRoomSnapshot(room: Room): RoomSnapshot {
     const participants = Object.values(room.participants).sort(
       (a, b) => a.joinedAt.getTime() - b.joinedAt.getTime(),
     );
@@ -290,13 +289,11 @@ export class RoomsService {
 
     return {
       id: room.id,
-      gameId: room.gameId,
       name: room.name,
       hostId: room.hostId,
       hostName: host ? host.username : 'Unknown',
       maxPlayers: room.maxPlayers,
-      status: this.toStatusResponse(room.status),
-      mode: this.toModeResponse(room.mode),
+      status: room.status,
       createdAt: room.createdAt,
       updatedAt: room.updatedAt,
       startedAt: room.startedAt,
@@ -304,36 +301,15 @@ export class RoomsService {
       players: participants.map((p) => ({
         userId: p.userId,
         username: p.username,
-        avatarUrl: p.avatarUrl,
+        avatarUrl: p.avatarUrl ? p.avatarUrl : undefined,
         isReady: p.isReady,
         isHost: p.isHost,
-        joinedAt: p.joinedAt,
       })),
     };
   }
 
-  private toStatusResponse(status: RoomStatus): RoomStatusResponse {
-    if (status === 'WAITING') return 'waiting';
-    if (status === 'PLAYING') return 'playing';
-    return 'finished';
-  }
-
-  private toModeResponse(mode: RoomMode): RoomModeResponse {
-    if (mode === 'LOCAL_CPU') return 'local_cpu';
-    return 'online';
-  }
-
   private assertStartable(room: Room) {
     const participants = Object.values(room.participants);
-
-    if (room.mode === 'LOCAL_CPU') {
-      if (participants.length !== 1) {
-        throw new ConflictException(
-          'Local CPU rooms must have exactly one human player',
-        );
-      }
-      return;
-    }
 
     if (participants.length !== room.maxPlayers) {
       throw new ConflictException('Room is not full');

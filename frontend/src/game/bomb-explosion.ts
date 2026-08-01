@@ -1,4 +1,4 @@
-import { EXPLOSION_DURATION_MS } from '../constants/game-constants'
+import { EXPLOSION_DURATION_MS } from '@ft_transcendence/shared/game-constants'
 import type { ClientGameState, BombermanExplosion } from '../types/game'
 import type { ServerToClientEvents } from '@ft_transcendence/shared/game-events.types'
 

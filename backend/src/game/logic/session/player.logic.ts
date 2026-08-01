@@ -15,13 +15,11 @@ export interface AddPlayerResult {
 export function addPlayerToRoom(
   room: GameSession,
   playerId: string,
-  clientId: string,
   username: string,
 ): AddPlayerResult {
   if (room.players[playerId]) {
     // 待機中の多重 join (React StrictMode の二重effect実行など)。
-    // ゲーム開始前で実害がないため、新しいソケットへ接続先を更新するだけで成功扱いにする
-    room.playerConnections[playerId].clientId = clientId;
+    // ゲーム開始前で実害がないため、成功扱いにするだけでよい
     room.playerConnections[playerId].lastActiveTime = 0;
     return { success: true };
   }
@@ -59,7 +57,6 @@ export function addPlayerToRoom(
     survivalTime: 0,
   };
   room.playerConnections[playerId] = {
-    clientId: clientId,
     lastActiveTime: 0,
   };
 
@@ -115,13 +112,11 @@ export interface ReconnectResult {
 export function reconnectPlayerToRoom(
   room: GameSession,
   playerId: string,
-  clientId: string,
 ): ReconnectResult {
   const player = room.players[playerId];
   if (!player || !player.isDisconnected) return { success: false };
 
   player.isDisconnected = false;
-  room.playerConnections[playerId].clientId = clientId;
   room.playerConnections[playerId].lastActiveTime = 0;
   room.disconnectedPlayers -= 1;
   room.disconnectedAt = 0; // 誰か一人でも戻ってきたらルームタイマーをリセット
@@ -129,6 +124,33 @@ export function reconnectPlayerToRoom(
   if (room.playerInputs && room.playerInputs[playerId]) {
     // 再接続時はクライアントが送るseqが初期値に戻るため、サーバー側も初期化する
     room.playerInputs[playerId].seq = 0;
+  }
+
+  return { success: true };
+}
+
+export interface RetireResult {
+  success: boolean;
+}
+
+/**
+ * 明示的なゲーム離脱（リタイア）。切断猶予を与えず即座に死亡扱いにする。
+ */
+export function retirePlayerFromRoom(
+  room: GameSession,
+  playerId: string,
+  now: number,
+): RetireResult {
+  const player = room.players[playerId];
+  if (!player || !player.alive) return { success: false };
+
+  player.alive = false;
+  room.stats[playerId].survivalTime = now - (room.startedAt || now);
+
+  // 死亡後に入力が残らないようにする（disconnectPlayerFromRoom と同様）
+  const playerInput = room.playerInputs?.[playerId];
+  if (playerInput) {
+    playerInput.direction = null;
   }
 
   return { success: true };
@@ -157,7 +179,6 @@ export function disconnectPlayerFromRoom(
 
   // 切断時の時間を保存（タイムアウト判定のため）
   player.isDisconnected = true;
-  room.playerConnections[playerId].clientId = '';
   room.playerConnections[playerId].lastActiveTime = now;
   room.disconnectedPlayers += 1;
 

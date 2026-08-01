@@ -1,8 +1,8 @@
 import type { GameSession } from './game.type';
-
-export type RoomStatus = 'WAITING' | 'PLAYING' | 'FINISHED';
-
-export type RoomMode = 'ONLINE' | 'LOCAL_CPU';
+import type {
+  RoomStatus,
+  RoomMaxPlayers,
+} from '@ft_transcendence/shared/rooms-events.types';
 
 export interface RoomParticipant {
   userId: string;
@@ -45,9 +45,8 @@ export interface Room {
   gameId: string;
   name: string;
   hostId: string;
-  maxPlayers: number;
+  maxPlayers: RoomMaxPlayers;
   status: RoomStatus;
-  mode: RoomMode;
 
   participants: Record<string, RoomParticipant>;
   messages: RoomMessage[];
@@ -62,29 +61,3 @@ export interface Room {
   // ゲーム進行中の詳細情報
   gameSession?: GameSession;
 }
-
-export type RoomStatusResponse = 'waiting' | 'playing' | 'finished';
-export type RoomModeResponse = 'online' | 'local_cpu';
-
-export type RoomResponse = {
-  id: string;
-  gameId: string;
-  name: string;
-  hostId: string;
-  hostName: string;
-  maxPlayers: number;
-  status: RoomStatusResponse;
-  mode: RoomModeResponse;
-  createdAt: Date;
-  updatedAt: Date;
-  startedAt?: Date | null;
-  finishedAt?: Date | null;
-  players: Array<{
-    userId: string;
-    username: string;
-    avatarUrl: string | null;
-    isReady: boolean;
-    isHost: boolean;
-    joinedAt: Date;
-  }>;
-};

@@ -1,14 +1,14 @@
 import { create } from 'zustand'
 import { immer } from 'zustand/middleware/immer'
-import type { GameRoom } from '../types/room'
+import type { RoomSnapshot } from '@ft_transcendence/shared/rooms-events.types'
 
 interface RoomStore {
-  rooms: GameRoom[]
-  currentRoom: GameRoom | null
-  setRooms: (rooms: GameRoom[]) => void
-  upsertRoom: (room: GameRoom) => void
+  rooms: RoomSnapshot[]
+  currentRoom: RoomSnapshot | null
+  setRooms: (rooms: RoomSnapshot[]) => void
+  upsertRoom: (room: RoomSnapshot) => void
   removeRoom: (roomId: string) => void
-  setCurrentRoom: (room: GameRoom | null) => void
+  setCurrentRoom: (room: RoomSnapshot | null) => void
 }
 
 export const useRoomStore = create<RoomStore>()(

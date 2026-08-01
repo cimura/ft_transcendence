@@ -1,5 +1,5 @@
 import { GameSession } from '../../../common/types/game.type';
-import { DISCONNECT_TIMEOUT_MS } from '../../constants/game-constants';
+import { DISCONNECT_TIMEOUT_MS } from '@ft_transcendence/shared/game-constants';
 
 export interface TimeoutResult {
   isAllDisconnectedTimeout: boolean;

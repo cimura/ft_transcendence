@@ -9,7 +9,7 @@ import {
   DEFAULT_MAX_BOMBS,
   DEFAULT_BOMB_RANGE,
   PLAYER_COLLISION_SIZE,
-} from '../../constants/game-constants';
+} from '@ft_transcendence/shared/game-constants';
 
 export interface ExplosionResult {
   bombId: string;

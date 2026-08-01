@@ -71,4 +71,8 @@ export const SCENE_CONFIG = {
     bombAura: '#ffffff',
     pointLight: '#ff00ff',
   },
+  playerLabel: {
+    height: 0.95,
+    zIndexRange: [9, 0] as [number, number], // usernameのオーバーレイを3Dより手前に、結果画面より奥に表示するため
+  },
 }

@@ -4,6 +4,8 @@ import { useFrame } from '@react-three/fiber'
 import type { Group, Mesh, Material } from 'three'
 import type { PlayerSnapshot } from '@ft_transcendence/shared/game-events.types'
 import { ProceduralUFO } from './models/ProceduralUFO'
+import { PlayerNameLabel } from './PlayerNameLabel'
+import { SCENE_CONFIG } from './constants/scene-constants'
 
 type BombermanCharacterProps = {
   player: PlayerSnapshot
@@ -100,13 +102,24 @@ export const BombermanCharacter = forwardRef<Group, BombermanCharacterProps>(
     if (!player.alive) return null
 
     return (
-      <group ref={groupRef}>
-        {/* 元々のBoxやSphereの代わりに、ProceduralUFOコンポーネントを配置 */}
-        <ProceduralUFO
-          playerColor={player.color}
-          scale={[0.25, 0.25, 0.25]} // マス目のサイズに合わせて調整（必要なら変更してください）
+      <>
+        <group ref={groupRef}>
+          {/* 元々のBoxやSphereの代わりに、ProceduralUFOコンポーネントを配置 */}
+          <ProceduralUFO
+            playerColor={player.color}
+            scale={[0.25, 0.25, 0.25]} // マス目のサイズに合わせて調整（必要なら変更してください）
+          />
+        </group>
+        <PlayerNameLabel
+          playerId={player.id}
+          username={player.username}
+          position={[
+            player.position.x,
+            SCENE_CONFIG.playerLabel.height,
+            player.position.z,
+          ]}
         />
-      </group>
+      </>
     )
   }
 )

@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef } from 'react'
 import { io, Socket } from 'socket.io-client'
 import { useRoomStore } from '../stores/roomStore'
-import { toGameRoom } from '../utils/roomSnapshot'
+import { useAuthStore } from '../stores/authStore'
 import type {
   RoomClientToServerEvents,
   RoomServerToClientEvents,
@@ -12,20 +12,20 @@ const BACKEND_URL = import.meta.env.VITE_BACKEND_URL || window.location.origin
 const ROOMS_NAMESPACE = `${BACKEND_URL.replace(/\/$/, '')}/rooms`
 
 export function useRoomSocket(roomId?: string) {
+  const accessToken = useAuthStore((state) => state.accessToken)
   const socketRef = useRef<Socket<
     RoomServerToClientEvents,
     RoomClientToServerEvents
   > | null>(null)
 
   useEffect(() => {
-    if (!roomId) return
+    if (!roomId || !accessToken) return
 
     const { upsertRoom, removeRoom } = useRoomStore.getState()
-    const accessToken = localStorage.getItem('accessToken')
 
     const socket = io(ROOMS_NAMESPACE, {
       autoConnect: false,
-      auth: accessToken ? { token: `Bearer ${accessToken}` } : undefined,
+      auth: { token: `Bearer ${accessToken}` },
     })
     socketRef.current = socket
 
@@ -42,7 +42,7 @@ export function useRoomSocket(roomId?: string) {
     })
 
     socket.on('room:updated', (snapshot: RoomSnapshot) => {
-      upsertRoom(toGameRoom(snapshot))
+      upsertRoom(snapshot)
     })
 
     socket.on(
@@ -65,7 +65,7 @@ export function useRoomSocket(roomId?: string) {
       socket.disconnect()
       socketRef.current = null
     }
-  }, [roomId])
+  }, [accessToken, roomId])
 
   // 明示的な退出操作(退出ボタン)専用。unmount(リロード/タブ閉じ/ゲーム開始遷移など)には
   // 紐付けない — それらは切断として扱われ、バックエンド側の猶予付き自動退出に委ねる。
