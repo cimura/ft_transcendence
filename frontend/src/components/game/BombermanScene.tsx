@@ -5,8 +5,8 @@ import { Grid } from '@react-three/drei'
 import { useMemo } from 'react'
 import { RockBlock } from './models/RockBlock'
 import { BreakRock1 } from './models/Break_Rock1'
-// ★ 追加: 作成したフィールドモデルをインポート
 import { Field } from './models/field'
+import { BombModel } from './models/Bom'
 import {
   BoxGeometry,
   MeshBasicMaterial,
@@ -163,18 +163,8 @@ export function BombermanScene({ gameState }: BombermanSceneProps) {
 
       {Object.values(gameState.bombs).map((bomb) => (
         <group key={bomb.id} position={[bomb.position.x, 0.5, bomb.position.y]}>
-          <mesh
-            geometry={assets.bombCoreGeometry}
-            material={
-              bomb.ownerId === myPlayerId
-                ? assets.localBombMaterial
-                : assets.enemyBombMaterial
-            }
-          />
-          <mesh
-            geometry={assets.bombAuraGeometry}
-            material={assets.bombAuraMaterial}
-          />
+          <BombModel scale={0.4} />
+
         </group>
       ))}
 
