@@ -3,6 +3,8 @@ import { useFrame } from '@react-three/fiber'
 import { Box, Sphere } from '@react-three/drei'
 import type { Group, Mesh, Material } from 'three'
 import type { PlayerSnapshot } from '@ft_transcendence/shared/game-events.types'
+import { PlayerNameLabel } from './PlayerNameLabel'
+import { SCENE_CONFIG } from './constants/scene-constants'
 
 type BombermanCharacterProps = {
   player: PlayerSnapshot
@@ -127,49 +129,60 @@ export const BombermanCharacter = forwardRef<Group, BombermanCharacterProps>(
     if (!player.alive) return null
 
     return (
-      <group ref={groupRef}>
-        <Box args={BODY_SIZE} position={[0, 0, 0]}>
-          <meshStandardMaterial
-            color={player.color}
-            roughness={BODY_ROUGHNESS}
-            metalness={BODY_METALNESS}
-            transparent={true}
-          />
-        </Box>
-        <Sphere
-          args={[HEAD_RADIUS, HEAD_SEGMENTS, HEAD_SEGMENTS]}
-          position={HEAD_POSITION}
-        >
-          <meshStandardMaterial
-            color="#dddddd"
-            roughness={HEAD_ROUGHNESS}
-            metalness={HEAD_METALNESS}
-            transparent={true}
-          />
-        </Sphere>
-        <Box args={VISOR_SIZE} position={VISOR_POSITION}>
-          <meshStandardMaterial
-            color={player.visorColor}
-            emissive={player.visorColor}
-            emissiveIntensity={VISOR_EMISSIVE_INTENSITY}
-            toneMapped={false}
-            transparent={true}
-          />
-        </Box>
-        <Box args={BACKPACK_SIZE} position={BACKPACK_POSITION}>
-          <meshStandardMaterial color="#222222" transparent={true} />
-        </Box>
-        <group position={LEFT_LEG_POSITION} ref={leftLegRef}>
-          <Box args={LEG_SIZE} position={LEG_MESH_POSITION}>
-            <meshStandardMaterial color="#333333" transparent={true} />
+      <>
+        <group ref={groupRef}>
+          <Box args={BODY_SIZE} position={[0, 0, 0]}>
+            <meshStandardMaterial
+              color={player.color}
+              roughness={BODY_ROUGHNESS}
+              metalness={BODY_METALNESS}
+              transparent={true}
+            />
           </Box>
-        </group>
-        <group position={RIGHT_LEG_POSITION} ref={rightLegRef}>
-          <Box args={LEG_SIZE} position={LEG_MESH_POSITION}>
-            <meshStandardMaterial color="#333333" transparent={true} />
+          <Sphere
+            args={[HEAD_RADIUS, HEAD_SEGMENTS, HEAD_SEGMENTS]}
+            position={HEAD_POSITION}
+          >
+            <meshStandardMaterial
+              color="#dddddd"
+              roughness={HEAD_ROUGHNESS}
+              metalness={HEAD_METALNESS}
+              transparent={true}
+            />
+          </Sphere>
+          <Box args={VISOR_SIZE} position={VISOR_POSITION}>
+            <meshStandardMaterial
+              color={player.visorColor}
+              emissive={player.visorColor}
+              emissiveIntensity={VISOR_EMISSIVE_INTENSITY}
+              toneMapped={false}
+              transparent={true}
+            />
           </Box>
+          <Box args={BACKPACK_SIZE} position={BACKPACK_POSITION}>
+            <meshStandardMaterial color="#222222" transparent={true} />
+          </Box>
+          <group position={LEFT_LEG_POSITION} ref={leftLegRef}>
+            <Box args={LEG_SIZE} position={LEG_MESH_POSITION}>
+              <meshStandardMaterial color="#333333" transparent={true} />
+            </Box>
+          </group>
+          <group position={RIGHT_LEG_POSITION} ref={rightLegRef}>
+            <Box args={LEG_SIZE} position={LEG_MESH_POSITION}>
+              <meshStandardMaterial color="#333333" transparent={true} />
+            </Box>
+          </group>
         </group>
-      </group>
+        <PlayerNameLabel
+          playerId={player.id}
+          username={player.username}
+          position={[
+            player.position.x,
+            SCENE_CONFIG.playerLabel.height,
+            player.position.z,
+          ]}
+        />
+      </>
     )
   }
 )
