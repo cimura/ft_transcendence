@@ -29,7 +29,7 @@ export function BreakRock1({ color = '#4a3018', ...props }: BreakRock1Props) {
         <meshStandardMaterial 
           color={color} 
           roughness={1.0} 
-          metalness={2.9} 
+          metalness={1.9} 
         />
       </mesh>
     </group>

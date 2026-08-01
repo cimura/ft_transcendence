@@ -2,95 +2,25 @@
 
 import { Canvas } from '@react-three/fiber'
 import { Grid } from '@react-three/drei'
-import { useMemo } from 'react'
 import { RockBlock } from './models/RockBlock'
 import { BreakRock1 } from './models/Break_Rock1'
 import { Field } from './models/field'
 import { BombModel } from './models/Bom'
-import {
-  BoxGeometry,
-  MeshBasicMaterial,
-  MeshStandardMaterial,
-  SphereGeometry,
-  IcosahedronGeometry,
-} from 'three'
-import {
-  BREAKABLE_COLORS,
-} from '../../components/game/utils/map-colors'
+import { BREAKABLE_COLORS } from '../../components/game/utils/map-colors'
 import { BOMBERMAN_GRID_SIZE } from '../../constants/game-constants'
 import type { ClientGameState } from '../../types/game'
 import { BombermanCharacter } from './BombermanCharacter'
 import { BombermanEffects } from './BombermanEffects'
 import { CameraRig } from './CameraRig'
 import { SCENE_CONFIG } from '../../components/game/constants/scene-constants'
-import { useGameStore } from '../../stores/gameStore'
 
 type BombermanSceneProps = {
   gameState: ClientGameState
 }
 
 export function BombermanScene({ gameState }: BombermanSceneProps) {
-  const myPlayerId = useGameStore((state) => state.myPlayerId)
   const center = (BOMBERMAN_GRID_SIZE - 1) / SCENE_CONFIG.grid.centerDivisor
-  const { blocks, bombs, colors } = SCENE_CONFIG
-
-  const assets = useMemo(() => {
-    const breakableMaterials = new Map(
-      BREAKABLE_COLORS.map((color) => [
-        color,
-        new MeshStandardMaterial({
-          color,
-          roughness: 1.0,
-          metalness: 0.1,
-          emissive: color,
-          emissiveIntensity: 0.15,
-          flatShading: true,
-        }),
-      ])
-    )
-
-    return {
-      solidBlockGeometry: new BoxGeometry(...blocks.solidSize),
-      breakableBlockGeometry: new IcosahedronGeometry(0.55, 1),
-      
-      bombCoreGeometry: new SphereGeometry(
-        bombs.coreRadius,
-        bombs.coreSegments,
-        bombs.coreSegments
-      ),
-      bombAuraGeometry: new SphereGeometry(
-        bombs.auraRadius,
-        bombs.auraSegments,
-        bombs.auraSegments
-      ),
-      
-      solidBlockMaterial: new MeshStandardMaterial({
-        color: colors.solidBlock,
-        roughness: 0.8,
-        metalness: 0.4,
-      }),
-      
-      localBombMaterial: new MeshStandardMaterial({
-        color: colors.localBomb,
-        emissive: colors.localBombEmissive,
-        emissiveIntensity: bombs.emissiveIntensity,
-        toneMapped: false,
-      }),
-      enemyBombMaterial: new MeshStandardMaterial({
-        color: colors.enemyBomb,
-        emissive: colors.enemyBombEmissive,
-        emissiveIntensity: bombs.emissiveIntensity,
-        toneMapped: false,
-      }),
-      bombAuraMaterial: new MeshBasicMaterial({
-        color: colors.bombAura,
-        wireframe: true,
-        transparent: true,
-        opacity: bombs.auraOpacity,
-      }),
-      breakableMaterials,
-    }
-  }, [blocks, bombs, colors])
+  const { colors } = SCENE_CONFIG // pointLightで使うためcolorsだけ残しています
 
   return (
     <Canvas
@@ -140,7 +70,7 @@ export function BombermanScene({ gameState }: BombermanSceneProps) {
             )
           }
 
-          const BREAKABLE_COLORS = ['#86a37a', '#964706', '#0861af'];
+          // インポートされている BREAKABLE_COLORS を使用
           const colorIndex = (x * 7 + y * 13) % 3; 
           const blockColor = BREAKABLE_COLORS[colorIndex];
 
@@ -163,8 +93,7 @@ export function BombermanScene({ gameState }: BombermanSceneProps) {
 
       {Object.values(gameState.bombs).map((bomb) => (
         <group key={bomb.id} position={[bomb.position.x, 0.5, bomb.position.y]}>
-          <BombModel scale={0.4} />
-
+          <BombModel scale={0.3} />
         </group>
       ))}
 
