@@ -25,12 +25,12 @@
       "default": "./realtime-events.types.ts"
     },
     "./game-constants": {
-      "types": "./game-constants.ts",
+      "types": "./dist/game-constants.d.ts",
       "browser": "./game-constants.ts",
       "default": "./dist/game-constants.js"
     },
     "./game-map": {
-      "types": "./game-map.ts",
+      "types": "./dist/game-map.d.ts",
       "browser": "./game-map.ts",
       "default": "./dist/game-map.js"
     }
