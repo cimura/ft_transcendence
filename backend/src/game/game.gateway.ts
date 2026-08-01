@@ -99,7 +99,7 @@ export class GameGateway
     }
 
     if (previousRoomId && previousRoomId !== data.roomId) {
-      this.cleanupPlayerConnection(previousRoomId, user.id, client.id);
+      this.cleanupPlayerConnection(previousRoomId, user.id, client.id, 'leave');
       try {
         await client.leave(previousRoomId);
       } catch (error) {
@@ -135,10 +135,26 @@ export class GameGateway
     const roomId = client.data.roomId;
     if (!roomId || !client.data.user) return;
 
-    await client.leave(roomId);
-    client.data.roomId = undefined;
+    // 明示的な離脱はリタイア扱い。切断猶予を待たずに即座に死亡させる。
+    // 後続のawaitでtickが進んでしまう前に、同期的に処理しておく。
+    this.cleanupPlayerConnection(
+      roomId,
+      client.data.user.id,
+      client.id,
+      'retire',
+    );
 
-    this.cleanupPlayerConnection(roomId, client.data.user.id, client.id);
+    try {
+      await client.leave(roomId);
+      client.data.roomId = undefined;
+    } catch (error) {
+      this.logger.error(
+        `Failed to leave Socket.IO room { roomId: '${roomId}', userId: '${client.data.user.id}' }`,
+        error instanceof Error ? error.stack : String(error),
+      );
+      client.data.roomId = undefined;
+      client.disconnect();
+    }
   }
 
   @SubscribeMessage('player:input')
@@ -176,7 +192,7 @@ export class GameGateway
     const userId = client.data.user?.id;
     if (!roomId || !userId) return;
 
-    this.cleanupPlayerConnection(roomId, userId, client.id);
+    this.cleanupPlayerConnection(roomId, userId, client.id, 'leave');
   }
 
   private async rollbackRoomTransition(
@@ -187,7 +203,7 @@ export class GameGateway
     clientId: string,
   ) {
     // 新しいゲーム状態とSocket.IO roomへの参加を取り消す。
-    this.cleanupPlayerConnection(nextRoomId, userId, clientId);
+    this.cleanupPlayerConnection(nextRoomId, userId, clientId, 'leave');
     try {
       await client.leave(nextRoomId);
     } catch (error) {
@@ -220,6 +236,7 @@ export class GameGateway
     roomId: string,
     userId: string,
     clientId: string,
+    mode: 'leave' | 'retire',
   ): void {
     const remaining = this.socketPresenceService.unregister({
       namespace: 'game',
@@ -227,8 +244,11 @@ export class GameGateway
       userId,
       socketId: clientId,
     });
+    if (remaining !== 0) return;
 
-    if (remaining === 0) {
+    if (mode === 'retire') {
+      this.gameService.handleGameRetire(roomId, userId);
+    } else if (mode == 'leave') {
       this.gameService.handleGameLeave(roomId, userId);
     }
   }

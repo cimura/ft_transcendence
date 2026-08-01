@@ -1,17 +1,17 @@
+import type { RefObject } from 'react'
+import type { Socket } from 'socket.io-client'
 import { BombermanScene } from './BombermanScene'
 import { TouchControls } from './TouchControls'
 import { useGameStore } from '../../stores/gameStore'
-import { useGameSocket } from '../../hooks/useGameSocket'
 import { useGameInput } from '../../hooks/useGameInput'
 import { GameCountdownOverlay } from './GameCountdownOverlay'
 
 type GameCanvasProps = {
-  roomId: string
+  socketRef: RefObject<Socket | null>
 }
 
-export function GameCanvas({ roomId }: GameCanvasProps) {
+export function GameCanvas({ socketRef }: GameCanvasProps) {
   const gameState = useGameStore((state) => state.gameState)
-  const socketRef = useGameSocket(roomId)
   const { activeControl, handleTouchInput } = useGameInput(socketRef)
 
   return (
