@@ -1,12 +1,14 @@
-import type { BombermanPlayerPreview } from './map-mock'
-import type { TileType } from '@ft_transcendence/shared/game-events.types'
+import type {
+  TileType,
+  WorldPosition,
+} from '@ft_transcendence/shared/game-events.types'
 
 // マップのプレビューを描画するためのファイル
 
 type RenderBombermanSceneOptions = {
   ctx: CanvasRenderingContext2D
   map: TileType[][]
-  players: BombermanPlayerPreview[]
+  spawnPositions: readonly WorldPosition[]
   tileSize: number
 }
 
@@ -18,7 +20,7 @@ const colors = {
   breakable: '#b45309',
   breakableHighlight: '#d97706',
   grid: 'rgba(255, 255, 255, 0.08)',
-  text: '#f9fafb',
+  spawnMarker: 'rgba(34, 211, 238, 0.85)',
 }
 
 const CHECKER_PATTERN_MODULO = 2
@@ -36,17 +38,13 @@ const BREAKABLE_HIGHLIGHT_HEIGHT = 4
 const BREAKABLE_BOTTOM_HIGHLIGHT_OFFSET = 13
 const GRID_LINE_WIDTH = 1
 const GRID_PIXEL_OFFSET = 0.5
-const PLAYER_RADIUS_RATIO = 0.32
-const PLAYER_EYE_X_RATIO = 0.35
-const PLAYER_EYE_Y_RATIO = 0.25
-const PLAYER_EYE_RADIUS = 3
-const PLAYER_LABEL_FONT = '12px sans-serif'
-const PLAYER_LABEL_Y_RATIO = 0.7
+const SPAWN_MARKER_RADIUS_RATIO = 0.32
+const SPAWN_MARKER_LINE_WIDTH = 2
 
 export function renderBombermanScene({
   ctx,
   map,
-  players,
+  spawnPositions,
   tileSize,
 }: RenderBombermanSceneOptions) {
   const rows = map.length
@@ -117,41 +115,16 @@ export function renderBombermanScene({
     }
   }
 
-  players.forEach((player) => {
-    const centerX = player.gridX * tileSize + tileSize / TILE_CENTER_DIVISOR
-    const centerY = player.gridY * tileSize + tileSize / TILE_CENTER_DIVISOR
-    const radius = tileSize * PLAYER_RADIUS_RATIO
+  // スポーン候補地点を中立なリングで示す（誰がどこに出るかはゲーム開始まで伏せる）
+  spawnPositions.forEach((position) => {
+    const centerX = position.x * tileSize + tileSize / TILE_CENTER_DIVISOR
+    const centerY = position.z * tileSize + tileSize / TILE_CENTER_DIVISOR
+    const radius = tileSize * SPAWN_MARKER_RADIUS_RATIO
 
-    ctx.fillStyle = player.color
+    ctx.strokeStyle = colors.spawnMarker
+    ctx.lineWidth = SPAWN_MARKER_LINE_WIDTH
     ctx.beginPath()
     ctx.arc(centerX, centerY, radius, 0, FULL_CIRCLE_RADIANS)
-    ctx.fill()
-
-    ctx.fillStyle = 'rgba(255, 255, 255, 0.9)'
-    ctx.beginPath()
-    ctx.arc(
-      centerX - radius * PLAYER_EYE_X_RATIO,
-      centerY - radius * PLAYER_EYE_Y_RATIO,
-      PLAYER_EYE_RADIUS,
-      0,
-      FULL_CIRCLE_RADIANS
-    )
-    ctx.arc(
-      centerX + radius * PLAYER_EYE_X_RATIO,
-      centerY - radius * PLAYER_EYE_Y_RATIO,
-      PLAYER_EYE_RADIUS,
-      0,
-      FULL_CIRCLE_RADIANS
-    )
-    ctx.fill()
-
-    ctx.fillStyle = colors.text
-    ctx.font = PLAYER_LABEL_FONT
-    ctx.textAlign = 'center'
-    ctx.fillText(
-      player.username,
-      centerX,
-      centerY + tileSize * PLAYER_LABEL_Y_RATIO
-    )
+    ctx.stroke()
   })
 }
