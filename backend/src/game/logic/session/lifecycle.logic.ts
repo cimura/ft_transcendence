@@ -2,7 +2,7 @@ import { GameSession } from '../../../common/types/game.type';
 import {
   GAME_COUNTDOWN_SEC,
   GAME_TICK_RATE,
-} from '../../constants/game-constants';
+} from '@ft_transcendence/shared/game-constants';
 
 export function startCountdownLogic(
   room: GameSession,

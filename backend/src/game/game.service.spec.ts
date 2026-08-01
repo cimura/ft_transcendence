@@ -5,7 +5,7 @@ import {
   GAME_COUNTDOWN_SEC,
   GAME_TICK_RATE,
   DISCONNECT_TIMEOUT_MS,
-} from './constants/game-constants';
+} from '@ft_transcendence/shared/game-constants';
 import { ScoresService } from '../scores/scores.service';
 import { RoomsStateService } from '../rooms/rooms-state.service';
 import type { Room } from '../common/types/room.type';
