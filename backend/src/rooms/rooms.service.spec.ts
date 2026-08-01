@@ -1,10 +1,19 @@
 import { ConflictException, NotFoundException } from '@nestjs/common';
+import type { EventEmitter2 } from '@nestjs/event-emitter';
 import { PrismaService } from '../prisma.service';
 import { bombermanGame } from '../games/games.constants';
 import { GamesService } from '../games/games.service';
 import { RoomsService } from './rooms.service';
 import { RoomsStateService } from './rooms-state.service';
 import type { Room } from '../common/types/room.type';
+import {
+  ROOM_CREATED_EVENT,
+  ROOM_UPDATED_EVENT,
+  ROOM_DELETED_EVENT,
+  RoomCreatedEvent,
+  RoomUpdatedEvent,
+  RoomDeletedEvent,
+} from './events/room-domain-events';
 
 const user = {
   id: 'user-host',
@@ -32,6 +41,10 @@ describe('RoomsService', () => {
     findById: jest.fn(),
   };
 
+  const eventEmitter = {
+    emit: jest.fn(),
+  };
+
   beforeEach(() => {
     jest.clearAllMocks();
     gamesService.findById.mockReturnValue(bombermanGame);
@@ -40,6 +53,7 @@ describe('RoomsService', () => {
       prisma as unknown as PrismaService,
       gamesService as unknown as GamesService,
       roomsState,
+      eventEmitter as unknown as EventEmitter2,
     );
   });
 
@@ -50,8 +64,8 @@ describe('RoomsService', () => {
       name: 'Test Room',
       hostId: user.id,
       maxPlayers: 2,
-      status: 'WAITING',
-      mode: 'ONLINE',
+      status: 'waiting',
+      mode: 'online',
       participants: {
         [user.id]: {
           userId: user.id,
@@ -86,11 +100,15 @@ describe('RoomsService', () => {
     expect(result.hostId).toBe(user.id);
     expect(roomsState.getAllRooms().length).toBe(1);
     expect(roomsState.getAllRooms()[0].participants[user.id].isHost).toBe(true);
+    expect(eventEmitter.emit).toHaveBeenCalledWith(
+      ROOM_CREATED_EVENT,
+      expect.any(RoomCreatedEvent),
+    );
   });
 
   it('filters rooms by status for the room list', () => {
-    setupRoom({ status: 'WAITING' });
-    setupRoom({ id: 'room-2', status: 'PLAYING' });
+    setupRoom({ status: 'waiting' });
+    setupRoom({ id: 'room-2', status: 'playing' });
 
     const result = service.findAll('waiting');
     expect(result.length).toBe(1);
@@ -132,7 +150,7 @@ describe('RoomsService', () => {
     setupRoom();
     prisma.user.findUnique.mockImplementation(() => {
       // ユーザー取得のawait中に対戦開始等で状態が変わったケースを再現
-      roomsState.updateRoomStatus('room-1', 'PLAYING');
+      roomsState.updateRoomStatus('room-1', 'playing');
       return Promise.resolve(guest);
     });
 
@@ -223,6 +241,10 @@ describe('RoomsService', () => {
     const memoryRoom = roomsState.getRoom('room-1')!;
     expect(memoryRoom.participants[user.id]).toBeUndefined();
     expect(memoryRoom.participants[guest.id].isHost).toBe(true);
+    expect(eventEmitter.emit).toHaveBeenCalledWith(
+      ROOM_UPDATED_EVENT,
+      expect.any(RoomUpdatedEvent),
+    );
   });
 
   it('deletes the room from memory when the last participant leaves', () => {
@@ -230,8 +252,12 @@ describe('RoomsService', () => {
 
     const result = service.leave('room-1', user.id);
 
-    expect(result).toEqual({ deleted: true, roomId: 'room-1' });
+    expect(result).toBeNull();
     expect(roomsState.getRoom('room-1')).toBeUndefined();
+    expect(eventEmitter.emit).toHaveBeenCalledWith(
+      ROOM_DELETED_EVENT,
+      expect.any(RoomDeletedEvent),
+    );
   });
 
   it('deletes the room after the transferred host is the last to leave', () => {
@@ -272,8 +298,12 @@ describe('RoomsService', () => {
 
     const result = service.leave('room-1', guest.id);
 
-    expect(result).toEqual({ deleted: true, roomId: 'room-1' });
+    expect(result).toBeNull();
     expect(roomsState.getRoom('room-1')).toBeUndefined();
+    expect(eventEmitter.emit).toHaveBeenCalledWith(
+      ROOM_DELETED_EVENT,
+      expect.any(RoomDeletedEvent),
+    );
   });
 
   it('does not start until the room is full', () => {
@@ -293,7 +323,7 @@ describe('RoomsService', () => {
     });
 
     expect(result.mode).toBe('local_cpu');
-    expect(roomsState.getAllRooms()[0].mode).toBe('LOCAL_CPU');
+    expect(roomsState.getAllRooms()[0].mode).toBe('local_cpu');
   });
 
   it('starts when the host requests it and all participants are ready', () => {
@@ -322,11 +352,11 @@ describe('RoomsService', () => {
     const result = service.start('room-1', user.id);
 
     expect(result.status).toBe('playing');
-    expect(roomsState.getRoom('room-1')?.status).toBe('PLAYING');
+    expect(roomsState.getRoom('room-1')?.status).toBe('playing');
   });
 
   it('starts a local CPU room with only the host participant', () => {
-    setupRoom({ mode: 'LOCAL_CPU', maxPlayers: 4 });
+    setupRoom({ mode: 'local_cpu', maxPlayers: 4 });
 
     const result = service.start('room-1', user.id);
 
@@ -336,7 +366,7 @@ describe('RoomsService', () => {
 
   it('does not start a local CPU room after another human has joined', () => {
     setupRoom({
-      mode: 'LOCAL_CPU',
+      mode: 'local_cpu',
       maxPlayers: 4,
       participants: {
         [user.id]: {

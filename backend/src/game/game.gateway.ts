@@ -86,11 +86,7 @@ export class GameGateway
 
     let initData: Parameters<ServerToClientEvents['game:init']>[0];
     try {
-      initData = this.gameService.handleGameJoin(
-        data.roomId,
-        user.id,
-        client.id,
-      );
+      initData = this.gameService.handleGameJoin(data.roomId, user.id);
     } catch (error) {
       if (previousRoomId !== data.roomId) {
         try {
@@ -170,7 +166,7 @@ export class GameGateway
     // 旧ルームのゲーム状態とpresenceを復元する。旧roomからのleaveに
     // 失敗しているため、Socket.IO上では旧roomに残ったままになる。
     try {
-      this.gameService.handleGameJoin(previousRoomId, userId, clientId);
+      this.gameService.handleGameJoin(previousRoomId, userId);
       this.socketPresenceService.register({
         namespace: 'game',
         roomId: previousRoomId,
@@ -253,7 +249,7 @@ export class GameGateway
     });
 
     if (remaining === 0) {
-      this.gameService.handleGameLeave(roomId, userId, clientId);
+      this.gameService.handleGameLeave(roomId, userId);
     }
 
     if (notifyPresence) {

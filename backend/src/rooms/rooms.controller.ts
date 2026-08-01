@@ -2,19 +2,24 @@ import {
   Body,
   Controller,
   Get,
+  HttpCode,
+  HttpStatus,
   Param,
   Post,
   Put,
   Query,
   Request,
+  Res,
   UseGuards,
 } from '@nestjs/common';
 import {
   ApiBearerAuth,
+  ApiNoContentResponse,
   ApiOperation,
   ApiResponse,
   ApiTags,
 } from '@nestjs/swagger';
+import type { Response } from 'express';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import type { UserRequest } from '../users/interfaces/user-request.interface';
 import { CreateRoomInvitationDto } from './dto/create-room-invitation.dto';
@@ -25,7 +30,7 @@ import { ReadyRoomDto } from './dto/ready-room.dto';
 import { RoomsService } from './rooms.service';
 import { RoomsInvitationService } from './rooms-invitation.service';
 import { RoomsChatService } from './rooms-chat.service';
-import { RoomsGateway } from './rooms.gateway';
+import type { RoomSnapshot } from '@ft_transcendence/shared/rooms-events.types';
 
 @ApiTags('rooms')
 @ApiBearerAuth()
@@ -36,7 +41,6 @@ export class RoomsController {
     private readonly roomsService: RoomsService,
     private readonly roomsInvitationService: RoomsInvitationService,
     private readonly roomsChatService: RoomsChatService,
-    private readonly roomsGateway: RoomsGateway,
   ) {}
 
   @Get()
@@ -50,9 +54,7 @@ export class RoomsController {
   @ApiOperation({ summary: 'ルームを作成' })
   @ApiResponse({ status: 201, description: '成功時' })
   async create(@Request() req: UserRequest, @Body() dto: CreateRoomDto) {
-    const room = await this.roomsService.create(req.user.userId, dto);
-    this.roomsGateway.emitRoomCreated(room);
-    return room;
+    return this.roomsService.create(req.user.userId, dto);
   }
 
   @Get(':roomId')
@@ -66,9 +68,7 @@ export class RoomsController {
   @ApiOperation({ summary: 'ルームに参加' })
   @ApiResponse({ status: 201, description: '成功時' })
   async join(@Request() req: UserRequest, @Param('roomId') roomId: string) {
-    const room = await this.roomsService.join(roomId, req.user.userId);
-    this.roomsGateway.emitRoomUpdated(room);
-    return room;
+    return this.roomsService.join(roomId, req.user.userId);
   }
 
   @Post(':roomId/invitations')
@@ -93,12 +93,10 @@ export class RoomsController {
     @Request() req: UserRequest,
     @Param('invitationId') invitationId: string,
   ) {
-    const room = await this.roomsInvitationService.acceptInvitation(
+    return this.roomsInvitationService.acceptInvitation(
       invitationId,
       req.user.userId,
     );
-    this.roomsGateway.emitRoomUpdated(room);
-    return room;
   }
 
   @Put('invitations/:invitationId/decline')
@@ -115,18 +113,26 @@ export class RoomsController {
   }
 
   @Post(':roomId/leave')
+  @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'ルームから退出' })
-  @ApiResponse({ status: 201, description: '成功時' })
-  leave(@Request() req: UserRequest, @Param('roomId') roomId: string) {
-    const result = this.roomsService.leave(roomId, req.user.userId);
+  @ApiResponse({ status: 200, description: '成功時。退出後のルーム情報を返す' })
+  @ApiNoContentResponse({
+    description: '最後の参加者が退出し、ルームごと削除された時',
+  })
+  leave(
+    @Request() req: UserRequest,
+    @Param('roomId') roomId: string,
+    @Res({ passthrough: true }) res: Response,
+  ): RoomSnapshot | undefined {
+    const room = this.roomsService.leave(roomId, req.user.userId);
 
-    if ('id' in result) {
-      this.roomsGateway.emitRoomUpdated(result);
-    } else {
-      this.roomsGateway.emitRoomDeleted(result.roomId);
+    // 削除された場合、どのルームかは呼び出し側が URL で指定済みなので返すものが無い
+    if (room === null) {
+      res.status(HttpStatus.NO_CONTENT);
+      return undefined;
     }
 
-    return result;
+    return room;
   }
 
   @Post(':roomId/ready')
@@ -137,22 +143,14 @@ export class RoomsController {
     @Param('roomId') roomId: string,
     @Body() dto: ReadyRoomDto,
   ) {
-    const room = this.roomsService.setReady(
-      roomId,
-      req.user.userId,
-      dto.isReady,
-    );
-    this.roomsGateway.emitRoomUpdated(room);
-    return room;
+    return this.roomsService.setReady(roomId, req.user.userId, dto.isReady);
   }
 
   @Post(':roomId/start')
   @ApiOperation({ summary: '試合を開始' })
   @ApiResponse({ status: 201, description: '成功時' })
   start(@Request() req: UserRequest, @Param('roomId') roomId: string) {
-    const room = this.roomsService.start(roomId, req.user.userId);
-    this.roomsGateway.emitRoomUpdated(room);
-    return room;
+    return this.roomsService.start(roomId, req.user.userId);
   }
 
   @Get(':roomId/messages')

@@ -1,6 +1,6 @@
 import { useNavigate, useParams } from 'react-router-dom'
 import { useRoomStore } from '../stores/roomStore'
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { PlayerCard } from '../components/waitingRoom/PlayerCard'
 import { ChatPanel } from '../components/waitingRoom/ChatPanel'
 import { GameMapPreview } from '../components/game/preview/GameMapPreview'
@@ -17,7 +17,7 @@ import { useRoomSocket } from '../hooks/useRoomSocket'
 import axios from 'axios'
 import { getApiErrorMessage } from '../api/errors'
 import { useFriends } from '../hooks/friends/useFriends'
-import type { GameRoom } from '../types/room'
+import type { RoomSnapshot } from '@ft_transcendence/shared/rooms-events.types'
 
 export function WaitingRoom() {
   const { roomId } = useParams<{ roomId: string }>()
@@ -27,7 +27,11 @@ export function WaitingRoom() {
   const [isLoadingRoom, setIsLoadingRoom] = useState(true)
   const currentUserId = currentUser?.id
 
-  useRoomSocket(roomId)
+  const { leaveRoom: emitRoomLeave } = useRoomSocket(roomId)
+
+  // 明示的な退出中は、currentRoom が空になったことをトリガーに再joinしないようにするフラグ
+  // (ホストが部屋を削除した等の外部要因による currentRoom クリアとは区別する必要がある)
+  const isLeavingRef = useRef(false)
 
   useEffect(() => {
     if (!roomId) {
@@ -38,12 +42,17 @@ export function WaitingRoom() {
     let cancelled = false
 
     const loadRoom = async () => {
-      if (currentRoom?.id === roomId) {
+      if (isLeavingRef.current) {
         setIsLoadingRoom(false)
         return
       }
 
+      setIsLoadingRoom(true)
       try {
+        // A room held in the store may only be a lobby snapshot. It can also
+        // be overwritten by an older lobby event while navigation is in
+        // progress. Joining is idempotent on the backend, so always confirm
+        // membership when the waiting-room route is entered.
         const joinedRoom = await joinRoom(roomId)
         if (cancelled) return
         upsertRoom(joinedRoom)
@@ -79,7 +88,7 @@ export function WaitingRoom() {
     return () => {
       cancelled = true
     }
-  }, [currentRoom?.id, navigate, roomId, setCurrentRoom, upsertRoom])
+  }, [navigate, roomId, setCurrentRoom, upsertRoom])
 
   useEffect(() => {
     if (!currentUser) {
@@ -135,26 +144,30 @@ export function WaitingRoom() {
   }
 
   const handleLeaveRoom = async () => {
-    console.log('部屋を退出')
+    if (isLeavingRef.current) return
+    isLeavingRef.current = true
     try {
       const result = await leaveRoom(currentRoom.id)
-      if (result.deleted) {
-        removeRoom(result.roomId)
-      } else {
+      if (result) {
         upsertRoom(result)
+      } else {
+        removeRoom(currentRoom.id)
       }
-      setCurrentRoom(null)
+      emitRoomLeave()
       navigate('/home')
+      setCurrentRoom(null)
     } catch (error) {
       if (
         axios.isAxiosError(error) &&
         (error.response?.status === 403 || error.response?.status === 404)
       ) {
+        emitRoomLeave()
         removeRoom(currentRoom.id)
-        setCurrentRoom(null)
         navigate('/home')
+        setCurrentRoom(null)
         return
       }
+      isLeavingRef.current = false
       console.error('Failed to leave room:', error)
     }
   }
@@ -372,7 +385,7 @@ export function WaitingRoom() {
   )
 }
 
-function RoomInviteSection({ currentRoom }: { currentRoom: GameRoom }) {
+function RoomInviteSection({ currentRoom }: { currentRoom: RoomSnapshot }) {
   const { friends } = useFriends()
   const [selectedInviteeId, setSelectedInviteeId] = useState('')
   const [inviteMessage, setInviteMessage] = useState<string | null>(null)

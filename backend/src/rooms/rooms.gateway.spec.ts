@@ -1,4 +1,6 @@
 import { Test, TestingModule } from '@nestjs/testing';
+import { NotFoundException } from '@nestjs/common';
+import { EventEmitterModule, EventEmitter2 } from '@nestjs/event-emitter';
 import { RoomsGateway } from './rooms.gateway';
 import { SocketAuthService } from '../websocket/socket-auth.service';
 import { SocketPresenceService } from '../websocket/socket-presence.service';
@@ -6,8 +8,16 @@ import { RoomsChatService } from './rooms-chat.service';
 import { RoomsLobbyService } from './rooms-lobby.service';
 import { RoomsService } from './rooms.service';
 import { RoomsStateService } from './rooms-state.service';
-import type { RoomResponse } from '../common/types/room.type';
 import type { Room } from '../common/types/room.type';
+import type { RoomSnapshot } from '@ft_transcendence/shared/rooms-events.types';
+import {
+  ROOM_CREATED_EVENT,
+  ROOM_UPDATED_EVENT,
+  ROOM_DELETED_EVENT,
+  RoomCreatedEvent,
+  RoomUpdatedEvent,
+  RoomDeletedEvent,
+} from './events/room-domain-events';
 
 describe('RoomsGateway', () => {
   let gateway: RoomsGateway;
@@ -17,22 +27,41 @@ describe('RoomsGateway', () => {
   let roomsLobbyService: jest.Mocked<RoomsLobbyService>;
   let roomsService: jest.Mocked<RoomsService>;
   let roomsState: jest.Mocked<RoomsStateService>;
+  let eventEmitter: EventEmitter2;
 
-  const mockRoomResponse: RoomResponse = {
+  const mockRoomSnapshot: RoomSnapshot = {
     id: 'room-1',
-    gameId: 'game-1',
     name: 'test room',
     hostId: 'user-1',
     hostName: 'hostuser',
     maxPlayers: 2,
     status: 'waiting',
     mode: 'online',
-    createdAt: new Date('2026-07-01T00:00:00.000Z'),
-    updatedAt: new Date('2026-07-01T00:00:00.000Z'),
-    startedAt: null,
-    finishedAt: null,
+    createdAt: '2026-07-01T00:00:00.000Z',
+    updatedAt: '2026-07-01T00:00:00.000Z',
+    startedAt: undefined,
+    finishedAt: undefined,
     players: [
       {
+        userId: 'user-1',
+        username: 'hostuser',
+        avatarUrl: undefined,
+        isReady: true,
+        isHost: true,
+      },
+    ],
+  };
+
+  const mockRoom: Room = {
+    id: 'room-1',
+    gameId: 'game-1',
+    name: 'test room',
+    hostId: 'user-1',
+    maxPlayers: 2,
+    status: 'waiting',
+    mode: 'online',
+    participants: {
+      'user-1': {
         userId: 'user-1',
         username: 'hostuser',
         avatarUrl: null,
@@ -40,34 +69,16 @@ describe('RoomsGateway', () => {
         isHost: true,
         joinedAt: new Date('2026-07-01T00:00:00.000Z'),
       },
-    ],
+    },
+    messages: [],
+    invitations: {},
+    createdAt: new Date('2026-07-01T00:00:00.000Z'),
+    updatedAt: new Date('2026-07-01T00:00:00.000Z'),
   };
-
-  const toSnapshot = (room: RoomResponse) => ({
-    id: room.id,
-    gameId: room.gameId,
-    name: room.name,
-    hostId: room.hostId,
-    hostName: room.hostName,
-    players: room.players.map((p) => ({
-      userId: p.userId,
-      username: p.username,
-      avatarUrl: p.avatarUrl,
-      isReady: p.isReady,
-      isHost: p.isHost,
-      joinedAt: p.joinedAt.toISOString(),
-    })),
-    maxPlayers: room.maxPlayers,
-    status: room.status,
-    mode: room.mode,
-    createdAt: room.createdAt.toISOString(),
-    updatedAt: room.updatedAt.toISOString(),
-    startedAt: room.startedAt?.toISOString(),
-    finishedAt: room.finishedAt?.toISOString(),
-  });
 
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
+      imports: [EventEmitterModule.forRoot()],
       providers: [
         RoomsGateway,
         { provide: SocketAuthService, useValue: { authenticate: jest.fn() } },
@@ -91,26 +102,29 @@ describe('RoomsGateway', () => {
           useValue: {
             getLobbyRooms: jest.fn().mockReturnValue([]),
             isLobbyVisible: jest.fn(
-              (room: RoomResponse) =>
+              (room: RoomSnapshot) =>
                 room.status === 'waiting' && room.mode === 'online',
             ),
-            toSnapshot: jest.fn((room: RoomResponse) => toSnapshot(room)),
           },
         },
         {
           provide: RoomsService,
           useValue: {
             leave: jest.fn(),
+            findOne: jest.fn(),
           },
         },
         {
           provide: RoomsStateService,
           useValue: {
-            getRoom: jest.fn(),
+            getRoom: jest.fn().mockReturnValue(mockRoom),
           },
         },
       ],
     }).compile();
+    // @OnEvent の購読登録は onApplicationBootstrap ライフサイクルで行われるため、
+    // .compile() だけでなく .init() までモジュールを起動する必要がある
+    await module.init();
 
     gateway = module.get<RoomsGateway>(RoomsGateway);
     socketAuthService = module.get(SocketAuthService);
@@ -119,6 +133,7 @@ describe('RoomsGateway', () => {
     roomsLobbyService = module.get(RoomsLobbyService);
     roomsService = module.get(RoomsService);
     roomsState = module.get(RoomsStateService);
+    eventEmitter = module.get(EventEmitter2);
 
     gateway.server = {
       to: jest.fn().mockReturnValue({ emit: jest.fn() }),
@@ -157,10 +172,11 @@ describe('RoomsGateway', () => {
   });
 
   describe('handleRoomJoin', () => {
-    it('指定のルームに参加する', () => {
+    it('指定のルームに参加して最新スナップショットを返す', async () => {
       const client = createMockSocket();
       client.data.user = { id: 'user-1' };
-      gateway.handleRoomJoin(client, { roomId: 'room-1' });
+      roomsService.findOne.mockReturnValue(mockRoomSnapshot);
+      await gateway.handleRoomJoin(client, { roomId: 'room-1' });
       expect(client.join).toHaveBeenCalledWith('room-1');
       expect(client.data.roomId).toBe('room-1');
       expect(socketPresenceService.register).toHaveBeenCalledWith({
@@ -169,26 +185,82 @@ describe('RoomsGateway', () => {
         userId: 'user-1',
         socketId: 'socket-1',
       });
+      expect(client.emit).toHaveBeenCalledWith(
+        'room:updated',
+        mockRoomSnapshot,
+      );
     });
 
-    it('既に別のルームに参加している場合は退出してから新しいルームに参加する', () => {
+    it('既に別のルームに参加している場合は退出してから新しいルームに参加する', async () => {
       const client = createMockSocket();
       client.data.user = { id: 'user-1' };
       client.data.roomId = 'room-0';
-      gateway.handleRoomJoin(client, { roomId: 'room-1' });
+      roomsService.findOne.mockReturnValue(mockRoomSnapshot);
+      await gateway.handleRoomJoin(client, { roomId: 'room-1' });
       expect(client.leave).toHaveBeenCalledWith('room-0');
       expect(client.join).toHaveBeenCalledWith('room-1');
     });
-  });
 
-  describe('handleRoomLeave / handleDisconnect', () => {
-    it('handleRoomLeave: presence を解除し、最後の1人なら猶予付き自動退出を予約する', () => {
+    it('参加権限がない場合は現在のルームを退出せず、指定のルームにも参加しない', async () => {
+      const client = createMockSocket();
+      client.data.user = { id: 'user-2' };
+      client.data.roomId = 'room-0';
+      roomsState.getRoom.mockReturnValue({
+        ...mockRoom,
+        status: 'playing',
+      });
+
+      await gateway.handleRoomJoin(client, { roomId: 'room-1' });
+
+      expect(client.leave).not.toHaveBeenCalled();
+      expect(client.join).not.toHaveBeenCalled();
+      expect(client.data.roomId).toBe('room-0');
+      expect(socketPresenceService.register).not.toHaveBeenCalled();
+      expect(client.emit).toHaveBeenCalledWith('room:error', {
+        message: 'Cannot join room',
+      });
+    });
+
+    it('ルーム取得失敗時は参加状態を変更せず not found を通知する', async () => {
       const client = createMockSocket();
       client.data.user = { id: 'user-1' };
-      client.data.roomId = 'room-1';
-      socketPresenceService.unregister.mockReturnValue(0);
+      roomsService.findOne.mockImplementation(() => {
+        throw new NotFoundException('Room not found');
+      });
 
-      gateway.handleRoomLeave(client);
+      await gateway.handleRoomJoin(client, { roomId: 'room-1' });
+
+      expect(client.join).not.toHaveBeenCalled();
+      expect(socketPresenceService.register).not.toHaveBeenCalled();
+      expect(client.emit).toHaveBeenCalledWith('room:error', {
+        message: 'Room not found',
+      });
+    });
+
+    it('Socket.IO room への参加失敗を通知する', async () => {
+      const client = createMockSocket();
+      client.data.user = { id: 'user-1' };
+      client.join.mockRejectedValue(new Error('join failed'));
+      roomsService.findOne.mockReturnValue(mockRoomSnapshot);
+
+      await gateway.handleRoomJoin(client, { roomId: 'room-1' });
+
+      expect(client.data.roomId).toBeUndefined();
+      expect(socketPresenceService.register).not.toHaveBeenCalled();
+      expect(client.emit).toHaveBeenCalledWith('room:error', {
+        message: 'Failed to join room',
+      });
+    });
+
+    it('presence 登録後の失敗時は room と presence をロールバックする', async () => {
+      const client = createMockSocket();
+      client.data.user = { id: 'user-1' };
+      client.emit.mockImplementation((event: string) => {
+        if (event === 'room:updated') throw new Error('emit failed');
+      });
+      roomsService.findOne.mockReturnValue(mockRoomSnapshot);
+
+      await gateway.handleRoomJoin(client, { roomId: 'room-1' });
 
       expect(client.leave).toHaveBeenCalledWith('room-1');
       expect(client.data.roomId).toBeUndefined();
@@ -198,24 +270,13 @@ describe('RoomsGateway', () => {
         userId: 'user-1',
         socketId: 'socket-1',
       });
-      expect(socketPresenceService.scheduleIfInactive).toHaveBeenCalledWith(
-        { namespace: 'rooms', roomId: 'room-1', userId: 'user-1' },
-        30_000,
-        expect.any(Function),
-      );
+      expect(client.emit).toHaveBeenCalledWith('room:error', {
+        message: 'Failed to join room',
+      });
     });
+  });
 
-    it('handleRoomLeave: 同じユーザーの別ソケットが残っている場合は自動退出を予約しない', () => {
-      const client = createMockSocket();
-      client.data.user = { id: 'user-1' };
-      client.data.roomId = 'room-1';
-      socketPresenceService.unregister.mockReturnValue(1);
-
-      gateway.handleRoomLeave(client);
-
-      expect(socketPresenceService.scheduleIfInactive).not.toHaveBeenCalled();
-    });
-
+  describe('handleRoomLeave / handleDisconnect', () => {
     it('handleDisconnect: 参加中のルームがあれば presence を解除する', () => {
       const client = createMockSocket();
       client.data.user = { id: 'user-1' };
@@ -240,13 +301,49 @@ describe('RoomsGateway', () => {
     });
   });
 
-  describe('自動退出コールバック(ゴーストルーム対策)', () => {
+  describe('room:leave(明示的退出)', () => {
+    it('presence を即座に解除し、猶予は挟まない(ドメイン退出は REST /leave の責務)', () => {
+      const client = createMockSocket();
+      client.data.user = { id: 'user-1' };
+      client.data.roomId = 'room-1';
+      socketPresenceService.unregister.mockReturnValue(0);
+
+      gateway.handleRoomLeave(client);
+
+      expect(client.leave).toHaveBeenCalledWith('room-1');
+      expect(client.data.roomId).toBeUndefined();
+      expect(socketPresenceService.unregister).toHaveBeenCalledWith({
+        namespace: 'rooms',
+        roomId: 'room-1',
+        userId: 'user-1',
+        socketId: 'socket-1',
+      });
+      // 明示的退出ではドメイン退出も猶予付き自動退出の予約もしない
+      expect(roomsService.leave).not.toHaveBeenCalled();
+      expect(socketPresenceService.scheduleIfInactive).not.toHaveBeenCalled();
+    });
+
+    it('同じユーザーの別タブが残っている場合は presence 解除もしない', () => {
+      const client = createMockSocket();
+      client.data.user = { id: 'user-1' };
+      client.data.roomId = 'room-1';
+      socketPresenceService.unregister.mockReturnValue(1);
+
+      gateway.handleRoomLeave(client);
+
+      expect(client.leave).toHaveBeenCalledWith('room-1');
+      expect(roomsService.leave).not.toHaveBeenCalled();
+      expect(socketPresenceService.scheduleIfInactive).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('自動退出コールバック(切断からの猶予経過後・ゴーストルーム対策)', () => {
     const getScheduledCallback = () => {
       const call = socketPresenceService.scheduleIfInactive.mock.calls[0];
       return call[2];
     };
 
-    it('猶予時間が過ぎても部屋に参加者として残っていれば leave して更新を通知する', () => {
+    it('猶予時間が過ぎても部屋に参加者として残っていれば leave を呼ぶ', () => {
       const client = createMockSocket();
       client.data.user = { id: 'user-1' };
       client.data.roomId = 'room-1';
@@ -258,8 +355,8 @@ describe('RoomsGateway', () => {
         name: 'test room',
         hostId: 'user-1',
         maxPlayers: 2,
-        status: 'WAITING',
-        mode: 'ONLINE',
+        status: 'waiting',
+        mode: 'online',
         participants: {
           'user-1': {
             userId: 'user-1',
@@ -276,19 +373,14 @@ describe('RoomsGateway', () => {
         updatedAt: new Date('2026-07-01T00:00:00.000Z'),
       };
       roomsState.getRoom.mockReturnValue(remainingRoom);
-      roomsService.leave.mockReturnValue(mockRoomResponse);
+      roomsService.leave.mockReturnValue(mockRoomSnapshot);
 
-      const toMock = { emit: jest.fn() };
-      jest.spyOn(gateway.server, 'to').mockReturnValue(toMock as any);
-
-      gateway.handleRoomLeave(client);
+      gateway.handleDisconnect(client);
       void getScheduledCallback()();
 
+      // ブロードキャスト自体は RoomsService が発行するドメインイベント経由で行われる
+      // (rooms.service.spec.ts、および本ファイルの「ドメインイベント → ブロードキャスト」で検証)
       expect(roomsService.leave).toHaveBeenCalledWith('room-1', 'user-1');
-      expect(toMock.emit).toHaveBeenCalledWith(
-        'room:updated',
-        expect.objectContaining({ id: 'room-1' }),
-      );
     });
 
     it('ルームが既に削除されていれば何もしない', () => {
@@ -298,13 +390,13 @@ describe('RoomsGateway', () => {
       socketPresenceService.unregister.mockReturnValue(0);
       roomsState.getRoom.mockReturnValue(undefined);
 
-      gateway.handleRoomLeave(client);
+      gateway.handleDisconnect(client);
       void getScheduledCallback()();
 
       expect(roomsService.leave).not.toHaveBeenCalled();
     });
 
-    it('既に本人が参加者から外れていれば何もしない(明示的な REST leave 済みのケース)', () => {
+    it('既に本人が参加者から外れていれば何もしない(明示的な room:leave 済みのケース)', () => {
       const client = createMockSocket();
       client.data.user = { id: 'user-1' };
       client.data.roomId = 'room-1';
@@ -316,8 +408,8 @@ describe('RoomsGateway', () => {
         name: 'test room',
         hostId: 'user-2',
         maxPlayers: 2,
-        status: 'WAITING',
-        mode: 'ONLINE',
+        status: 'waiting',
+        mode: 'online',
         participants: {},
         messages: [],
         invitations: {},
@@ -326,7 +418,7 @@ describe('RoomsGateway', () => {
       };
       roomsState.getRoom.mockReturnValue(emptyRoom);
 
-      gateway.handleRoomLeave(client);
+      gateway.handleDisconnect(client);
       void getScheduledCallback()();
 
       expect(roomsService.leave).not.toHaveBeenCalled();
@@ -336,13 +428,13 @@ describe('RoomsGateway', () => {
   describe('lobby:join', () => {
     it('lobby ルームに参加し、現在のロビー一覧を送信する', () => {
       const client = createMockSocket();
-      roomsLobbyService.getLobbyRooms.mockReturnValue([mockRoomResponse]);
+      roomsLobbyService.getLobbyRooms.mockReturnValue([mockRoomSnapshot]);
 
       gateway.handleLobbyJoin(client);
 
       expect(client.join).toHaveBeenCalledWith('lobby');
       expect(client.emit).toHaveBeenCalledWith('lobby:rooms', [
-        toSnapshot(mockRoomResponse),
+        mockRoomSnapshot,
       ]);
     });
   });
@@ -416,68 +508,82 @@ describe('RoomsGateway', () => {
     });
   });
 
-  describe('emitRoomCreated', () => {
-    it('online かつ waiting のルームは lobby へ配信する', () => {
-      const toMock = { emit: jest.fn() };
-      jest.spyOn(gateway.server, 'to').mockReturnValue(toMock as any);
+  describe('ドメインイベント → ブロードキャスト', () => {
+    describe(`${ROOM_CREATED_EVENT} → room:created`, () => {
+      it('online かつ waiting のルームは lobby へ配信する', () => {
+        const toMock = { emit: jest.fn() };
+        jest.spyOn(gateway.server, 'to').mockReturnValue(toMock as any);
 
-      gateway.emitRoomCreated(mockRoomResponse);
+        eventEmitter.emit(
+          ROOM_CREATED_EVENT,
+          new RoomCreatedEvent(mockRoomSnapshot),
+        );
 
-      expect(gateway.server.to).toHaveBeenCalledWith('lobby');
-      expect(toMock.emit).toHaveBeenCalledWith(
-        'room:created',
-        toSnapshot(mockRoomResponse),
-      );
+        expect(gateway.server.to).toHaveBeenCalledWith('lobby');
+        expect(toMock.emit).toHaveBeenCalledWith(
+          'room:created',
+          mockRoomSnapshot,
+        );
+      });
+
+      it('ロビーに表示すべきでないルーム(local_cpu 等)は配信しない', () => {
+        const toMock = { emit: jest.fn() };
+        jest.spyOn(gateway.server, 'to').mockReturnValue(toMock as any);
+        roomsLobbyService.isLobbyVisible.mockReturnValueOnce(false);
+
+        eventEmitter.emit(
+          ROOM_CREATED_EVENT,
+          new RoomCreatedEvent({ ...mockRoomSnapshot, mode: 'local_cpu' }),
+        );
+
+        expect(toMock.emit).not.toHaveBeenCalled();
+      });
     });
 
-    it('ロビーに表示すべきでないルーム(local_cpu 等)は配信しない', () => {
-      const toMock = { emit: jest.fn() };
-      jest.spyOn(gateway.server, 'to').mockReturnValue(toMock as any);
-      roomsLobbyService.isLobbyVisible.mockReturnValueOnce(false);
+    describe(`${ROOM_UPDATED_EVENT} → room:updated`, () => {
+      it('ルームとロビー双方に RoomSnapshot を emit する(online)', () => {
+        const toMock = { emit: jest.fn() };
+        jest.spyOn(gateway.server, 'to').mockReturnValue(toMock as any);
 
-      gateway.emitRoomCreated({ ...mockRoomResponse, mode: 'local_cpu' });
+        eventEmitter.emit(
+          ROOM_UPDATED_EVENT,
+          new RoomUpdatedEvent(mockRoomSnapshot),
+        );
 
-      expect(toMock.emit).not.toHaveBeenCalled();
+        expect(gateway.server.to).toHaveBeenCalledWith('room-1');
+        expect(gateway.server.to).toHaveBeenCalledWith('lobby');
+        expect(toMock.emit).toHaveBeenCalledWith(
+          'room:updated',
+          mockRoomSnapshot,
+        );
+      });
+
+      it('local_cpu ルームは lobby へは配信しない', () => {
+        const toMock = { emit: jest.fn() };
+        jest.spyOn(gateway.server, 'to').mockReturnValue(toMock as any);
+
+        eventEmitter.emit(
+          ROOM_UPDATED_EVENT,
+          new RoomUpdatedEvent({ ...mockRoomSnapshot, mode: 'local_cpu' }),
+        );
+
+        expect(gateway.server.to).toHaveBeenCalledWith('room-1');
+        expect(gateway.server.to).not.toHaveBeenCalledWith('lobby');
+      });
     });
-  });
 
-  describe('emitRoomUpdated', () => {
-    it('RoomResponseからRoomSnapshotを生成し、ルームとロビー双方にemitする(online)', () => {
-      const toMock = { emit: jest.fn() };
-      jest.spyOn(gateway.server, 'to').mockReturnValue(toMock as any);
+    describe(`${ROOM_DELETED_EVENT} → room:deleted`, () => {
+      it('ルームと lobby の双方に削除イベントをemitする', () => {
+        const toMock = { emit: jest.fn() };
+        jest.spyOn(gateway.server, 'to').mockReturnValue(toMock as any);
 
-      gateway.emitRoomUpdated(mockRoomResponse);
+        eventEmitter.emit(ROOM_DELETED_EVENT, new RoomDeletedEvent('room-1'));
 
-      expect(gateway.server.to).toHaveBeenCalledWith('room-1');
-      expect(gateway.server.to).toHaveBeenCalledWith('lobby');
-      expect(toMock.emit).toHaveBeenCalledWith(
-        'room:updated',
-        toSnapshot(mockRoomResponse),
-      );
-    });
-
-    it('local_cpu ルームは lobby へは配信しない', () => {
-      const toMock = { emit: jest.fn() };
-      jest.spyOn(gateway.server, 'to').mockReturnValue(toMock as any);
-
-      gateway.emitRoomUpdated({ ...mockRoomResponse, mode: 'local_cpu' });
-
-      expect(gateway.server.to).toHaveBeenCalledWith('room-1');
-      expect(gateway.server.to).not.toHaveBeenCalledWith('lobby');
-    });
-  });
-
-  describe('emitRoomDeleted', () => {
-    it('ルームと lobby の双方に削除イベントをemitする', () => {
-      const toMock = { emit: jest.fn() };
-      jest.spyOn(gateway.server, 'to').mockReturnValue(toMock as any);
-
-      gateway.emitRoomDeleted('room-1');
-
-      expect(gateway.server.to).toHaveBeenCalledWith('room-1');
-      expect(gateway.server.to).toHaveBeenCalledWith('lobby');
-      expect(toMock.emit).toHaveBeenCalledWith('room:deleted', {
-        roomId: 'room-1',
+        expect(gateway.server.to).toHaveBeenCalledWith('room-1');
+        expect(gateway.server.to).toHaveBeenCalledWith('lobby');
+        expect(toMock.emit).toHaveBeenCalledWith('room:deleted', {
+          roomId: 'room-1',
+        });
       });
     });
   });

@@ -43,8 +43,8 @@ describe('GameGateway', () => {
   });
 
   // モックのソケットオブジェクトを作成するヘルパー関数
-  const createMockSocket = (): any => ({
-    id: 'socket-123',
+  const createMockSocket = (id = 'socket-123'): any => ({
+    id,
     data: {},
     handshake: { auth: {} },
     join: jest.fn(),
@@ -103,11 +103,9 @@ describe('GameGateway', () => {
 
       await gateway.handleJoin(joinData, client);
 
-      // handleGameJoin に clientId を渡しているか確認
       expect(gameService.handleGameJoin).toHaveBeenCalledWith(
         'room-1',
         'user-1',
-        'socket-123',
       );
       expect(client.join).toHaveBeenCalledWith('room-1');
 
@@ -134,7 +132,6 @@ describe('GameGateway', () => {
       expect(gameService.handleGameLeave).toHaveBeenCalledWith(
         'room-old',
         'user-1',
-        'socket-123',
       );
 
       // 新ルームへ参加しているか
@@ -233,17 +230,14 @@ describe('GameGateway', () => {
       expect(gameService.handleGameLeave).toHaveBeenCalledWith(
         'room-old',
         'user-1',
-        'socket-123',
       );
       expect(gameService.handleGameLeave).toHaveBeenCalledWith(
         'room-new',
         'user-1',
-        'socket-123',
       );
       expect(gameService.handleGameJoin).toHaveBeenLastCalledWith(
         'room-old',
         'user-1',
-        'socket-123',
       );
       expect(client.data.roomId).toBe('room-old');
     });
@@ -293,11 +287,9 @@ describe('GameGateway', () => {
       expect(client.leave).toHaveBeenCalledWith('room-1');
       expect(client.data.roomId).toBeUndefined();
 
-      // userId と clientId を渡しているか
       expect(gameService.handleGameLeave).toHaveBeenCalledWith(
         'room-1',
         'user-1',
-        'socket-123',
       );
     });
 
@@ -362,8 +354,7 @@ describe('GameGateway', () => {
   });
 
   describe('handleDisconnect', () => {
-    it('切断猶予期間が経過するとgameService.handleGameLeaveが呼ばれること', async () => {
-      jest.useFakeTimers();
+    it('唯一のソケットが切断するとgameService.handleGameLeaveが呼ばれること', async () => {
       const client = createMockSocket();
       client.data.user = { id: 'user-1' };
       client.data.roomId = 'room-1';
@@ -375,15 +366,47 @@ describe('GameGateway', () => {
       });
 
       await gateway.handleDisconnect(client);
-      await jest.advanceTimersByTimeAsync(2000);
 
-      // userId と clientId を渡しているか
       expect(gameService.handleGameLeave).toHaveBeenCalledWith(
         'room-1',
         'user-1',
-        'socket-123',
       );
-      jest.useRealTimers();
+    });
+
+    it('同一ユーザーの別ソケットが残っている場合は切断扱いにしないこと(StrictMode/複数タブ対策)', async () => {
+      // React StrictMode の二重ソケットや別タブ接続を想定し、同一ユーザーの
+      // 2本のソケットを presence に登録する
+      const clientA = createMockSocket('socket-a');
+      clientA.data.user = { id: 'user-1' };
+      clientA.data.roomId = 'room-1';
+      const clientB = createMockSocket('socket-b');
+      clientB.data.user = { id: 'user-1' };
+      clientB.data.roomId = 'room-1';
+
+      socketPresenceService.register({
+        namespace: 'game',
+        roomId: 'room-1',
+        userId: 'user-1',
+        socketId: 'socket-a',
+      });
+      socketPresenceService.register({
+        namespace: 'game',
+        roomId: 'room-1',
+        userId: 'user-1',
+        socketId: 'socket-b',
+      });
+
+      // 1本目が切断しても、まだ2本目が残っているため handleGameLeave は呼ばれない
+      await gateway.handleDisconnect(clientA);
+      expect(gameService.handleGameLeave).not.toHaveBeenCalled();
+
+      // 最後の1本が切断すると呼ばれる。これは最新ソケットが先に閉じても
+      // 最終的に切断扱いになることの確認でもある
+      await gateway.handleDisconnect(clientB);
+      expect(gameService.handleGameLeave).toHaveBeenCalledWith(
+        'room-1',
+        'user-1',
+      );
     });
 
     it('ユーザー情報がない場合、何もしないこと', async () => {

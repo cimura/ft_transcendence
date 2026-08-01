@@ -5,6 +5,7 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
+import { EventEmitter2 } from '@nestjs/event-emitter';
 import { randomUUID } from 'crypto';
 import { PrismaService } from '../prisma.service';
 import { GamesService } from '../games/games.service';
@@ -12,15 +13,19 @@ import { RoomsStateService } from './rooms-state.service';
 import { BOMBERMAN_GAME_ID } from '../games/games.constants';
 import { CreateRoomDto } from './dto/create-room.dto';
 import type { QueryRoomStatus } from './dto/query-rooms.dto';
+import type { Room, RoomParticipant } from '../common/types/room.type';
 import type {
-  Room,
-  RoomParticipant,
-  RoomStatus,
   RoomMode,
-  RoomResponse,
-  RoomStatusResponse,
-  RoomModeResponse,
-} from '../common/types/room.type';
+  RoomSnapshot,
+} from '@ft_transcendence/shared/rooms-events.types';
+import {
+  ROOM_CREATED_EVENT,
+  ROOM_UPDATED_EVENT,
+  ROOM_DELETED_EVENT,
+  RoomCreatedEvent,
+  RoomUpdatedEvent,
+  RoomDeletedEvent,
+} from './events/room-domain-events';
 
 @Injectable()
 export class RoomsService {
@@ -28,23 +33,23 @@ export class RoomsService {
     private readonly prisma: PrismaService,
     private readonly gamesService: GamesService,
     private readonly roomsState: RoomsStateService,
+    private readonly eventEmitter: EventEmitter2,
   ) {}
 
-  findAll(status?: QueryRoomStatus): RoomResponse[] {
+  findAll(status?: QueryRoomStatus): RoomSnapshot[] {
     let rooms = this.roomsState.getAllRooms();
 
     if (status) {
-      const targetStatus = status.toUpperCase() as RoomStatus;
-      rooms = rooms.filter((room) => room.status === targetStatus);
+      rooms = rooms.filter((room) => room.status === status);
     }
 
     // 作成日時の降順でソート
     rooms.sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
 
-    return rooms.map((room) => this.toRoomResponse(room));
+    return rooms.map((room) => this.toRoomSnapshot(room));
   }
 
-  async create(userId: string, dto: CreateRoomDto): Promise<RoomResponse> {
+  async create(userId: string, dto: CreateRoomDto): Promise<RoomSnapshot> {
     const name = dto.name.trim();
     if (!name) {
       throw new BadRequestException('Room name is required');
@@ -62,7 +67,7 @@ export class RoomsService {
     if (!user) throw new NotFoundException('User not found');
 
     const roomId = randomUUID();
-    const mode: RoomMode = dto.mode === 'local_cpu' ? 'LOCAL_CPU' : 'ONLINE';
+    const mode: RoomMode = dto.mode === 'local_cpu' ? 'local_cpu' : 'online';
 
     const hostParticipant: RoomParticipant = {
       userId,
@@ -79,7 +84,7 @@ export class RoomsService {
       name,
       hostId: userId,
       maxPlayers: dto.maxPlayers,
-      status: 'WAITING',
+      status: 'waiting',
       mode,
       participants: {
         [userId]: hostParticipant,
@@ -91,27 +96,29 @@ export class RoomsService {
     };
 
     this.roomsState.addRoom(newRoom);
-    return this.toRoomResponse(newRoom);
+    const snapshot = this.toRoomSnapshot(newRoom);
+    this.eventEmitter.emit(ROOM_CREATED_EVENT, new RoomCreatedEvent(snapshot));
+    return snapshot;
   }
 
-  findOne(roomId: string): RoomResponse {
-    return this.toRoomResponse(this.getRoomOrThrow(roomId));
+  findOne(roomId: string): RoomSnapshot {
+    return this.toRoomSnapshot(this.getRoomOrThrow(roomId));
   }
 
-  async join(roomId: string, userId: string): Promise<RoomResponse> {
+  async join(roomId: string, userId: string): Promise<RoomSnapshot> {
     const room = this.getRoomOrThrow(roomId);
 
-    if (room.status !== 'WAITING') {
+    if (room.status !== 'waiting') {
       throw new ConflictException('Only waiting rooms can be joined');
     }
 
-    if (room.mode === 'LOCAL_CPU' && room.hostId !== userId) {
+    if (room.mode === 'local_cpu' && room.hostId !== userId) {
       throw new ConflictException('Local CPU rooms cannot be joined');
     }
 
     // 既に参加している場合はそのまま返す
     if (room.participants[userId]) {
-      return this.toRoomResponse(room);
+      return this.emitRoomUpdated(room);
     }
 
     // await を伴うユーザー取得を先に行う
@@ -119,16 +126,16 @@ export class RoomsService {
     if (!user) throw new NotFoundException('User not found');
 
     const currentRoom = this.getRoomOrThrow(roomId);
-    if (currentRoom.status !== 'WAITING') {
+    if (currentRoom.status !== 'waiting') {
       throw new ConflictException('Only waiting rooms can be joined');
     }
-    if (currentRoom.mode === 'LOCAL_CPU' && currentRoom.hostId !== userId) {
+    if (currentRoom.mode === 'local_cpu' && currentRoom.hostId !== userId) {
       throw new ConflictException('Local CPU rooms cannot be joined');
     }
 
     // await 後に同期的に再チェックしてから追加し、同時 join による定員超過を防ぐ
     if (currentRoom.participants[userId]) {
-      return this.toRoomResponse(room);
+      return this.emitRoomUpdated(room);
     }
     if (
       Object.keys(currentRoom.participants).length >= currentRoom.maxPlayers
@@ -146,13 +153,13 @@ export class RoomsService {
     };
 
     this.roomsState.addParticipant(roomId, participant);
-    return this.toRoomResponse(room);
+    return this.emitRoomUpdated(room);
   }
 
-  leave(roomId: string, userId: string) {
+  leave(roomId: string, userId: string): RoomSnapshot | null {
     const room = this.getRoomOrThrow(roomId);
 
-    if (room.status !== 'WAITING') {
+    if (room.status !== 'waiting') {
       throw new ConflictException('Only waiting rooms can be left');
     }
 
@@ -169,7 +176,8 @@ export class RoomsService {
     // 空室のルームは削除する。
     if (remainingParticipants.length === 0) {
       this.roomsState.deleteRoom(roomId);
-      return { deleted: true as const, roomId };
+      this.eventEmitter.emit(ROOM_DELETED_EVENT, new RoomDeletedEvent(roomId));
+      return null;
     }
 
     // ホストが退出した場合の処理
@@ -186,13 +194,13 @@ export class RoomsService {
       room.updatedAt = new Date();
     }
 
-    return this.toRoomResponse(room);
+    return this.emitRoomUpdated(room);
   }
 
-  setReady(roomId: string, userId: string, isReady: boolean): RoomResponse {
+  setReady(roomId: string, userId: string, isReady: boolean): RoomSnapshot {
     const room = this.getRoomOrThrow(roomId);
 
-    if (room.status !== 'WAITING') {
+    if (room.status !== 'waiting') {
       throw new ConflictException('Ready can only be changed in waiting rooms');
     }
 
@@ -211,13 +219,13 @@ export class RoomsService {
       participant.isHost ? true : isReady,
     );
 
-    return this.toRoomResponse(room);
+    return this.emitRoomUpdated(room);
   }
 
-  start(roomId: string, userId: string): RoomResponse {
+  start(roomId: string, userId: string): RoomSnapshot {
     const room = this.getRoomOrThrow(roomId);
 
-    if (room.status !== 'WAITING') {
+    if (room.status !== 'waiting') {
       throw new ConflictException('Only waiting rooms can be started');
     }
 
@@ -232,10 +240,10 @@ export class RoomsService {
 
     this.assertStartable(room);
 
-    this.roomsState.updateRoomStatus(roomId, 'PLAYING');
+    this.roomsState.updateRoomStatus(roomId, 'playing');
     room.startedAt = new Date();
 
-    return this.toRoomResponse(room);
+    return this.emitRoomUpdated(room);
   }
 
   // 他のサービスからルームの存在確認等に使用
@@ -249,7 +257,13 @@ export class RoomsService {
 
   // --- Private Helpers ---
 
-  private toRoomResponse(room: Room): RoomResponse {
+  private emitRoomUpdated(room: Room): RoomSnapshot {
+    const snapshot = this.toRoomSnapshot(room);
+    this.eventEmitter.emit(ROOM_UPDATED_EVENT, new RoomUpdatedEvent(snapshot));
+    return snapshot;
+  }
+
+  private toRoomSnapshot(room: Room): RoomSnapshot {
     const participants = Object.values(room.participants).sort(
       (a, b) => a.joinedAt.getTime() - b.joinedAt.getTime(),
     );
@@ -259,13 +273,12 @@ export class RoomsService {
 
     return {
       id: room.id,
-      gameId: room.gameId,
       name: room.name,
       hostId: room.hostId,
       hostName: host ? host.username : 'Unknown',
       maxPlayers: room.maxPlayers,
-      status: this.toStatusResponse(room.status),
-      mode: this.toModeResponse(room.mode),
+      status: room.status,
+      mode: room.mode,
       createdAt: room.createdAt,
       updatedAt: room.updatedAt,
       startedAt: room.startedAt,
@@ -273,29 +286,17 @@ export class RoomsService {
       players: participants.map((p) => ({
         userId: p.userId,
         username: p.username,
-        avatarUrl: p.avatarUrl,
+        avatarUrl: p.avatarUrl ? p.avatarUrl : undefined,
         isReady: p.isReady,
         isHost: p.isHost,
-        joinedAt: p.joinedAt,
       })),
     };
-  }
-
-  private toStatusResponse(status: RoomStatus): RoomStatusResponse {
-    if (status === 'WAITING') return 'waiting';
-    if (status === 'PLAYING') return 'playing';
-    return 'finished';
-  }
-
-  private toModeResponse(mode: RoomMode): RoomModeResponse {
-    if (mode === 'LOCAL_CPU') return 'local_cpu';
-    return 'online';
   }
 
   private assertStartable(room: Room) {
     const participants = Object.values(room.participants);
 
-    if (room.mode === 'LOCAL_CPU') {
+    if (room.mode === 'local_cpu') {
       if (participants.length !== 1) {
         throw new ConflictException(
           'Local CPU rooms must have exactly one human player',

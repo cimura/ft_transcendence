@@ -12,5 +12,6 @@
   },
   "[css]": {
     "editor.defaultFormatter": "esbenp.prettier-vscode"
-  }
+  },
+  "git.detectWorktrees": true
 }
