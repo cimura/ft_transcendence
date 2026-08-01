@@ -14,8 +14,8 @@ import { RoomsStateService } from './rooms-state.service';
 import type {
   RoomInvitation,
   RoomInvitationUserSnapshot,
-  RoomResponse,
 } from '../common/types/room.type';
+import type { RoomSnapshot } from '@ft_transcendence/shared/rooms-events.types';
 
 type InvitationStatusResponse = 'pending' | 'accepted' | 'declined' | 'expired';
 
@@ -39,7 +39,7 @@ export class RoomsInvitationService {
 
     const room = this.roomsService.getRoomOrThrow(roomId);
 
-    if (room.status !== 'WAITING') {
+    if (room.status !== 'waiting') {
       throw new ConflictException('Only waiting rooms can be invited to');
     }
 
@@ -85,7 +85,7 @@ export class RoomsInvitationService {
 
     // await の間にルームが解散/変化し得るため、書き込み直前に同期で再確認する
     const currentRoom = this.roomsService.getRoomOrThrow(roomId);
-    if (currentRoom.status !== 'WAITING') {
+    if (currentRoom.status !== 'waiting') {
       throw new ConflictException('Only waiting rooms can be invited to');
     }
     if (currentRoom.participants[inviteeId]) {
@@ -114,7 +114,7 @@ export class RoomsInvitationService {
   async acceptInvitation(
     invitationId: string,
     userId: string,
-  ): Promise<RoomResponse> {
+  ): Promise<RoomSnapshot> {
     const found = this.roomsState.getInvitation(invitationId);
     if (!found) {
       throw new NotFoundException('Invitation not found');
@@ -130,7 +130,7 @@ export class RoomsInvitationService {
       invitation.inviteeId,
     );
 
-    // join が満員・PLAYING 等で失敗した場合に招待を無駄に消費しないよう、成功後に削除する
+    // join が満員・playing 等で失敗した場合に招待を無駄に消費しないよう、成功後に削除する
     const response = await this.roomsService.join(room.id, userId);
     this.roomsState.removeInvitation(room.id, userId);
 

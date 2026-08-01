@@ -3,6 +3,7 @@ import axios from 'axios'
 import type { User } from '../types/user'
 import * as authApi from '../api/auth'
 import { getApiErrorMessage } from '../api/errors'
+import { getStoredAccessToken, storeAccessToken } from '../utils/accessToken'
 
 interface AuthState {
   currentUser: User | null
@@ -18,24 +19,6 @@ interface AuthState {
 
   fetchCurrentUser: () => Promise<void>
   logout: () => Promise<void>
-}
-
-const ACCESS_TOKEN_KEY = 'accessToken'
-
-const getStoredAccessToken = () => {
-  if (typeof window === 'undefined') return null
-  return window.localStorage.getItem(ACCESS_TOKEN_KEY)
-}
-
-const storeAccessToken = (token: string | null) => {
-  if (typeof window === 'undefined') return
-
-  if (token) {
-    window.localStorage.setItem(ACCESS_TOKEN_KEY, token)
-    return
-  }
-
-  window.localStorage.removeItem(ACCESS_TOKEN_KEY)
 }
 
 /**

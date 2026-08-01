@@ -17,7 +17,7 @@ import { useRoomSocket } from '../hooks/useRoomSocket'
 import axios from 'axios'
 import { getApiErrorMessage } from '../api/errors'
 import { useFriends } from '../hooks/friends/useFriends'
-import type { GameRoom } from '../types/room'
+import type { RoomSnapshot } from '@ft_transcendence/shared/rooms-events.types'
 
 export function WaitingRoom() {
   const { roomId } = useParams<{ roomId: string }>()
@@ -47,12 +47,12 @@ export function WaitingRoom() {
         return
       }
 
-      if (currentRoom?.id === roomId) {
-        setIsLoadingRoom(false)
-        return
-      }
-
+      setIsLoadingRoom(true)
       try {
+        // A room held in the store may only be a lobby snapshot. It can also
+        // be overwritten by an older lobby event while navigation is in
+        // progress. Joining is idempotent on the backend, so always confirm
+        // membership when the waiting-room route is entered.
         const joinedRoom = await joinRoom(roomId)
         if (cancelled) return
         upsertRoom(joinedRoom)
@@ -88,7 +88,7 @@ export function WaitingRoom() {
     return () => {
       cancelled = true
     }
-  }, [currentRoom?.id, navigate, roomId, setCurrentRoom, upsertRoom])
+  }, [navigate, roomId, setCurrentRoom, upsertRoom])
 
   useEffect(() => {
     if (!currentUser) {
@@ -144,15 +144,16 @@ export function WaitingRoom() {
   }
 
   const handleLeaveRoom = async () => {
+    if (isLeavingRef.current) return
+    isLeavingRef.current = true
     try {
       const result = await leaveRoom(currentRoom.id)
-      if (result.deleted) {
-        removeRoom(result.roomId)
-      } else {
+      if (result) {
         upsertRoom(result)
+      } else {
+        removeRoom(currentRoom.id)
       }
       emitRoomLeave()
-      isLeavingRef.current = true
       navigate('/home')
       setCurrentRoom(null)
     } catch (error) {
@@ -162,11 +163,11 @@ export function WaitingRoom() {
       ) {
         emitRoomLeave()
         removeRoom(currentRoom.id)
-        isLeavingRef.current = true
         navigate('/home')
         setCurrentRoom(null)
         return
       }
+      isLeavingRef.current = false
       console.error('Failed to leave room:', error)
     }
   }
@@ -384,7 +385,7 @@ export function WaitingRoom() {
   )
 }
 
-function RoomInviteSection({ currentRoom }: { currentRoom: GameRoom }) {
+function RoomInviteSection({ currentRoom }: { currentRoom: RoomSnapshot }) {
   const { friends } = useFriends()
   const [selectedInviteeId, setSelectedInviteeId] = useState('')
   const [inviteMessage, setInviteMessage] = useState<string | null>(null)
