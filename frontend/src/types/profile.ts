@@ -55,3 +55,34 @@ export type MatchHistoryResponse = PaginatedResponse<MatchHistory>
 export interface RankingsResponse {
   data: RankingItem[]
 }
+
+export type AchievementCategory = 'JOURNEY' | 'VICTORY' | 'COMBAT'
+
+export interface TravellerProgression {
+  level: number
+  title: string
+  totalXp: number
+  currentLevelXp: number
+  levelXpRequired: number | null
+  xpToNextLevel: number | null
+  progressPercent: number
+}
+
+export interface AchievementProgress {
+  id: string
+  name: string
+  description: string
+  icon: string
+  category: AchievementCategory
+  progress: number
+  target: number
+  unlocked: boolean
+  unlockedAt: string | null
+}
+
+export interface GalacticGuide {
+  progression: TravellerProgression
+  unlockedCount: number
+  totalCount: number
+  achievements: AchievementProgress[]
+}

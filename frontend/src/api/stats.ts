@@ -4,6 +4,7 @@ import type {
   UserStats,
   MatchHistoryResponse,
   RankingsResponse,
+  GalacticGuide,
 } from '../types/profile'
 
 /**
@@ -43,5 +44,19 @@ export const getRankings = async (
   const response = await api.get<RankingsResponse>('/scores/rankings', {
     params: { limit },
   })
+  return response.data
+}
+
+/**
+ *  Get a user's Traveller progression and achievements.
+ */
+
+export const getGalacticGuide = async (
+  userId: string
+): Promise<GalacticGuide> => {
+  const response = await api.get<GalacticGuide>(
+    `/scores/user/${userId}/guide`
+  )
+
   return response.data
 }
