@@ -24,6 +24,10 @@
     "./game-constants": {
       "types": "./game-constants.ts",
       "default": "./game-constants.ts"
+    },
+    "./game-map": {
+      "types": "./game-map.ts",
+      "default": "./game-map.ts"
     }
   }
 }
