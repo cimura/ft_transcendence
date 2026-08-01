@@ -6,6 +6,10 @@ import { MatchResult } from '../generated/prisma/enums';
 import { Prisma } from '../generated/prisma/client.js';
 import type { PlayerRanking } from '@ft_transcendence/shared/game-events.types';
 import { UserStatsDto } from './dto/user-stats.dto';
+import {
+  calculatePlayerMetrics,
+  findCompletedAchievementIds,
+} from './achievements/progression';
 
 type RankingAggregateRow = {
   userId: string;
@@ -44,14 +48,22 @@ export class ScoresService {
 
     if (participants.length === 0) return;
 
-    await this.prisma.match.create({
-      data: {
-        gameType: params.gameType,
-        finishedAt: params.finishedAt,
-        participants: {
-          create: participants,
+    await this.prisma.$transaction(async (tx) => {
+      await tx.match.create({
+        data: {
+          gameType: params.gameType,
+          finishedAt: params.finishedAt,
+          participants: {
+            create: participants,
+          },
         },
-      },
+      });
+
+      const userIds = [...new Set(participants.map(({ userId }) => userId))];
+
+      for (const userId of userIds) {
+        await this.unlockCompletedAchievements(tx, userId);
+      }
     });
   }
 
@@ -236,6 +248,42 @@ export class ScoresService {
     }));
 
     return { data };
+  }
+
+  private async unlockCompletedAchievements(
+    tx: Prisma.TransactionClient,
+    userId: string,
+  ): Promise<void> {
+    const matches = await tx.matchParticipant.findMany({
+      where: { userId },
+      select: {
+        result: true,
+        kills: true,
+      },
+      orderBy: [
+        {
+          match: {
+            finishedAt: 'asc',
+          },
+        },
+        {
+          matchId: 'asc',
+        },
+      ],
+    });
+
+    const metrics = calculatePlayerMetrics(matches);
+    const completedAchievementIds = findCompletedAchievementIds(metrics);
+
+    if (completedAchievementIds.length === 0) return;
+
+    await tx.userAchievement.createMany({
+      data: completedAchievementIds.map((achievementId) => ({
+        userId,
+        achievementId,
+      })),
+      skipDuplicates: true,
+    });
   }
 
   private toStoredResult(

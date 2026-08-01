@@ -3,6 +3,7 @@ import { NotFoundException } from '@nestjs/common';
 import { ScoresService } from './scores.service';
 import { PrismaService } from '../prisma.service';
 import { MatchResult } from '../generated/prisma/enums';
+import { IsDataURI } from 'class-validator';
 
 describe('ScoresService', () => {
   let service: ScoresService;
@@ -18,6 +19,9 @@ describe('ScoresService', () => {
     matchParticipant: {
       findMany: jest.Mock;
       count: jest.Mock;
+    };
+    userAchievement: {
+      createMany: jest.Mock;
     };
   };
 
@@ -35,7 +39,23 @@ describe('ScoresService', () => {
         findMany: jest.fn(),
         count: jest.fn(),
       },
+      userAchievement: {
+        createMany: jest.fn(),
+      },
     };
+
+    prisma.$transaction.mockImplementation(
+      async (
+        operation:
+          | ((tx: typeof prisma) => Promise<unknown>)
+          | Promise<unknown>[],
+      ) => {
+        if (typeof operation === 'function') {
+          return operation(prisma);
+        }
+        return Promise.all(operation);
+      },
+    );
 
     const module: TestingModule = await Test.createTestingModule({
       providers: [
@@ -273,6 +293,9 @@ describe('ScoresService', () => {
 
   it('records game end rankings as match participants', async () => {
     const finishedAt = new Date('2026-06-25T09:12:20.525Z');
+    prisma.matchParticipant.findMany
+      .mockResolvedValueOnce([{ result: MatchResult.WIN, kills: 1 }])
+      .mockResolvedValueOnce([{ result: MatchResult.LOSS, kills: 0 }]);
 
     await service.recordMatchResult({
       gameType: 'Bomberman',
@@ -322,6 +345,30 @@ describe('ScoresService', () => {
           ],
         },
       },
+    });
+
+    expect(prisma.userAchievement.createMany).toHaveBeenNthCalledWith(1, {
+      data: [
+        {
+          userId: 'user-1',
+          achievementId: 'first_match',
+        },
+        {
+          userId: 'user-1',
+          achievementId: 'first_win',
+        },
+      ],
+      skipDuplicates: true,
+    });
+
+    expect(prisma.userAchievement.createMany).toHaveBeenNthCalledWith(2, {
+      data: [
+        {
+          userId: 'user-2',
+          achievementId: 'first_match',
+        },
+      ],
+      skipDuplicates: true,
     });
   });
 
