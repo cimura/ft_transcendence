@@ -12,6 +12,9 @@ import {
   UsePipes,
   ValidationPipe,
   Logger,
+  BadRequestException,
+  ConflictException,
+  ForbiddenException,
   NotFoundException,
 } from '@nestjs/common';
 import { OnEvent } from '@nestjs/event-emitter';
@@ -20,7 +23,6 @@ import { SocketPresenceService } from '../websocket/socket-presence.service';
 import { RoomsChatService } from './rooms-chat.service';
 import { RoomsLobbyService } from './rooms-lobby.service';
 import { RoomsService } from './rooms.service';
-import { RoomsStateService } from './rooms-state.service';
 import { getSocketCorsOrigins } from '../websocket/socket-cors';
 import {
   RoomJoinDto,
@@ -28,10 +30,11 @@ import {
   ChatLeaveDto,
   ChatMessageDto,
 } from './dto/events.dto';
+import type { RoomMessage } from '../common/types/room.type';
 import {
+  ChatMessagePayload,
   RoomClientToServerEvents,
   RoomServerToClientEvents,
-  RoomSnapshot,
 } from '@ft_transcendence/shared/rooms-events.types';
 import {
   ROOM_CREATED_EVENT,
@@ -81,7 +84,6 @@ export class RoomsGateway implements OnGatewayConnection, OnGatewayDisconnect {
     private readonly roomsChatService: RoomsChatService,
     private readonly roomsLobbyService: RoomsLobbyService,
     private readonly roomsService: RoomsService,
-    private readonly roomsState: RoomsStateService,
   ) {}
 
   handleConnection(client: RoomsSocket) {
@@ -112,99 +114,22 @@ export class RoomsGateway implements OnGatewayConnection, OnGatewayDisconnect {
     @ConnectedSocket() client: RoomsSocket,
     @MessageBody() dto: RoomJoinDto,
   ) {
-    const userId = client.data.user?.id;
-    const room = this.roomsState.getRoom(dto.roomId);
-    const isParticipant = userId ? Boolean(room?.participants[userId]) : false;
-    const canJoin =
-      room?.status === 'waiting' &&
-      Object.keys(room.participants).length < room.maxPlayers;
-
-    if (!userId || (!isParticipant && !canJoin)) {
+    const userId = this.requireUserId(client);
+    if (!userId) {
       client.emit('room:error', { message: 'Cannot join room' });
       return;
     }
 
-    let snapshot: RoomSnapshot;
     try {
-      snapshot = this.roomsService.findOne(dto.roomId);
+      // Socket.IO room へ参加する前に、サーバ側で購読権限を検証する。
+      // (REST /join と socket room:join は並行に呼ばれ得るため、canSubscribe は
+      // 「既に参加済み」または「これから参加できる」のどちらも許可する)
+      if (!this.roomsService.canSubscribe(dto.roomId, userId)) {
+        throw new ForbiddenException('Cannot join room');
+      }
+      await this.subscribeToRoom(client, dto.roomId, userId);
     } catch (error) {
-      if (error instanceof NotFoundException) {
-        client.emit('room:error', { message: 'Room not found' });
-      } else {
-        this.logger.error(
-          `Failed to prepare room subscription { roomId: '${dto.roomId}', userId: '${userId}' }`,
-          error instanceof Error ? error.stack : String(error),
-        );
-        client.emit('room:error', { message: 'Failed to join room' });
-      }
-      return;
-    }
-
-    let joined = false;
-    let presenceRegistrationAttempted = false;
-    try {
-      await client.join(dto.roomId);
-      joined = true;
-
-      if (client.data.roomId && client.data.roomId !== dto.roomId) {
-        // 別ルームへの乗り換え: 切断相当なので猶予付きで後始末する
-        this.leaveCurrentRoom(client, /* explicit */ false);
-      }
-      client.data.roomId = dto.roomId;
-
-      presenceRegistrationAttempted = true;
-      this.socketPresenceService.register({
-        namespace: 'rooms',
-        roomId: dto.roomId,
-        userId,
-        socketId: client.id,
-      });
-
-      // REST mutations can happen before this socket has finished joining the
-      // Socket.IO room. Always send an authoritative snapshot on subscription so
-      // a missed join/ready broadcast cannot leave the squad count stale.
-      client.emit('room:updated', snapshot);
-    } catch (error) {
-      if (client.data.roomId === dto.roomId) {
-        client.data.roomId = undefined;
-      }
-      if (presenceRegistrationAttempted) {
-        try {
-          // 購読が失敗して socket が部屋に居ない状態なので、切断と同じく猶予付きで扱う
-          this.unregisterRoomPresence(
-            dto.roomId,
-            userId,
-            client.id,
-            /* explicit */ false,
-          );
-        } catch (rollbackError) {
-          this.logger.warn(
-            `Failed to roll back room presence { roomId: '${dto.roomId}', userId: '${userId}', error: '${
-              rollbackError instanceof Error
-                ? rollbackError.message
-                : String(rollbackError)
-            }' }`,
-          );
-        }
-      }
-      if (joined) {
-        try {
-          await client.leave(dto.roomId);
-        } catch (rollbackError) {
-          this.logger.warn(
-            `Failed to leave room during rollback { roomId: '${dto.roomId}', userId: '${userId}', error: '${
-              rollbackError instanceof Error
-                ? rollbackError.message
-                : String(rollbackError)
-            }' }`,
-          );
-        }
-      }
-      this.logger.error(
-        `Failed to join room subscription { roomId: '${dto.roomId}', userId: '${userId}' }`,
-        error instanceof Error ? error.stack : String(error),
-      );
-      client.emit('room:error', { message: 'Failed to join room' });
+      this.emitJoinError(client, error, dto.roomId, userId);
       return;
     }
 
@@ -215,12 +140,16 @@ export class RoomsGateway implements OnGatewayConnection, OnGatewayDisconnect {
   handleRoomLeave(@ConnectedSocket() client: RoomsSocket) {
     // 明示的な退出操作: ドメインからの退出は REST の /rooms/:id/leave が担うため、
     // ここでは presence 解除と socket ルーム離脱のみを即座に行う
-    this.leaveCurrentRoom(client, /* explicit */ true);
+    const roomId = client.data.roomId;
+    const userId = this.requireUserId(client);
+    if (!roomId || !userId) return;
+
+    this.leaveCurrentRoomId(client, roomId, userId, /* explicit */ true);
   }
 
   @SubscribeMessage('lobby:join')
-  handleLobbyJoin(@ConnectedSocket() client: RoomsSocket) {
-    void client.join(LOBBY_ROOM);
+  async handleLobbyJoin(@ConnectedSocket() client: RoomsSocket) {
+    await client.join(LOBBY_ROOM);
     const rooms = this.roomsLobbyService.getLobbyRooms();
     client.emit('lobby:rooms', rooms);
   }
@@ -231,26 +160,27 @@ export class RoomsGateway implements OnGatewayConnection, OnGatewayDisconnect {
     @MessageBody() dto: ChatJoinDto,
   ) {
     const roomId = dto.roomId;
-    const chatRoom = `chat:${roomId}`;
+    const userId = this.requireUserId(client);
+    if (!userId) return;
 
     try {
-      const messages = await this.roomsChatService.findMessages(
-        roomId,
-        client.data.user.id,
-      );
-      void client.join(chatRoom);
+      const messages = await this.roomsChatService.findMessages(roomId, userId);
+      await client.join(`chat:${roomId}`);
       client.emit('chat:history', {
         roomId,
-        messages: messages.map((m) => ({
-          id: m.id,
-          roomId: m.roomId,
-          userId: m.senderId,
-          username: m.senderName,
-          text: m.content,
-          createdAt: m.createdAt.toISOString(),
-        })),
+        messages: messages.map((m) => this.toChatMessagePayload(m)),
       });
-    } catch {
+    } catch (error) {
+      // Forbidden/NotFound は想定内の拒否。それ以外のみログに残し、区別する。
+      if (
+        !(error instanceof ForbiddenException) &&
+        !(error instanceof NotFoundException)
+      ) {
+        this.logger.error(
+          `Failed to join chat { roomId: '${roomId}', userId: '${userId}' }`,
+          error instanceof Error ? error.stack : String(error),
+        );
+      }
       client.emit('chat:error', { message: '履歴の取得に失敗しました' });
     }
   }
@@ -268,29 +198,38 @@ export class RoomsGateway implements OnGatewayConnection, OnGatewayDisconnect {
     @ConnectedSocket() client: RoomsSocket,
     @MessageBody() dto: ChatMessageDto,
   ) {
+    const userId = this.requireUserId(client);
+    if (!userId) {
+      return { ok: false, error: 'メッセージを送信できません' };
+    }
+
     try {
       const message = await this.roomsChatService.createMessage(
         dto.roomId,
-        client.data.user.id,
+        userId,
         { content: dto.text },
       );
 
-      const payload = {
-        id: message.id,
-        roomId: message.roomId,
-        userId: message.senderId,
-        username: message.senderName,
-        text: message.content,
-        createdAt: message.createdAt.toISOString(),
-      };
-
-      this.server.to(`chat:${dto.roomId}`).emit('chat:message', payload);
+      this.server
+        .to(`chat:${dto.roomId}`)
+        .emit('chat:message', this.toChatMessagePayload(message));
 
       return { ok: true };
     } catch (error: unknown) {
-      const errMsg =
-        error instanceof Error ? error.message : 'メッセージを送信できません';
-      return { ok: false, error: errMsg };
+      // ドメイン例外のメッセージのみクライアントへ通す。それ以外は内部エラー文言が
+      // 漏洩しないよう汎用文言に差し替え、ログに残す。
+      if (
+        error instanceof ForbiddenException ||
+        error instanceof ConflictException ||
+        error instanceof BadRequestException
+      ) {
+        return { ok: false, error: error.message };
+      }
+      this.logger.error(
+        `Failed to send chat message { roomId: '${dto.roomId}', userId: '${userId}' }`,
+        error instanceof Error ? error.stack : String(error),
+      );
+      return { ok: false, error: 'メッセージを送信できません' };
     }
   }
 
@@ -317,25 +256,134 @@ export class RoomsGateway implements OnGatewayConnection, OnGatewayDisconnect {
     this.server.to(LOBBY_ROOM).emit('room:deleted', { roomId });
   }
 
+  // --- room:join helpers ---
+
+  // 想定外の例外を「Room not found」等の期待される拒否として扱わないよう、ここで一元的に分類する。
+  private emitJoinError(
+    client: RoomsSocket,
+    error: unknown,
+    roomId: string,
+    userId: string,
+  ) {
+    if (error instanceof NotFoundException) {
+      client.emit('room:error', { message: 'Room not found' });
+      return;
+    }
+    if (error instanceof ForbiddenException) {
+      client.emit('room:error', { message: 'Cannot join room' });
+      return;
+    }
+    this.logger.error(
+      `Failed to join room subscription { roomId: '${roomId}', userId: '${userId}' }`,
+      error instanceof Error ? error.stack : String(error),
+    );
+    client.emit('room:error', { message: 'Failed to join room' });
+  }
+
+  // Socket.IO room への参加・presence 登録・ルーム切替を行う。途中で失敗した場合は
+  // それまでに成功した操作だけを逆順にロールバックし、部分的な状態を残さない。
+  private async subscribeToRoom(
+    client: RoomsSocket,
+    roomId: string,
+    userId: string,
+  ) {
+    const previousRoomId = client.data.roomId;
+    const rollbacks: Array<() => void | Promise<void>> = [];
+
+    try {
+      await client.join(roomId);
+      rollbacks.push(() => client.leave(roomId));
+
+      this.socketPresenceService.register({
+        namespace: 'rooms',
+        roomId,
+        userId,
+        socketId: client.id,
+      });
+      // 購読処理中の一時的な失敗であり実際の切断ではないため、presence の登録だけを取り消し、
+      // 猶予付き自動退出(evictIfWaiting)は予約しない
+      rollbacks.push(() => {
+        this.socketPresenceService.unregister({
+          namespace: 'rooms',
+          roomId,
+          userId,
+          socketId: client.id,
+        });
+      });
+
+      client.data.roomId = roomId;
+      rollbacks.push(() => {
+        client.data.roomId = previousRoomId;
+      });
+
+      // REST 側の変更が socket 参加前に起きている可能性があるため、Socket.IO room への
+      // 参加が完了した「後」に最新スナップショットを読み直して送る
+      client.emit('room:updated', this.roomsService.findOne(roomId));
+    } catch (error) {
+      await this.runRollbacks(rollbacks);
+      throw error; // 分類とクライアント通知は emitJoinError に委ねる
+    }
+
+    // 全て成功した後にのみ旧ルームを後始末する。失敗時は旧ルームの購読が保たれる。
+    if (previousRoomId && previousRoomId !== roomId) {
+      this.leaveCurrentRoomId(
+        client,
+        previousRoomId,
+        userId,
+        /* explicit */ false,
+      );
+    }
+  }
+
+  private async runRollbacks(rollbacks: Array<() => void | Promise<void>>) {
+    for (const undo of rollbacks.reverse()) {
+      try {
+        await undo();
+      } catch (error) {
+        this.logger.warn(
+          `Failed to roll back room subscription: ${
+            error instanceof Error ? error.message : String(error)
+          }`,
+        );
+      }
+    }
+  }
+
+  // --- shared helpers ---
+
+  private requireUserId(client: RoomsSocket): string | undefined {
+    return client.data.user?.id;
+  }
+
+  private toChatMessagePayload(message: RoomMessage): ChatMessagePayload {
+    return {
+      id: message.id,
+      roomId: message.roomId,
+      userId: message.senderId,
+      username: message.senderName,
+      text: message.content,
+      createdAt: message.createdAt.toISOString(),
+    };
+  }
+
   // explicit=true: 明示的な退出(room:leave)。ドメインからの退出は REST の /rooms/:id/leave
   // が既に担っているため、ここでは presence 解除のみを即座に行い、猶予は挟まない。
   // explicit=false: 切断/ルーム乗り換え。REST 呼び出しを伴わないため、再接続の可能性を
   // 考慮して猶予付きでドメインからも自動退出させる。
-  private leaveCurrentRoom(client: RoomsSocket, explicit: boolean) {
-    const roomId = client.data.roomId;
-    if (!roomId) return;
-
+  private leaveCurrentRoomId(
+    client: RoomsSocket,
+    roomId: string,
+    userId: string,
+    explicit: boolean,
+  ) {
     void client.leave(roomId);
-    client.data.roomId = undefined;
-
-    if (client.data.user) {
-      this.unregisterRoomPresence(
-        roomId,
-        client.data.user.id,
-        client.id,
-        explicit,
-      );
+    // 呼び出し時点で既に別ルームへ切り替わっている場合(乗り換え成功後の旧ルーム後始末)は
+    // 現在の roomId を巻き戻してしまわないようにする
+    if (client.data.roomId === roomId) {
+      client.data.roomId = undefined;
     }
+
+    this.unregisterRoomPresence(roomId, userId, client.id, explicit);
 
     this.logger.log(`Client ${client.id} left room ${roomId}`);
   }
@@ -371,15 +419,11 @@ export class RoomsGateway implements OnGatewayConnection, OnGatewayDisconnect {
   // handleDisconnect の猶予経路からのみ呼ばれる、非同意切断(タブ閉じ等)専用の後始末で、
   // ホストが戻らないまま部屋だけが残り続ける「ゴーストルーム」を防ぐ役割を持つ。
   private evictParticipant(roomId: string, userId: string) {
-    const room = this.roomsState.getRoom(roomId);
-    if (!room || room.status !== 'waiting' || !room.participants[userId]) {
-      return;
-    }
-
     try {
-      // ドメイン退出とクライアントへのブロードキャストは RoomsService が発行する
-      // イベント(handleRoomUpdatedEvent/handleRoomDeletedEvent)経由で行われる
-      this.roomsService.leave(roomId, userId);
+      // 既に退出済み/ゲーム開始済みかどうかの判定とドメイン退出は RoomsService が担う。
+      // クライアントへのブロードキャストは RoomsService が発行するイベント
+      // (handleRoomUpdatedEvent/handleRoomDeletedEvent)経由で行われる
+      this.roomsService.evictIfWaiting(roomId, userId);
       this.logger.log(
         `Participant left room { roomId: '${roomId}', userId: '${userId}' }`,
       );

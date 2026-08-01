@@ -338,4 +338,112 @@ describe('RoomsService', () => {
     expect(result.status).toBe('playing');
     expect(roomsState.getRoom('room-1')?.status).toBe('playing');
   });
+
+  describe('canSubscribe', () => {
+    it('allows an existing participant even if the room is no longer waiting', () => {
+      setupRoom({ status: 'playing' });
+
+      expect(service.canSubscribe('room-1', user.id)).toBe(true);
+    });
+
+    it('allows a non-participant to subscribe when the room is waiting and has space', () => {
+      setupRoom({ maxPlayers: 2 });
+
+      expect(service.canSubscribe('room-1', guest.id)).toBe(true);
+    });
+
+    it('denies a non-participant when the room is not waiting', () => {
+      setupRoom({ status: 'playing' });
+
+      expect(service.canSubscribe('room-1', guest.id)).toBe(false);
+    });
+
+    it('denies a non-participant when the room is full', () => {
+      setupRoom({
+        maxPlayers: 2,
+        participants: {
+          [user.id]: {
+            userId: user.id,
+            username: 'Host',
+            avatarUrl: null,
+            isHost: true,
+            isReady: true,
+            joinedAt: new Date(),
+          },
+          'other-user': {
+            userId: 'other-user',
+            username: 'Other',
+            avatarUrl: null,
+            isHost: false,
+            isReady: false,
+            joinedAt: new Date(),
+          },
+        },
+      });
+
+      expect(service.canSubscribe('room-1', guest.id)).toBe(false);
+    });
+
+    it('throws NotFoundException for an unknown room', () => {
+      expect(() => service.canSubscribe('missing-room', guest.id)).toThrow(
+        NotFoundException,
+      );
+    });
+  });
+
+  describe('evictIfWaiting', () => {
+    it('removes a participant from a waiting room', () => {
+      setupRoom({
+        participants: {
+          [user.id]: {
+            userId: user.id,
+            username: 'Host',
+            avatarUrl: null,
+            isHost: true,
+            isReady: true,
+            joinedAt: new Date(Date.now() - 1000),
+          },
+          [guest.id]: {
+            userId: guest.id,
+            username: 'Guest',
+            avatarUrl: null,
+            isHost: false,
+            isReady: false,
+            joinedAt: new Date(),
+          },
+        },
+      });
+
+      service.evictIfWaiting('room-1', guest.id);
+
+      expect(
+        roomsState.getRoom('room-1')?.participants[guest.id],
+      ).toBeUndefined();
+      expect(eventEmitter.emit).toHaveBeenCalledWith(
+        ROOM_UPDATED_EVENT,
+        expect.any(RoomUpdatedEvent),
+      );
+    });
+
+    it('does nothing when the room is no longer waiting', () => {
+      setupRoom({ status: 'playing' });
+
+      expect(() => service.evictIfWaiting('room-1', user.id)).not.toThrow();
+      expect(eventEmitter.emit).not.toHaveBeenCalled();
+    });
+
+    it('does nothing when the user is not a participant', () => {
+      setupRoom();
+
+      expect(() => service.evictIfWaiting('room-1', guest.id)).not.toThrow();
+      expect(eventEmitter.emit).not.toHaveBeenCalled();
+    });
+
+    it('does nothing when the room no longer exists', () => {
+      expect(() =>
+        service.evictIfWaiting('missing-room', user.id),
+      ).not.toThrow();
+      expect(eventEmitter.emit).not.toHaveBeenCalled();
+    });
+  });
 });
