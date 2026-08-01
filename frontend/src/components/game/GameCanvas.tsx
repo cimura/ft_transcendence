@@ -1,4 +1,4 @@
-import type { MutableRefObject } from 'react'
+import type { RefObject } from 'react'
 import type { Socket } from 'socket.io-client'
 import { BombermanScene } from './BombermanScene'
 import { TouchControls } from './TouchControls'
@@ -7,7 +7,7 @@ import { useGameInput } from '../../hooks/useGameInput'
 import { GameCountdownOverlay } from './GameCountdownOverlay'
 
 type GameCanvasProps = {
-  socketRef: MutableRefObject<Socket | null>
+  socketRef: RefObject<Socket | null>
 }
 
 export function GameCanvas({ socketRef }: GameCanvasProps) {
