@@ -211,4 +211,77 @@ describe('GameService', () => {
       expect(emit).not.toHaveBeenCalledWith('game:end', expect.any(Object));
     });
   });
+
+  describe('Retire (明示的な離脱)', () => {
+    beforeEach(() => {
+      service.handleGameJoin('room-1', 'player-1');
+      service.handleGameStart('room-1');
+      service.handleGameJoin('room-1', 'player-2');
+      service.handleGameStart('room-1');
+    });
+
+    it('プレイ中にリタイアすると猶予時間を待たず即座に死亡し、相手の勝利になること', () => {
+      jest.advanceTimersByTime(GAME_COUNTDOWN_SEC * 1000);
+
+      service.handleGameRetire('room-1', 'player-1');
+
+      const session = roomsState.getRoom('room-1')?.gameSession;
+      expect(session?.players['player-1'].alive).toBe(false);
+
+      // 猶予時間(DISCONNECT_TIMEOUT_MS)を待たず、次のtickで即座に決着すること
+      jest.advanceTimersByTime(1000 / GAME_TICK_RATE);
+
+      expect(emit).toHaveBeenCalledWith(
+        'game:end',
+        expect.objectContaining({ winnerId: 'player-2' }),
+      );
+    });
+
+    it('countdownフェーズ中にリタイアすると即座に死亡扱いになり、game:stateが明示的に発行されること', () => {
+      const session = roomsState.getRoom('room-1')?.gameSession;
+      expect(session?.phase).toBe('countdown');
+
+      emit.mockClear();
+
+      service.handleGameRetire('room-1', 'player-1');
+
+      expect(session?.players['player-1'].alive).toBe(false);
+
+      // countdown中はtickループが走っていないため、明示的にgame:stateが飛ぶこと
+      expect(emit).toHaveBeenCalledWith('game:state', expect.any(Object));
+    });
+
+    it('waitingフェーズではリタイアしても死亡扱いにならないこと', () => {
+      const testRoom: Room = {
+        id: 'room-waiting',
+        gameId: 'bomberman',
+        name: 'Waiting Room',
+        hostId: 'player-3',
+        maxPlayers: 2,
+        status: 'WAITING',
+        mode: 'ONLINE',
+        participants: {
+          'player-3': {
+            userId: 'player-3',
+            username: 'p3',
+            avatarUrl: null,
+            isHost: true,
+            isReady: true,
+            joinedAt: new Date(),
+          },
+        },
+        messages: [],
+        invitations: {},
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      };
+      roomsState.addRoom(testRoom);
+      service.handleGameJoin('room-waiting', 'player-3');
+
+      service.handleGameRetire('room-waiting', 'player-3');
+
+      const session = roomsState.getRoom('room-waiting')?.gameSession;
+      expect(session?.players['player-3'].alive).toBe(true);
+    });
+  });
 });
