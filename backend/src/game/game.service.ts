@@ -12,7 +12,10 @@ import {
 import { GameSession } from '../common/types/game.type';
 import { RoomsStateService } from '../rooms/rooms-state.service';
 import { advanceGameTick } from './logic/core/loop.logic';
-import { createInitialMap, START_POSITIONS } from './logic/setup/map.logic';
+import {
+  createInitialMap,
+  START_POSITIONS,
+} from '@ft_transcendence/shared/game-map';
 import {
   startCountdownLogic,
   startGameLoopLogic,

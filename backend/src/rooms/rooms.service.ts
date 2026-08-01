@@ -24,6 +24,16 @@ import {
   RoomDeletedEvent,
 } from './events/room-domain-events';
 
+type JoinRejectionReason = 'not_waiting' | 'full' | null;
+
+const JOIN_REJECTION_MESSAGES: Record<
+  Exclude<JoinRejectionReason, null>,
+  string
+> = {
+  not_waiting: 'Only waiting rooms can be joined',
+  full: 'Room is full',
+};
+
 @Injectable()
 export class RoomsService {
   constructor(
@@ -254,14 +264,14 @@ export class RoomsService {
 
   // --- Private Helpers ---
 
-  // 参加を拒否する理由(メッセージ)。null なら参加可能。
+  // 参加を拒否する理由コード。null なら参加可能。
   // join() の例外送出と canSubscribe() の真偽判定で共用する。
-  private checkJoinable(room: Room): string | null {
+  private checkJoinable(room: Room): JoinRejectionReason {
     if (room.status !== 'waiting') {
-      return 'Only waiting rooms can be joined';
+      return 'not_waiting';
     }
     if (Object.keys(room.participants).length >= room.maxPlayers) {
-      return 'Room is full';
+      return 'full';
     }
     return null;
   }
@@ -269,7 +279,7 @@ export class RoomsService {
   private assertJoinable(room: Room): void {
     const reason = this.checkJoinable(room);
     if (reason) {
-      throw new ConflictException(reason);
+      throw new ConflictException(JOIN_REJECTION_MESSAGES[reason]);
     }
   }
 
