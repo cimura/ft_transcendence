@@ -114,7 +114,7 @@ export class RoomsGateway implements OnGatewayConnection, OnGatewayDisconnect {
     @ConnectedSocket() client: RoomsSocket,
     @MessageBody() dto: RoomJoinDto,
   ) {
-    const userId = this.requireUserId(client);
+    const userId = this.getUserId(client);
     if (!userId) {
       client.emit('room:error', { message: 'Cannot join room' });
       return;
@@ -141,7 +141,7 @@ export class RoomsGateway implements OnGatewayConnection, OnGatewayDisconnect {
     // 明示的な退出操作: ドメインからの退出は REST の /rooms/:id/leave が担うため、
     // ここでは presence 解除と socket ルーム離脱のみを即座に行う
     const roomId = client.data.roomId;
-    const userId = this.requireUserId(client);
+    const userId = this.getUserId(client);
     if (!roomId || !userId) return;
 
     this.leaveCurrentRoomId(client, roomId, userId, /* explicit */ true);
@@ -160,7 +160,7 @@ export class RoomsGateway implements OnGatewayConnection, OnGatewayDisconnect {
     @MessageBody() dto: ChatJoinDto,
   ) {
     const roomId = dto.roomId;
-    const userId = this.requireUserId(client);
+    const userId = this.getUserId(client);
     if (!userId) return;
 
     try {
@@ -198,7 +198,7 @@ export class RoomsGateway implements OnGatewayConnection, OnGatewayDisconnect {
     @ConnectedSocket() client: RoomsSocket,
     @MessageBody() dto: ChatMessageDto,
   ) {
-    const userId = this.requireUserId(client);
+    const userId = this.getUserId(client);
     if (!userId) {
       return { ok: false, error: 'メッセージを送信できません' };
     }
@@ -351,7 +351,7 @@ export class RoomsGateway implements OnGatewayConnection, OnGatewayDisconnect {
 
   // --- shared helpers ---
 
-  private requireUserId(client: RoomsSocket): string | undefined {
+  private getUserId(client: RoomsSocket): string | undefined {
     return client.data.user?.id;
   }
 
