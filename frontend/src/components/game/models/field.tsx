@@ -7,8 +7,8 @@ type GLTFResult = GLTF & {
   nodes: {
     Plane: THREE.Mesh
   }
-  materials: {}
-  animations: any[]
+  materials: Record<string, THREE.Material>
+  animations: THREE.AnimationClip[]
 }
 
 export function Field(props: ThreeElements['group']) {
@@ -17,7 +17,7 @@ export function Field(props: ThreeElements['group']) {
 
   return (
     <group {...props} dispose={null}>
-      {/* ★ nodes.Plane.material を使うとエラーになる場合は一旦削除し、標準マテリアルを適用します（後述の色問題への暫定対応） */}
+      {/*nodes.Plane.material を使うとエラーになる場合は一旦削除し、標準マテリアルを適用します（後述の色問題への暫定対応） */}
       <mesh geometry={nodes.Plane.geometry}>
         <meshStandardMaterial color="#65737a" /> {/* デフォルトの色を仮置き */}
       </mesh>

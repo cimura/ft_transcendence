@@ -9,8 +9,8 @@ type GLTFResult = GLTF & {
   nodes: {
     Torus001: THREE.Mesh
   }
-  materials: {}
-  animations: any[]
+  materials: Record<string, THREE.Material>
+  animations: THREE.AnimationClip[]
 }
 
 export function BombModel(props: ThreeElements['group']) {
