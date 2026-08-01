@@ -499,4 +499,33 @@ describe('ScoresService', () => {
 
     expect(prisma.$transaction).not.toHaveBeenCalled();
   });
+
+  it('shows achievements completed before achievement tracking was added', async () => {
+    prisma.user.findUnique.mockResolvedValue({ id: 'user-1' });
+    prisma.matchParticipant.findMany.mockResolvedValue([
+      { result: MatchResult.WIN, kills: 0 },
+      { result: MatchResult.LOSS, kills: 0 },
+    ]);
+    prisma.userAchievement.findMany.mockResolvedValue([]);
+
+    const result = await service.getGalacticGuide('user-1');
+
+    expect(result.achievements).toContainEqual(
+      expect.objectContaining({
+        id: 'first_match',
+        unlocked: true,
+        unlockedAt: null,
+      }),
+    );
+
+    expect(result.achievements).toContainEqual(
+      expect.objectContaining({
+        id: 'first_win',
+        unlocked: true,
+        unlockedAt: null,
+      }),
+    );
+
+    expect(result.unlockedCount).toBe(2);
+  });
 });

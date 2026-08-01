@@ -290,6 +290,9 @@ export class ScoresService {
       }),
     ]);
     const metrics = calculatePlayerMetrics(matches);
+    const completedAchievementIds = new Set(
+      findCompletedAchievementIds(metrics),
+    );
     const progression = calculateTravellerProgression(matches);
 
     const unlockedById = new Map(
@@ -309,7 +312,7 @@ export class ScoresService {
         category: definition.category,
         progress: metrics[definition.metric],
         target: definition.target,
-        unlocked: unlockedAt !== undefined,
+        unlocked: completedAchievementIds.has(definition.id),
         unlockedAt: unlockedAt?.toISOString() ?? null,
       };
     });
