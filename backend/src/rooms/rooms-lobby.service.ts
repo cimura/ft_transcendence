@@ -8,9 +8,7 @@ export class RoomsLobbyService {
 
   // ロビーに一覧表示する対象: 参加受付中(waiting)のルームのみ
   getLobbyRooms(): RoomSnapshot[] {
-    return this.roomsService
-      .findAll('waiting')
-      .filter((room) => this.isLobbyVisible(room));
+    return this.roomsService.findAll('waiting');
   }
 
   isLobbyVisible(room: RoomSnapshot): boolean {
