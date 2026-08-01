@@ -5,7 +5,7 @@ import { bombermanGame } from '../games/games.constants';
 import { GamesService } from '../games/games.service';
 import { RoomsService } from './rooms.service';
 import { RoomsStateService } from './rooms-state.service';
-import type { Room } from '../common/types/room.type';
+import type { Room, RoomParticipant } from '../common/types/room.type';
 import {
   ROOM_CREATED_EVENT,
   ROOM_UPDATED_EVENT,
@@ -28,6 +28,18 @@ const guest = {
   username: 'Guest',
   avatarUrl: null,
 };
+
+const buildParticipant = (
+  overrides: Partial<RoomParticipant> = {},
+): RoomParticipant => ({
+  userId: user.id,
+  username: 'Host',
+  avatarUrl: null,
+  isHost: true,
+  isReady: true,
+  joinedAt: new Date(),
+  ...overrides,
+});
 
 describe('RoomsService', () => {
   let service: RoomsService;
@@ -66,14 +78,7 @@ describe('RoomsService', () => {
       maxPlayers: 2,
       status: 'waiting',
       participants: {
-        [user.id]: {
-          userId: user.id,
-          username: 'Host',
-          avatarUrl: null,
-          isHost: true,
-          isReady: true,
-          joinedAt: new Date(),
-        },
+        [user.id]: buildParticipant(),
       },
       messages: [],
       invitations: {},
@@ -362,22 +367,13 @@ describe('RoomsService', () => {
       setupRoom({
         maxPlayers: 2,
         participants: {
-          [user.id]: {
-            userId: user.id,
-            username: 'Host',
-            avatarUrl: null,
-            isHost: true,
-            isReady: true,
-            joinedAt: new Date(),
-          },
-          'other-user': {
+          [user.id]: buildParticipant(),
+          'other-user': buildParticipant({
             userId: 'other-user',
             username: 'Other',
-            avatarUrl: null,
             isHost: false,
             isReady: false,
-            joinedAt: new Date(),
-          },
+          }),
         },
       });
 
@@ -395,22 +391,15 @@ describe('RoomsService', () => {
     it('removes a participant from a waiting room', () => {
       setupRoom({
         participants: {
-          [user.id]: {
-            userId: user.id,
-            username: 'Host',
-            avatarUrl: null,
-            isHost: true,
-            isReady: true,
+          [user.id]: buildParticipant({
             joinedAt: new Date(Date.now() - 1000),
-          },
-          [guest.id]: {
+          }),
+          [guest.id]: buildParticipant({
             userId: guest.id,
             username: 'Guest',
-            avatarUrl: null,
             isHost: false,
             isReady: false,
-            joinedAt: new Date(),
-          },
+          }),
         },
       });
 
