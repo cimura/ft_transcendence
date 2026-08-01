@@ -285,7 +285,7 @@ describe('RoomsGateway', () => {
         throw new Error('unexpected');
       });
       const errorSpy = jest
-        .spyOn((gateway as any).logger, 'error')
+        .spyOn(gateway['logger'], 'error')
         .mockImplementation(() => undefined);
 
       await gateway.handleRoomJoin(client, { roomId: 'room-1' });
@@ -461,7 +461,7 @@ describe('RoomsGateway', () => {
         throw new Error('boom');
       });
       const warnSpy = jest
-        .spyOn((gateway as any).logger, 'warn')
+        .spyOn(gateway['logger'], 'warn')
         .mockImplementation(() => undefined);
 
       gateway.handleDisconnect(client);
@@ -526,7 +526,7 @@ describe('RoomsGateway', () => {
         new ForbiddenException('You are not a participant of this room'),
       );
       const errorSpy = jest
-        .spyOn((gateway as any).logger, 'error')
+        .spyOn(gateway['logger'], 'error')
         .mockImplementation(() => undefined);
 
       await gateway.handleChatJoin(client, { roomId: 'room-1' });
@@ -543,7 +543,7 @@ describe('RoomsGateway', () => {
       client.data.user = { id: 'user-1' };
       roomsChatService.findMessages.mockRejectedValue(new Error('db down'));
       const errorSpy = jest
-        .spyOn((gateway as any).logger, 'error')
+        .spyOn(gateway['logger'], 'error')
         .mockImplementation(() => undefined);
 
       await gateway.handleChatJoin(client, { roomId: 'room-1' });
@@ -593,7 +593,7 @@ describe('RoomsGateway', () => {
       client.data.user = { id: 'user-1' };
       roomsChatService.createMessage.mockRejectedValue(new Error('db down'));
       const errorSpy = jest
-        .spyOn((gateway as any).logger, 'error')
+        .spyOn(gateway['logger'], 'error')
         .mockImplementation(() => undefined);
 
       const result = await gateway.handleChatMessage(client, {
