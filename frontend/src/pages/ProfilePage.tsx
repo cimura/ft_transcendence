@@ -7,8 +7,9 @@ import { ProfileEditModal } from '../components/profile/ProfileEditModal'
 import { StatsTab } from '../components/profile/StatsTab'
 import { HistoryTab } from '../components/profile/HistoryTab'
 import type { UserProfile } from '../types/user'
+import { GalacticGuideTab } from '../components/profile/GalacticGuideTab'
 
-type TabType = 'stats' | 'history'
+type TabType = 'stats' | 'history' | 'guide'
 
 export const ProfilePage = () => {
   const { userId } = useParams<{ userId: string }>()
@@ -116,7 +117,7 @@ export const ProfilePage = () => {
         {/* タブナビゲーション */}
         {/* 変更点: 背景を半透明に、ボーダーをシアンに */}
         <div className="bg-black/40 backdrop-blur-md border-x border-cyan-500/30 px-8 py-4">
-          <div className="flex gap-4">
+          <div className="flex flex-wrap gap-4">
             <button
               onClick={() => setActiveTab('stats')}
               className={`px-6 py-2 rounded-full font-semibold transition-all duration-300
@@ -141,17 +142,27 @@ export const ProfilePage = () => {
             >
               戦闘履歴
             </button>
+            <button
+              onClick={() => setActiveTab('guide')}
+              className={`px-6 py-2 rounded-full font-semibold transition-all duration-300
+                ${
+                  activeTab === 'guide'
+                    ? 'bg-cyan-500/20 text-cyan-100 border border-cyan-400 shadow-[0_0_10px_rgba(0,255,255,0.3)]'
+                    : 'bg-transparent text-cyan-300/60 border border-cyan-900/50 hover:bg-cyan-900/30 hover:text-cyan-200'
+                }
+              `}
+            >
+              銀河ガイド
+            </button>
           </div>
         </div>
 
         {/* タブコンテンツ */}
         {/* 変更点: 下部パネルの角丸とボーダーを調整 */}
         <div className="bg-black/50 backdrop-blur-md rounded-b-2xl border border-t-0 border-cyan-500/30 overflow-hidden min-h-[300px]">
-          {activeTab === 'stats' ? (
-            <StatsTab userId={profile.id} />
-          ) : (
-            <HistoryTab userId={profile.id} />
-          )}
+          {activeTab === 'stats' && <StatsTab userId={profile.id} />}
+          {activeTab === 'history' && <HistoryTab userId={profile.id} />}
+          {activeTab === 'guide' && <GalacticGuideTab userId={profile.id} />}
         </div>
 
         {/* プロフィール編集モーダル */}

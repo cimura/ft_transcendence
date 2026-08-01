@@ -14,6 +14,7 @@ import {
 } from './dto/match-history.dto';
 import { RankingQueryDto, RankingsResponseDto } from './dto/ranking.dto';
 import { UserStatsDto } from './dto/user-stats.dto';
+import { GalacticGuideResponseDto } from './dto/galactic-guide.dto';
 
 @Controller('scores')
 @ApiTags('scores')
@@ -41,6 +42,18 @@ export class ScoresController {
   })
   getUserStats(@Param('userId') userId: string): Promise<UserStatsDto> {
     return this.scoresService.getUserStats(userId);
+  }
+
+  @Get('user/:userId/guide')
+  @ApiOperation({ summary: 'ユーザーの銀河ガイドを取得' })
+  @ApiOkResponse({
+    description: '成功時',
+    type: GalacticGuideResponseDto,
+  })
+  getGalacticGuide(
+    @Param('userId') userId: string,
+  ): Promise<GalacticGuideResponseDto> {
+    return this.scoresService.getGalacticGuide(userId);
   }
 
   @Get('user/:userId')

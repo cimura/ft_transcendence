@@ -8,6 +8,7 @@ describe('ScoresController', () => {
     getMatchHistory: jest.Mock;
     getRankings: jest.Mock;
     getUserStats: jest.Mock;
+    getGalacticGuide: jest.Mock;
   };
 
   beforeEach(async () => {
@@ -27,6 +28,20 @@ describe('ScoresController', () => {
         kills: 0,
         winRate: 0,
         maxWinStreak: 0,
+      }),
+      getGalacticGuide: jest.fn().mockResolvedValue({
+        progression: {
+          level: 1,
+          title: 'Stranded Earthling',
+          totalXp: 0,
+          currentLevelXp: 0,
+          levelXpRequired: 50,
+          xpToNextLevel: 50,
+          progressPercent: 0,
+        },
+        unlockedCount: 0,
+        totalCount: 6,
+        achievements: [],
       }),
     };
     const module: TestingModule = await Test.createTestingModule({
@@ -70,5 +85,11 @@ describe('ScoresController', () => {
     await controller.getUserStats('user-1');
 
     expect(scoresService.getUserStats).toHaveBeenCalledWith('user-1');
+  });
+
+  it('passes user ID to the Galactic Guide service', async () => {
+    await controller.getGalacticGuide('user-1');
+
+    expect(scoresService.getGalacticGuide).toHaveBeenCalledWith('user-1');
   });
 });
