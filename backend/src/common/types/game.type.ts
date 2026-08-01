@@ -11,7 +11,9 @@ import type {
 } from '@ft_transcendence/shared/game-events.types';
 
 export interface PlayerConnection {
-  clientId: string; // 現在プレイヤーが使用しているWebSocketのID
+  // 切断された時刻。接続中は 0。再接続の猶予判定とタイムアウト自爆判定に使う。
+  // どのWebSocketで繋がっているかは SocketPresenceService が管理するため、
+  // セッション側はソケットの同一性を持たない。
   lastActiveTime: number;
 }
 

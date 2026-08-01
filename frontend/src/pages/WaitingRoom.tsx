@@ -47,12 +47,12 @@ export function WaitingRoom() {
         return
       }
 
-      if (currentRoom?.id === roomId) {
-        setIsLoadingRoom(false)
-        return
-      }
-
+      setIsLoadingRoom(true)
       try {
+        // A room held in the store may only be a lobby snapshot. It can also
+        // be overwritten by an older lobby event while navigation is in
+        // progress. Joining is idempotent on the backend, so always confirm
+        // membership when the waiting-room route is entered.
         const joinedRoom = await joinRoom(roomId)
         if (cancelled) return
         upsertRoom(joinedRoom)
@@ -88,7 +88,7 @@ export function WaitingRoom() {
     return () => {
       cancelled = true
     }
-  }, [currentRoom?.id, navigate, roomId, setCurrentRoom, upsertRoom])
+  }, [navigate, roomId, setCurrentRoom, upsertRoom])
 
   useEffect(() => {
     if (!currentUser) {

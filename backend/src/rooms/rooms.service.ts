@@ -118,12 +118,7 @@ export class RoomsService {
 
     // 既に参加している場合はそのまま返す
     if (room.participants[userId]) {
-      const snapshot = this.toRoomSnapshot(room);
-      this.eventEmitter.emit(
-        ROOM_UPDATED_EVENT,
-        new RoomUpdatedEvent(snapshot),
-      );
-      return snapshot;
+      return this.emitRoomUpdated(room);
     }
 
     // await を伴うユーザー取得を先に行う
@@ -140,12 +135,7 @@ export class RoomsService {
 
     // await 後に同期的に再チェックしてから追加し、同時 join による定員超過を防ぐ
     if (currentRoom.participants[userId]) {
-      const snapshot = this.toRoomSnapshot(room);
-      this.eventEmitter.emit(
-        ROOM_UPDATED_EVENT,
-        new RoomUpdatedEvent(snapshot),
-      );
-      return snapshot;
+      return this.emitRoomUpdated(room);
     }
     if (
       Object.keys(currentRoom.participants).length >= currentRoom.maxPlayers
@@ -163,9 +153,7 @@ export class RoomsService {
     };
 
     this.roomsState.addParticipant(roomId, participant);
-    const snapshot = this.toRoomSnapshot(room);
-    this.eventEmitter.emit(ROOM_UPDATED_EVENT, new RoomUpdatedEvent(snapshot));
-    return snapshot;
+    return this.emitRoomUpdated(room);
   }
 
   leave(roomId: string, userId: string): RoomSnapshot | null {
@@ -206,9 +194,7 @@ export class RoomsService {
       room.updatedAt = new Date();
     }
 
-    const snapshot = this.toRoomSnapshot(room);
-    this.eventEmitter.emit(ROOM_UPDATED_EVENT, new RoomUpdatedEvent(snapshot));
-    return snapshot;
+    return this.emitRoomUpdated(room);
   }
 
   setReady(roomId: string, userId: string, isReady: boolean): RoomSnapshot {
@@ -233,9 +219,7 @@ export class RoomsService {
       participant.isHost ? true : isReady,
     );
 
-    const snapshot = this.toRoomSnapshot(room);
-    this.eventEmitter.emit(ROOM_UPDATED_EVENT, new RoomUpdatedEvent(snapshot));
-    return snapshot;
+    return this.emitRoomUpdated(room);
   }
 
   start(roomId: string, userId: string): RoomSnapshot {
@@ -259,9 +243,7 @@ export class RoomsService {
     this.roomsState.updateRoomStatus(roomId, 'playing');
     room.startedAt = new Date();
 
-    const snapshot = this.toRoomSnapshot(room);
-    this.eventEmitter.emit(ROOM_UPDATED_EVENT, new RoomUpdatedEvent(snapshot));
-    return snapshot;
+    return this.emitRoomUpdated(room);
   }
 
   // 他のサービスからルームの存在確認等に使用
@@ -274,6 +256,12 @@ export class RoomsService {
   }
 
   // --- Private Helpers ---
+
+  private emitRoomUpdated(room: Room): RoomSnapshot {
+    const snapshot = this.toRoomSnapshot(room);
+    this.eventEmitter.emit(ROOM_UPDATED_EVENT, new RoomUpdatedEvent(snapshot));
+    return snapshot;
+  }
 
   private toRoomSnapshot(room: Room): RoomSnapshot {
     const participants = Object.values(room.participants).sort(

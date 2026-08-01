@@ -1,3 +1,4 @@
+import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Button } from '../common/Button'
 import { useGameStore } from '../../stores/gameStore'
@@ -7,16 +8,24 @@ const EMPTY_RANKINGS: PlayerRanking[] = []
 
 export function GameResultOverlay() {
   const navigate = useNavigate()
+  const [isSpectating, setIsSpectating] = useState(false)
   const players = useGameStore((state) => state.gameState.players)
+  const gamePhase = useGameStore((state) => state.gamePhase)
   const myPlayerId = useGameStore((state) => state.myPlayerId)
   const resultStats = useGameStore((state) => state.resultStats)
   const errorMessage = useGameStore((state) => state.errorMessage)
 
   const rankings = resultStats?.rankings || EMPTY_RANKINGS
+  const myPlayer = myPlayerId ? players[myPlayerId] : undefined
+  const isEliminated =
+    gamePhase === 'playing' && myPlayer !== undefined && !myPlayer.alive
 
-  if (!resultStats && !errorMessage) return null
+  if (!resultStats && !errorMessage && (!isEliminated || isSpectating)) {
+    return null
+  }
 
-  let displayResult: 'WIN' | 'LOSE' | 'DRAW' | 'ERROR' | null = null
+  let displayResult: 'WIN' | 'LOSE' | 'DRAW' | 'ERROR' | 'ELIMINATED' | null =
+    null
   if (errorMessage) {
     displayResult = 'ERROR'
   } else if (resultStats) {
@@ -27,6 +36,8 @@ export function GameResultOverlay() {
     } else {
       displayResult = 'LOSE'
     }
+  } else if (isEliminated) {
+    displayResult = 'ELIMINATED'
   }
 
   return (
@@ -37,7 +48,14 @@ export function GameResultOverlay() {
           {displayResult === 'LOSE' && 'GAME OVER'}
           {displayResult === 'DRAW' && 'DRAW'}
           {displayResult === 'ERROR' && 'ERROR'}
+          {displayResult === 'ELIMINATED' && 'GAME OVER'}
         </p>
+
+        {displayResult === 'ELIMINATED' && (
+          <p className="mt-4 text-base font-semibold text-gray-300">
+            あなたは脱落しました。試合はまだ続いています。
+          </p>
+        )}
 
         {errorMessage && (
           <p className="mt-4 text-lg font-bold text-red-400">{errorMessage}</p>
@@ -106,7 +124,12 @@ export function GameResultOverlay() {
             </table>
           </div>
         )}
-        <div className="mt-6 flex justify-center">
+        <div className="mt-6 flex flex-wrap justify-center gap-3">
+          {displayResult === 'ELIMINATED' && (
+            <Button variant="secondary" onClick={() => setIsSpectating(true)}>
+              観戦する
+            </Button>
+          )}
           <Button variant="primary" onClick={() => navigate('/home')}>
             ホームへ戻る
           </Button>

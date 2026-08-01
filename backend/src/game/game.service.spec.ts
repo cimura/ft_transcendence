@@ -1,5 +1,4 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { WsException } from '@nestjs/websockets';
 import type { Server } from 'socket.io';
 import { GameService } from './game.service';
 import {
@@ -86,49 +85,49 @@ describe('GameService', () => {
 
   describe('Connection & Setup', () => {
     it('参加が許可され、初期データが返ること', () => {
-      const initData = service.handleGameJoin('room-1', 'player-1', 'client-1');
+      const initData = service.handleGameJoin('room-1', 'player-1');
 
       expect(initData.yourId).toBe('player-1');
       expect(initData.phase).toBe('waiting');
       expect(initData.players['player-1']).toBeDefined();
     });
 
-    it('異なるクライアントからのゴーストソケットの切断イベントを無視すること', () => {
-      service.handleGameJoin('room-1', 'player-1', 'client-1');
+    it('待機中に同一プレイヤーが多重 join しても失敗せず、二重登録されないこと', () => {
+      service.handleGameJoin('room-1', 'player-1');
 
-      // ゴーストソケットからの切断通知
-      service.handleGameLeave('room-1', 'player-1', 'client-old');
+      // React StrictMode 等による多重 join を想定
+      expect(() => {
+        service.handleGameJoin('room-1', 'player-1');
+      }).not.toThrow();
 
-      // 部屋から退出させられていないか確認するため、2人目を追加してゲームを開始してみる
-      service.handleGameJoin('room-1', 'player-2', 'client-2');
+      const session = roomsState.getRoom('room-1')?.gameSession;
+      expect(Object.keys(session?.players ?? {})).toEqual(['player-1']);
+
+      service.handleGameJoin('room-1', 'player-2');
       service.handleGameStart('room-1');
 
-      // player-1 が残っていれば 2人揃っている判定になりカウントダウンが始まる
       expect(emit).toHaveBeenCalledWith('game:countdown', expect.any(Object));
     });
 
-    it('待機中に同一プレイヤーが多重 join しても失敗せず、最新のソケットに接続先が更新されること', () => {
-      service.handleGameJoin('room-1', 'player-1', 'client-1');
-
-      // React StrictMode 等による多重 join を想定 (まだ切断イベントは来ていない)
-      expect(() => {
-        service.handleGameJoin('room-1', 'player-1', 'client-1-new');
-      }).not.toThrow();
-
-      // 古いソケットからの切断は無視され、ゲームは開始できる
-      service.handleGameLeave('room-1', 'player-1', 'client-1');
-      service.handleGameJoin('room-1', 'player-2', 'client-2');
+    it('最後の参加者によるカウントダウン開始直後の多重 join を許可すること', () => {
+      service.handleGameJoin('room-1', 'player-1');
+      service.handleGameJoin('room-1', 'player-2');
       service.handleGameStart('room-1');
 
-      expect(emit).toHaveBeenCalledWith('game:countdown', expect.any(Object));
+      // React StrictMode 等による2本目のソケットからの join
+      const init = service.handleGameJoin('room-1', 'player-2');
+      expect(init.phase).toBe('countdown');
+
+      const session = roomsState.getRoom('room-1')?.gameSession;
+      expect(session?.players['player-2'].isDisconnected).toBe(false);
     });
   });
 
   describe('Game Lifecycle & Disconnection', () => {
     beforeEach(() => {
-      service.handleGameJoin('room-1', 'player-1', 'client-1');
+      service.handleGameJoin('room-1', 'player-1');
       service.handleGameStart('room-1');
-      service.handleGameJoin('room-1', 'player-2', 'client-2');
+      service.handleGameJoin('room-1', 'player-2');
       service.handleGameStart('room-1');
     });
 
@@ -149,7 +148,7 @@ describe('GameService', () => {
       jest.advanceTimersByTime(GAME_COUNTDOWN_SEC * 1000);
 
       // player-1 が切断
-      service.handleGameLeave('room-1', 'player-1', 'client-1');
+      service.handleGameLeave('room-1', 'player-1');
 
       // まだゲームは終わらない
       jest.advanceTimersByTime(10000);
@@ -169,15 +168,11 @@ describe('GameService', () => {
     it('猶予時間内に再接続（Join）すればゲームに復帰できること', () => {
       jest.advanceTimersByTime(GAME_COUNTDOWN_SEC * 1000);
 
-      service.handleGameLeave('room-1', 'player-1', 'client-1');
+      service.handleGameLeave('room-1', 'player-1');
 
-      // 10秒後に新しいソケットIDで復帰
+      // 10秒後に新しいソケットで復帰
       jest.advanceTimersByTime(10000);
-      const initData = service.handleGameJoin(
-        'room-1',
-        'player-1',
-        'client-1-new',
-      );
+      const initData = service.handleGameJoin('room-1', 'player-1');
 
       expect(initData.phase).toBe('playing');
 
@@ -185,12 +180,36 @@ describe('GameService', () => {
       expect(emit).not.toHaveBeenCalledWith('game:end', expect.any(Object));
     });
 
-    it('ゲーム中に切断されていないソケットから多重ログインしようとするとエラーになること', () => {
+    it('ゲーム中に切断されていないプレイヤーが追加ソケットで join しても成功し、切断扱いにならないこと', () => {
       jest.advanceTimersByTime(GAME_COUNTDOWN_SEC * 1000);
 
       expect(() => {
-        service.handleGameJoin('room-1', 'player-1', 'client-1-new');
-      }).toThrow(WsException);
+        service.handleGameJoin('room-1', 'player-1');
+      }).not.toThrow();
+
+      const session = roomsState.getRoom('room-1')?.gameSession;
+      expect(session?.players['player-1'].isDisconnected).toBe(false);
+    });
+
+    it('playing 中にリロードして2本のソケットで再参加しても、どちらも成功しゲームが終了しないこと', () => {
+      jest.advanceTimersByTime(GAME_COUNTDOWN_SEC * 1000);
+
+      // リロードで一旦切断
+      service.handleGameLeave('room-1', 'player-1');
+
+      // React StrictMode により2本のソケットがほぼ同時に game:join する
+      expect(() => {
+        service.handleGameJoin('room-1', 'player-1');
+      }).not.toThrow();
+      expect(() => {
+        service.handleGameJoin('room-1', 'player-1');
+      }).not.toThrow();
+
+      const session = roomsState.getRoom('room-1')?.gameSession;
+      expect(session?.players['player-1'].isDisconnected).toBe(false);
+
+      jest.advanceTimersByTime(DISCONNECT_TIMEOUT_MS);
+      expect(emit).not.toHaveBeenCalledWith('game:end', expect.any(Object));
     });
   });
 });
