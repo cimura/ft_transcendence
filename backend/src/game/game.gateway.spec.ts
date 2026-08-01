@@ -355,6 +355,31 @@ describe('GameGateway', () => {
       expect(gameService.handleGameLeave).not.toHaveBeenCalled();
       expect(gameService.handleGameRetire).not.toHaveBeenCalled();
     });
+
+    it('Socket.IOルームからのleaveが失敗しても、roomIdをクリアした上でソケットを切断すること', async () => {
+      const client = createMockSocket();
+      client.data.user = { id: 'user-1' };
+      client.data.roomId = 'room-1';
+      socketPresenceService.register({
+        namespace: 'game',
+        roomId: 'room-1',
+        userId: 'user-1',
+        socketId: 'socket-123',
+      });
+      client.leave.mockRejectedValue(new Error('Socket leave failed'));
+
+      await gateway.handleLeave(client);
+
+      // リタイア扱いの処理自体はleave失敗の影響を受けず、既に反映されていること
+      expect(gameService.handleGameRetire).toHaveBeenCalledWith(
+        'room-1',
+        'user-1',
+      );
+
+      // leaveに失敗しても後続の状態クリアと切断は行われること
+      expect(client.data.roomId).toBeUndefined();
+      expect(client.disconnect).toHaveBeenCalled();
+    });
   });
 
   describe('handleInput', () => {

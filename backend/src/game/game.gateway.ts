@@ -144,8 +144,17 @@ export class GameGateway
       'retire',
     );
 
-    await client.leave(roomId);
-    client.data.roomId = undefined;
+    try {
+      await client.leave(roomId);
+      client.data.roomId = undefined;
+    } catch (error) {
+      this.logger.error(
+        `Failed to leave Socket.IO room { roomId: '${roomId}', userId: '${client.data.user.id}' }`,
+        error instanceof Error ? error.stack : String(error),
+      );
+      client.data.roomId = undefined;
+      client.disconnect();
+    }
   }
 
   @SubscribeMessage('player:input')
