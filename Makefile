@@ -4,7 +4,10 @@ COMPOSE_FILE = docker/docker-compose.yml
 
 all: up
 
-up:
+.env:
+	cp .env.example .env
+
+up: .env
 	docker compose -f $(COMPOSE_FILE) up -d
 
 build:
