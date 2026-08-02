@@ -1,5 +1,6 @@
 import type { Friend } from '../../types/friend'
 import { Link } from 'react-router-dom'
+import { Avatar } from '../common/Avatar'
 
 interface FriendCardProps {
   friend: Friend
@@ -21,17 +22,12 @@ export function FriendCard({ friend, onDelete }: FriendCardProps) {
       >
         {/* アバター */}
         <div className="flex-shrink-0">
-          {friend.avatarUrl ? (
-            <img
-              src={friend.avatarUrl}
-              alt={friend.username}
-              className="w-12 h-12 rounded-full"
-            />
-          ) : (
-            <div className="w-12 h-12 rounded-full bg-gradient-to-br from-green-400 to-green-600 flex items-center justify-center">
-              <span className="text-2xl">🐦</span>
-            </div>
-          )}
+          <Avatar
+            avatarUrl={friend.avatarUrl}
+            username={friend.username}
+            className="w-12 h-12 rounded-full border-2 border-cyan-700 shadow-[0_0_10px_rgba(0,255,255,0.2)]"
+            fallbackClassName="bg-cyan-950 text-cyan-300 font-bold text-xl"
+          />
         </div>
 
         {/* ユーザー名 */}

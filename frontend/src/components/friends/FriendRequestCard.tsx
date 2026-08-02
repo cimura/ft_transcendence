@@ -1,4 +1,5 @@
 import type { FriendRequest } from '../../types/friend'
+import { Avatar } from '../common/Avatar'
 
 interface FriendRequestCardProps {
   request: FriendRequest
@@ -21,9 +22,12 @@ export function FriendRequestCard({
         {/* ユーザー情報 */}
         <div className="flex items-center gap-4">
           {/* アバター */}
-          <div className="w-12 h-12 rounded-full bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center text-white font-bold text-xl">
-            {request.requester.username[0].toUpperCase()}
-          </div>
+          <Avatar
+            avatarUrl={request.requester.avatarUrl}
+            username={request.requester.username}
+            className="h-12 w-12 rounded-full border border-cyan-400 shadow-[0_0_10px_rgba(0,255,255,0.3)]"
+            fallbackClassName="bg-cyan-950 text-cyan-300 font-bold text-xl"
+          />
 
           {/* ユーザー名 */}
           <div>

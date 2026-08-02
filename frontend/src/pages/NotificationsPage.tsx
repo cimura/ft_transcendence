@@ -6,6 +6,7 @@ import { getApiErrorMessage } from '../api/errors'
 import { useNotifications } from '../hooks/useNotifications'
 import { useRoomStore } from '../stores/roomStore'
 import type { NotificationItem } from '../types/notification'
+import { Avatar } from '../components/common/Avatar'
 
 const formatDate = (value: string) =>
   new Intl.DateTimeFormat('ja-JP', {
@@ -140,17 +141,12 @@ export function NotificationsPage() {
                     className="flex flex-col gap-4 rounded-xl border border-cyan-500/40 bg-black/60 backdrop-blur-md px-6 py-5 text-cyan-100 transition-all hover:border-cyan-400 hover:shadow-[0_0_15px_rgba(0,255,255,0.2)] sm:flex-row sm:items-center"
                   >
                     <div className="flex items-center gap-4 flex-1">
-                      {item.actor.avatarUrl ? (
-                        <img
-                          src={item.actor.avatarUrl}
-                          alt={item.actor.username}
-                          className="h-12 w-12 rounded-full object-cover border border-cyan-400 shadow-[0_0_10px_rgba(0,255,255,0.3)]"
-                        />
-                      ) : (
-                        <div className="flex h-12 w-12 items-center justify-center rounded-full bg-cyan-900/50 border border-cyan-500 text-xl font-bold shadow-[0_0_10px_rgba(0,255,255,0.3)]">
-                          {item.actor.username.slice(0, 1).toUpperCase()}
-                        </div>
-                      )}
+                      <Avatar
+                        avatarUrl={item.actor.avatarUrl}
+                        username={item.actor.username}
+                        className="h-12 w-12 rounded-full border border-cyan-400 shadow-[0_0_10px_rgba(0,255,255,0.3)]"
+                        fallbackClassName="bg-cyan-950 text-cyan-300 font-bold text-xl"
+                      />
                       <div className="min-w-0">
                         <p className="text-lg font-bold text-white tracking-wide">
                           {title}
