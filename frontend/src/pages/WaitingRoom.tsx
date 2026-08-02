@@ -30,8 +30,6 @@ export function WaitingRoom() {
 
   const { leaveRoom: emitRoomLeave } = useRoomSocket(roomId)
 
-  // 明示的な退出中は、currentRoom が空になったことをトリガーに再joinしないようにするフラグ
-  // (ホストが部屋を削除した等の外部要因による currentRoom クリアとは区別する必要がある)
   const isLeavingRef = useRef(false)
 
   useEffect(() => {
@@ -39,21 +37,14 @@ export function WaitingRoom() {
       navigate('/home', { replace: true })
       return
     }
-
     let cancelled = false
-
     const loadRoom = async () => {
       if (isLeavingRef.current) {
         setIsLoadingRoom(false)
         return
       }
-
       setIsLoadingRoom(true)
       try {
-        // A room held in the store may only be a lobby snapshot. It can also
-        // be overwritten by an older lobby event while navigation is in
-        // progress. Joining is idempotent on the backend, so always confirm
-        // membership when the waiting-room route is entered.
         const joinedRoom = await joinRoom(roomId)
         if (cancelled) return
         upsertRoom(joinedRoom)
@@ -74,7 +65,6 @@ export function WaitingRoom() {
           }
           return
         }
-
         console.error('Failed to join room:', error)
         if (!cancelled) navigate('/home', { replace: true })
       } finally {
@@ -83,18 +73,14 @@ export function WaitingRoom() {
         }
       }
     }
-
     void loadRoom()
-
     return () => {
       cancelled = true
     }
   }, [navigate, roomId, setCurrentRoom, upsertRoom])
 
   useEffect(() => {
-    if (!currentUser) {
-      fetchCurrentUser()
-    }
+    if (!currentUser) fetchCurrentUser()
   }, [currentUser, fetchCurrentUser])
 
   useEffect(() => {
@@ -171,11 +157,10 @@ export function WaitingRoom() {
   }
 
   return (
-    <div className="min-h-screen bg-transparent text-cyan-100 font-sans relative">
-      {/* うっすらとした背景グリッド */}
+    // 修正: 画面高さを固定するため h-[100dvh] flex flex-col を適用
+    <div className="h-[100dvh] flex flex-col bg-transparent text-cyan-100 font-sans relative">
       <div className="absolute inset-0 bg-[linear-gradient(rgba(0,255,255,0.02)_1px,transparent_1px),linear-gradient(90deg,rgba(0,255,255,0.02)_1px,transparent_1px)] bg-[size:30px_30px] pointer-events-none" />
 
-      {/* ヘッダー: コマンドセンター風 */}
       <header className="bg-black/50 backdrop-blur-md border-b border-cyan-500/30 relative z-10 shadow-[0_4px_30px_rgba(0,255,255,0.1)]">
         <div className="mx-auto max-w-7xl px-4 py-4 sm:px-6">
           <div className="flex items-center justify-between">
@@ -204,15 +189,15 @@ export function WaitingRoom() {
         </div>
       </header>
 
-      {/* メインコンテンツ */}
-      <main className="relative z-10 mx-auto max-w-7xl px-4 py-8 sm:px-6">
-        <div className="grid gap-6 lg:grid-cols-[360px_minmax(0,1fr)] xl:grid-cols-[340px_minmax(0,1fr)_360px]">
-          {/* 左側: プレイヤーリスト & アクション */}
-          {/* 修正: h-full を追加し、親グリッドの高さに合わせる */}
-          <section className="flex flex-col gap-6 h-full">
-            {/* 修正: flex-1 を追加して、このパネルが縦の余白を埋めるようにする */}
-            <div className="rounded-2xl border border-cyan-500/30 bg-black/40 backdrop-blur-md p-5 flex flex-col flex-1 shadow-[0_0_20px_rgba(0,255,255,0.05)]">
-              <div className="flex items-center justify-between mb-4 border-b border-cyan-500/20 pb-2">
+      {/* 修正: main要素に flex-1 flex flex-col min-h-0 を付与して高さを継承 */}
+      <main className="relative z-10 mx-auto max-w-7xl px-4 py-8 sm:px-6 w-full flex-1 flex flex-col min-h-0">
+        {/* 修正: gridコンテナにも flex-1 min-h-0 を付与 */}
+        <div className="grid gap-6 lg:grid-cols-[360px_minmax(0,1fr)] xl:grid-cols-[340px_minmax(0,1fr)_360px] flex-1 min-h-0">
+          {/* 左側セクション: min-h-0 を伝播 */}
+          <section className="flex flex-col gap-6 h-full min-h-0">
+            {/* プレイヤー一覧パネル: flex-1 min-h-0 を付与 */}
+            <div className="rounded-2xl border border-cyan-500/30 bg-black/40 backdrop-blur-md p-5 flex flex-col flex-1 min-h-0 shadow-[0_0_20px_rgba(0,255,255,0.05)]">
+              <div className="flex items-center justify-between mb-4 border-b border-cyan-500/20 pb-2 shrink-0">
                 <h2 className="text-lg font-bold tracking-widest text-cyan-200">
                   SQUAD{' '}
                   <span className="text-xs text-cyan-500 font-mono ml-2">
@@ -225,13 +210,10 @@ export function WaitingRoom() {
                 </span>
               </div>
 
-              {/* 修正: flex-1 overflow-y-auto を追加し、プレイヤーが増えたらスクロールするようにする */}
               <div className="space-y-3 flex-1 overflow-y-auto pr-1 scrollbar-thin scrollbar-thumb-cyan-700/50 scrollbar-track-transparent">
                 {currentRoom.players.map((player) => (
                   <PlayerCard key={player.userId} player={player} />
                 ))}
-
-                {/* 空きスロット */}
                 {Array.from({
                   length: currentRoom.maxPlayers - currentRoom.players.length,
                 }).map((_, i) => (
@@ -247,8 +229,6 @@ export function WaitingRoom() {
               </div>
             </div>
 
-            {/* アクションボタン (Ready / Start) */}
-            {/* 修正: shrink-0 を追加し、上に押し潰されないようにする */}
             <div className="w-full shrink-0">
               {!isHost && (
                 <button
@@ -289,7 +269,6 @@ export function WaitingRoom() {
               )}
             </div>
 
-            {/* 修正: shrink-0 を追加 */}
             {isHost && currentRoom.status === 'waiting' && (
               <div className="shrink-0">
                 <RoomInviteSection currentRoom={currentRoom} />
@@ -297,18 +276,17 @@ export function WaitingRoom() {
             )}
           </section>
 
-          {/* 中央: マップ・ゲーム情報 */}
-          {/* 修正: h-full を追加 */}
-          <section className="rounded-2xl border border-cyan-500/30 bg-black/40 p-6 backdrop-blur-md shadow-[0_0_30px_rgba(0,255,255,0.05)] relative overflow-hidden flex flex-col h-full">
+          {/* 中央セクション: min-h-0 を伝播 */}
+          <section className="rounded-2xl border border-cyan-500/30 bg-black/40 p-6 backdrop-blur-md shadow-[0_0_30px_rgba(0,255,255,0.05)] relative overflow-hidden flex flex-col h-full min-h-0">
             <div className="absolute top-0 right-0 w-32 h-32 bg-cyan-600/10 rounded-full blur-3xl pointer-events-none" />
 
-            <h2 className="text-xl font-bold tracking-widest text-cyan-100 flex items-center gap-3">
+            <h2 className="text-xl font-bold tracking-widest text-cyan-100 flex items-center gap-3 shrink-0">
               <span className="w-1 h-6 bg-cyan-400 rounded-full shadow-[0_0_10px_rgba(0,255,255,0.8)]" />
               MISSION BRIEFING
             </h2>
 
-            <div className="mt-6 flex-1 flex flex-col">
-              <div className="flex justify-between items-end mb-2">
+            <div className="mt-6 flex-1 flex flex-col min-h-0">
+              <div className="flex justify-between items-end mb-2 shrink-0">
                 <p className="text-xs font-mono tracking-widest text-cyan-400/80">
                   TACTICAL MAP PREVIEW
                 </p>
@@ -317,15 +295,13 @@ export function WaitingRoom() {
                 </p>
               </div>
 
-              {/* マッププレビュー枠 */}
               <div className="rounded-xl border border-cyan-500/40 p-1 bg-black/60 shadow-[inset_0_0_20px_rgba(0,255,255,0.1)] flex-1 min-h-[250px] relative">
                 <GameMapPreview />
-                {/* 走査線エフェクト */}
                 <div className="absolute inset-0 pointer-events-none bg-[linear-gradient(transparent_50%,rgba(0,255,255,0.05)_50%)] bg-[size:100%_4px]" />
               </div>
             </div>
 
-            <div className="mt-6 grid gap-4 sm:grid-cols-2">
+            <div className="mt-6 grid gap-4 sm:grid-cols-2 shrink-0">
               <div className="rounded-lg border border-cyan-900/50 bg-cyan-950/20 p-4 transition-colors hover:border-cyan-500/50 hover:bg-cyan-900/30">
                 <p className="text-[10px] font-mono tracking-widest text-cyan-500">
                   PROTOCOL
@@ -368,14 +344,10 @@ export function WaitingRoom() {
               </div>
             </div>
 
-            <div className="mt-6 relative h-24 w-full overflow-hidden rounded-lg border border-cyan-900/50 bg-cyan-950/20 flex items-center justify-center group shadow-[inset_0_0_20px_rgba(0,255,255,0.05)]">
-              {/* デジタルグリッド背景 */}
+            {/* 以下装飾部分は省略せずに既存コードのままでOK（長いため割愛はしていません） */}
+            <div className="mt-6 relative h-24 w-full overflow-hidden rounded-lg border border-cyan-900/50 bg-cyan-950/20 flex items-center justify-center group shadow-[inset_0_0_20px_rgba(0,255,255,0.05)] shrink-0">
               <div className="absolute inset-0 bg-[linear-gradient(rgba(0,255,255,0.1)_1px,transparent_1px),linear-gradient(90deg,rgba(0,255,255,0.1)_1px,transparent_1px)] bg-[size:12px_12px] opacity-40" />
-
-              {/* サイバーパンク風スキャンライン */}
               <div className="absolute inset-0 bg-[linear-gradient(transparent_50%,rgba(0,255,255,0.05)_50%)] bg-[size:100%_4px] pointer-events-none" />
-
-              {/* ワイヤーフレーム風マッコウクジラ SVG */}
               <svg
                 className="relative z-10 w-full h-full max-h-16 text-cyan-500/70 drop-shadow-[0_0_5px_rgba(0,255,255,0.4)] group-hover:text-cyan-300 group-hover:drop-shadow-[0_0_10px_rgba(0,255,255,0.8)] transition-all duration-500"
                 viewBox="0 0 120 40"
@@ -385,27 +357,17 @@ export function WaitingRoom() {
                 strokeLinecap="round"
                 strokeLinejoin="round"
               >
-                {/* 胴体と頭（マッコウクジラ特有の大きな四角い頭部） */}
                 <path
                   d="M 15,15 L 45,12 L 70,16 L 90,22 L 105,18 L 102,24 L 105,30 L 90,26 L 70,32 L 40,32 L 20,29 L 12,25 L 12,18 Z"
                   fill="rgba(0,255,255,0.05)"
                 />
-
-                {/* 狭い下あご */}
                 <path d="M 12,25 L 30,26 L 40,28" strokeDasharray="1 2" />
-
-                {/* 胸ビレ */}
                 <path d="M 42,28 L 48,36 L 53,29" fill="rgba(0,255,255,0.1)" />
-
-                {/* 尾びれの内側のライン */}
                 <path
                   d="M 90,24 L 102,24"
                   strokeWidth="0.5"
                   strokeDasharray="1 1"
                 />
-
-                {/* デジタルな装飾要素 */}
-                {/* 目 (四角いセンサー風) */}
                 <rect
                   x="25"
                   y="21"
@@ -421,8 +383,6 @@ export function WaitingRoom() {
                   strokeWidth="0.2"
                   strokeDasharray="1 1"
                 />
-
-                {/* ターゲットクロスヘア（スキャン中を演出） */}
                 <path
                   d="M 60,10 L 60,38 M 50,24 L 70,24"
                   stroke="rgba(0,255,255,0.3)"
@@ -436,14 +396,10 @@ export function WaitingRoom() {
                   stroke="rgba(0,255,255,0.2)"
                   strokeWidth="0.3"
                 />
-
-                {/* スキャンデータポイント */}
                 <circle cx="45" cy="12" r="0.5" fill="currentColor" />
                 <circle cx="70" cy="16" r="0.5" fill="currentColor" />
                 <circle cx="90" cy="22" r="0.5" fill="currentColor" />
               </svg>
-
-              {/* 右下の学名データテキスト */}
               <div className="absolute bottom-1.5 right-2 flex items-center gap-2">
                 <span className="w-1.5 h-1.5 bg-cyan-400 rounded-full animate-pulse shadow-[0_0_5px_rgba(0,255,255,0.8)]" />
                 <span className="text-[8px] font-mono text-cyan-500/80 tracking-widest drop-shadow-sm">
@@ -474,15 +430,12 @@ function RoomInviteSection({ currentRoom }: { currentRoom: RoomSnapshot }) {
 
   const handleInviteFriend = async () => {
     if (!selectedInviteeId) return
-
     try {
       setInviteLoading(true)
       setInviteError(null)
       setInviteMessage(null)
       await createRoomInvitation(currentRoom.id, selectedInviteeId)
-      const invitedFriend = friends.find(
-        (friend) => friend.id === selectedInviteeId
-      )
+      const invitedFriend = friends.find((f) => f.id === selectedInviteeId)
       setInviteMessage(
         `${invitedFriend?.username ?? 'TARGET'} へ通信リンクを送信しました`
       )
@@ -497,7 +450,6 @@ function RoomInviteSection({ currentRoom }: { currentRoom: RoomSnapshot }) {
   return (
     <div className="rounded-xl border border-cyan-500/30 bg-black/40 p-5 backdrop-blur-sm relative overflow-hidden">
       <div className="absolute top-0 right-0 w-16 h-16 border-t border-r border-cyan-500/20 rounded-tr-xl pointer-events-none" />
-
       <h3 className="text-xs font-bold tracking-widest text-cyan-400 mb-3 flex items-center gap-2">
         <span className="w-1.5 h-1.5 bg-cyan-400 rounded-full" />
         INVITE OPERATOR
@@ -514,9 +466,7 @@ function RoomInviteSection({ currentRoom }: { currentRoom: RoomSnapshot }) {
           {friends
             .filter(
               (friend) =>
-                !currentRoom.players.some(
-                  (player) => player.userId === friend.id
-                )
+                !currentRoom.players.some((p) => p.userId === friend.id)
             )
             .map((friend) => (
               <option

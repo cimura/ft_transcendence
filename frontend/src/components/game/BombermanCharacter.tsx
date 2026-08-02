@@ -12,16 +12,14 @@ type BombermanCharacterProps = {
 }
 
 const MOVEMENT_EPSILON = 0.001
-// UFOなので、少しゆっくりフワフワするように調整しています
 const WALK_BOB_FREQUENCY = 10
 const WALK_BOB_AMPLITUDE = 0.05
 const IDLE_BOB_FREQUENCY = 2
 const IDLE_BOB_AMPLITUDE = 0.08
-const CHARACTER_BASE_HEIGHT = 0.5 // UFOを地面から少し浮かす
+const CHARACTER_BASE_HEIGHT = 0.5
 const ROTATION_SMOOTHING = 0.2
 const FULL_TURN_RADIANS = Math.PI * 2
 
-// Blinking effect constants
 const DISCONNECTED_BLINK_SPEED = 5
 const MIN_OPACITY = 0.2
 const MAX_OPACITY = 0.7
@@ -31,22 +29,24 @@ export const BombermanCharacter = forwardRef<Group, BombermanCharacterProps>(
     const groupRef = useRef<Group>(null)
     const lastPositionRef = useRef({ ...player.position })
     const materialsRef = useRef<Material[]>([])
+    const baseOpacitiesRef = useRef<number[]>([]) // 初期opacityを保存するRef
 
     useImperativeHandle(ref, () => groupRef.current as Group)
 
+    // player.color を依存配列に追加し、色変更時に正しくマテリアルを再取得する
     useEffect(() => {
       if (groupRef.current) {
         const materials: Material[] = []
         groupRef.current.traverse((child) => {
           const mesh = child as Mesh
-          // DreiのEdgesなどの一部Lineオブジェクトを除外し、MeshかつMaterialがあるものだけを取得
           if (mesh.isMesh && mesh.material) {
             materials.push(mesh.material as Material)
           }
         })
         materialsRef.current = materials
+        baseOpacitiesRef.current = materials.map((material) => material.opacity)
       }
-    }, [])
+    }, [player.color])
 
     useFrame((state) => {
       const group = groupRef.current
@@ -58,7 +58,6 @@ export const BombermanCharacter = forwardRef<Group, BombermanCharacterProps>(
         Math.abs(dx) > MOVEMENT_EPSILON || Math.abs(dz) > MOVEMENT_EPSILON
       const time = state.clock.elapsedTime
 
-      // フワフワ浮くボビング処理
       const bobbing = isMoving
         ? Math.abs(Math.sin(time * WALK_BOB_FREQUENCY)) * WALK_BOB_AMPLITUDE
         : Math.sin(time * IDLE_BOB_FREQUENCY) * IDLE_BOB_AMPLITUDE
@@ -69,7 +68,6 @@ export const BombermanCharacter = forwardRef<Group, BombermanCharacterProps>(
         player.position.z
       )
 
-      // 進行方向に向く回転処理
       if (isMoving) {
         const targetAngle = Math.atan2(dx, dz)
         let diff = targetAngle - group.rotation.y
@@ -78,7 +76,6 @@ export const BombermanCharacter = forwardRef<Group, BombermanCharacterProps>(
         group.rotation.y += diff * ROTATION_SMOOTHING
       }
 
-      // --- BLINKING LOGIC ---
       if (player.isDisconnected) {
         const blinkOpacity =
           MIN_OPACITY +
@@ -89,9 +86,11 @@ export const BombermanCharacter = forwardRef<Group, BombermanCharacterProps>(
           materialsRef.current[i].opacity = blinkOpacity
         }
       } else {
+        // 切断から復帰した時、1ではなく各マテリアルの初期opacity（UFOのガラス等は0.6）に戻す
         for (let i = 0; i < materialsRef.current.length; i++) {
-          if (materialsRef.current[i].opacity !== 1) {
-            materialsRef.current[i].opacity = 1
+          const baseOpacity = baseOpacitiesRef.current[i] ?? 1
+          if (materialsRef.current[i].opacity !== baseOpacity) {
+            materialsRef.current[i].opacity = baseOpacity
           }
         }
       }
@@ -104,10 +103,9 @@ export const BombermanCharacter = forwardRef<Group, BombermanCharacterProps>(
     return (
       <>
         <group ref={groupRef}>
-          {/* 元々のBoxやSphereの代わりに、ProceduralUFOコンポーネントを配置 */}
           <ProceduralUFO
             playerColor={player.color}
-            scale={[0.25, 0.25, 0.25]} // マス目のサイズに合わせて調整（必要なら変更してください）
+            scale={[0.25, 0.25, 0.25]}
           />
         </group>
         <PlayerNameLabel

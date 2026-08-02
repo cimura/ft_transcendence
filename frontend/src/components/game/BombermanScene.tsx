@@ -1,5 +1,4 @@
 // frontend/src/components/game/BombermanScene.tsx
-
 import { Canvas } from '@react-three/fiber'
 import { Grid } from '@react-three/drei'
 import { RockBlock } from './models/RockBlock'
@@ -20,18 +19,10 @@ type BombermanSceneProps = {
 
 export function BombermanScene({ gameState }: BombermanSceneProps) {
   const center = (BOMBERMAN_GRID_SIZE - 1) / SCENE_CONFIG.grid.centerDivisor
-  const { colors } = SCENE_CONFIG // pointLightで使うためcolorsだけ残しています
+  const { colors } = SCENE_CONFIG
 
   return (
-    <Canvas
-      camera={{
-        position: [
-          center,
-          SCENE_CONFIG.camera.height * 1.2,
-          center + SCENE_CONFIG.camera.distanceFromCenter * 1.2,
-        ],
-      }}
-    >
+    <Canvas camera={{ fov: SCENE_CONFIG.camera.fov }}>
       <ambientLight intensity={SCENE_CONFIG.light.ambientIntensity} />
       <directionalLight
         position={SCENE_CONFIG.light.directionalPosition}
@@ -45,17 +36,19 @@ export function BombermanScene({ gameState }: BombermanSceneProps) {
       />
       <CameraRig />
 
-      {/* 元々の mesh と boxGeometry による土台を削除し、Field コンポーネントに置き換え */}
-      <Field position={[center, -4.2, center]} scale={[2.6, 4, 2.3]} />
+      <Field
+        position={[center, SCENE_CONFIG.field.offsetY, center]}
+        scale={SCENE_CONFIG.field.scale}
+      />
 
       <Grid
         args={[BOMBERMAN_GRID_SIZE, BOMBERMAN_GRID_SIZE]}
-        cellColor="#00ffff"
-        sectionColor="#ff00ff"
-        cellThickness={1.0}
-        sectionThickness={1.5}
-        fadeDistance={30}
-        position={[center, 0.01, center]}
+        cellColor={colors.gridCell}
+        sectionColor={colors.gridSection}
+        cellThickness={SCENE_CONFIG.grid.cellThickness}
+        sectionThickness={SCENE_CONFIG.grid.sectionThickness}
+        fadeDistance={SCENE_CONFIG.grid.fadeDistance}
+        position={[center, SCENE_CONFIG.grid.offsetY, center]}
       />
 
       {gameState.map.map((row, y) =>
@@ -74,9 +67,8 @@ export function BombermanScene({ gameState }: BombermanSceneProps) {
             )
           }
 
-          // インポートされている BREAKABLE_COLORS を使用
-          const colorIndex = (x * 7 + y * 13) % 3
-          const blockColor = BREAKABLE_COLORS[colorIndex]
+          const colorIndex = (x * 7 + y * 13) % BREAKABLE_COLORS.length
+          const blockColor = BREAKABLE_COLORS[colorIndex] ?? '#4a3018'
 
           return (
             <group

@@ -1,30 +1,17 @@
+// frontend/src/components/game/utils/fit-camera.ts
 import { MathUtils, Vector3, type Box3 } from 'three'
 
 type FitDistanceParams = {
-  /** 画面に収めたい対象を囲む箱（ワールド座標） */
   bounds: Box3
-  /** カメラの注視点 */
   target: Vector3
-  /** target からカメラへ向かう単位ベクトル */
   direction: Vector3
-  /** 垂直画角（度） */
   fov: number
-  /** 描画領域のアスペクト比（width / height） */
   aspect: number
-  /** 算出距離に掛ける余白倍率 */
   margin: number
 }
 
 const WORLD_UP = new Vector3(0, 1, 0)
 
-/**
- * 箱の8頂点をカメラ空間へ射影し、すべてが視錐台に収まる最小のカメラ距離を求める。
- *
- * カメラ空間での頂点 (x, y, z) が画角内に入る条件は
- *   |x| <= tanH * (distance - z) かつ |y| <= tanV * (distance - z)
- * なので、頂点ごとの必要距離は max(z + |x|/tanH, z + |y|/tanV) となる。
- * 全頂点の最大値を取れば箱全体が収まる。
- */
 export function computeFitDistance({
   bounds,
   target,
@@ -36,9 +23,15 @@ export function computeFitDistance({
   const tanV = Math.tan(MathUtils.degToRad(fov) / 2)
   const tanH = tanV * aspect
 
-  // カメラの回転基底。direction がカメラの +Z（target から見て手前）にあたる
   const backward = direction
-  const right = new Vector3().crossVectors(WORLD_UP, backward).normalize()
+  const right = new Vector3().crossVectors(WORLD_UP, backward)
+
+  // directionがWORLD_UPと平行な場合（真上からの視点）NaNになるのを防ぐ
+  if (right.lengthSq() < 1e-8) {
+    right.set(1, 0, 0)
+  }
+  right.normalize()
+
   const up = new Vector3().crossVectors(backward, right)
 
   const corner = new Vector3()

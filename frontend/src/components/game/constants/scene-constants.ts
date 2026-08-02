@@ -1,18 +1,25 @@
+// frontend/src/components/game/constants/scene-constants.ts
 // frontend のみで使う定数を定義
 
 export const SCENE_CONFIG = {
   grid: {
     centerDivisor: 2,
     y: -0.48,
+    cellThickness: 1.0,
+    sectionThickness: 1.5,
+    fadeDistance: 30,
+    offsetY: 0.01,
+  },
+  field: {
+    offsetY: -4.2,
+    scale: [2.6, 4, 2.3] as [number, number, number],
   },
   camera: {
-    height: 10, // カメラの高さを少し下げる
-    distanceFromCenter: 9, // カメラを少し手前に引いて斜め感を強める
+    height: 10,
+    distanceFromCenter: 9,
     fov: 58,
     targetY: 0,
-
-    fitMargin: 0.85,
-
+    fitMargin: 1.1, // 0.85から1.1へ変更（マップ全体が収まるように余白を確保）
     contentTopY: 1.0,
   },
   light: {
@@ -26,33 +33,6 @@ export const SCENE_CONFIG = {
   ground: {
     y: -0.5,
     sizePadding: 1,
-    reflectorBlur: [300, 80] as [number, number],
-    reflectorResolution: 512,
-    reflectorMixBlur: 1,
-    reflectorMixStrength: 40,
-    reflectorRoughness: 0.22,
-    reflectorDepthScale: 1,
-    minDepthThreshold: 0.4,
-    maxDepthThreshold: 1.2,
-  },
-  blocks: {
-    solidSize: [1, 1, 1] as [number, number, number],
-    solidPillarSize: [0.5, 1.1, 0.5] as [number, number, number],
-    breakableCoreRadius: 0.35,
-    breakableCoreSegments: 16,
-    breakableShellSize: [0.9, 0.9, 0.9] as [number, number, number],
-    breakableShellOpacity: 0.6,
-    metallicMetalness: 0.9,
-    solidEdgeOpacity: 0.22,
-    breakableEmissiveIntensity: 2,
-  },
-  bombs: {
-    coreRadius: 0.3,
-    coreSegments: 32,
-    auraRadius: 0.4,
-    auraSegments: 16,
-    emissiveIntensity: 4,
-    auraOpacity: 0.4,
   },
   colors: {
     background: '#010103',
@@ -73,6 +53,6 @@ export const SCENE_CONFIG = {
   },
   playerLabel: {
     height: 0.95,
-    zIndexRange: [9, 0] as [number, number], // usernameのオーバーレイを3Dより手前に、結果画面より奥に表示するため
+    zIndexRange: [9, 0] as [number, number],
   },
 }

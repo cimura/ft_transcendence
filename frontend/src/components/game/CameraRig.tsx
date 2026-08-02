@@ -1,3 +1,4 @@
+// frontend/src/components/game/CameraRig.tsx
 import { useLayoutEffect } from 'react'
 import { useThree } from '@react-three/fiber'
 import { Box3, PerspectiveCamera, Vector3 } from 'three'
@@ -9,7 +10,6 @@ const CENTER = (BOMBERMAN_GRID_SIZE - 1) / SCENE_CONFIG.grid.centerDivisor
 const GROUND_HALF_SIZE =
   (BOMBERMAN_GRID_SIZE + SCENE_CONFIG.ground.sizePadding) / 2
 
-// フィット対象: 地面プレーン全体（X/Z）と、床からキャラクター頭頂まで（Y）
 const FIT_BOUNDS = new Box3(
   new Vector3(
     CENTER - GROUND_HALF_SIZE,
@@ -31,11 +31,6 @@ const DIRECTION = new Vector3(
   SCENE_CONFIG.camera.distanceFromCenter
 ).normalize()
 
-/**
- * 描画領域のアスペクト比に応じてカメラ距離を再計算し、
- * 見下ろし角度を保ったままマップ全体が常に画面に収まるようにする。
- * ズーム・パン・回転など、ユーザー操作によるカメラ変更は行わない。
- */
 export function CameraRig() {
   const camera = useThree((state) => state.camera)
   const width = useThree((state) => state.size.width)
@@ -55,10 +50,8 @@ export function CameraRig() {
       margin: SCENE_CONFIG.camera.fitMargin,
     })
 
-    // three.js のカメラは R3F の描画ループが直接書き換えることを前提にした
-    // ミュータブルなオブジェクトであり、Reactの状態ではない（公式のuseFrame例と同じ手続き的更新）
-    // eslint-disable-next-line react-hooks/immutability -- 意図的な three.js オブジェクトの直接更新
     camera.aspect = aspect
+    camera.fov = SCENE_CONFIG.camera.fov // fovの設定を追加
     camera.position.copy(TARGET).addScaledVector(DIRECTION, distance)
     camera.lookAt(TARGET)
     camera.updateProjectionMatrix()

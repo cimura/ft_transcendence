@@ -1,6 +1,6 @@
 // frontend/src/components/game/models/ProceduralUFO.tsx
 import * as THREE from 'three'
-import { useMemo } from 'react'
+import { useMemo, useEffect } from 'react'
 import { Edges } from '@react-three/drei'
 import type { ThreeElements } from '@react-three/fiber'
 
@@ -12,18 +12,15 @@ export function ProceduralUFO({
   playerColor = '#00ffff',
   ...props
 }: ProceduralUFOProps) {
-  // マテリアルの設定
   const { hullMaterial, glassMaterial, neonMaterial } = useMemo(() => {
-    // A. 装甲（金属）: metallic を metalness に修正
     const hullMaterial = new THREE.MeshStandardMaterial({
       color: '#33333a',
       metalness: 1.0,
       roughness: 0.4,
       flatShading: false,
-      transparent: true, // 点滅アニメーションのために必要
+      transparent: true,
     })
 
-    // B. コックピット（ガラス）
     const glassMaterial = new THREE.MeshStandardMaterial({
       color: '#aaddff',
       metalness: 0.2,
@@ -32,21 +29,28 @@ export function ProceduralUFO({
       opacity: 0.6,
     })
 
-    // C. 発光部
     const neonMaterial = new THREE.MeshStandardMaterial({
       color: playerColor,
       emissive: playerColor,
       emissiveIntensity: 4.0,
       toneMapped: false,
-      transparent: true, // 点滅アニメーションのために必要
+      transparent: true,
     })
 
     return { hullMaterial, glassMaterial, neonMaterial }
   }, [playerColor])
 
+  // マテリアルのメモリリーク防止（dispose）
+  useEffect(() => {
+    return () => {
+      hullMaterial.dispose()
+      glassMaterial.dispose()
+      neonMaterial.dispose()
+    }
+  }, [hullMaterial, glassMaterial, neonMaterial])
+
   return (
     <group {...props} dispose={null}>
-      {/* メインボディ */}
       <mesh position={[0, 0, 0]} material={hullMaterial}>
         <cylinderGeometry args={[1.5, 1.8, 0.2, 32]} />
       </mesh>
@@ -55,17 +59,16 @@ export function ProceduralUFO({
         <cylinderGeometry args={[0.8, 1.5, 0.2, 32]} />
       </mesh>
 
-      {/* コックピット & 窓枠 */}
       <mesh position={[0, 0.3, 0]} material={glassMaterial}>
         <sphereGeometry args={[0.6, 32, 16, 0, Math.PI * 2, 0, Math.PI / 2]} />
       </mesh>
 
-      <group position={[0, 0.3, 0]} scale={0.61}>
+      {/* groupからmeshに変更し、visible={false}を設定 */}
+      <mesh position={[0, 0.3, 0]} scale={0.61} visible={false}>
         <sphereGeometry args={[1, 16, 8, 0, Math.PI * 2, 0, Math.PI / 2]} />
         <Edges color="#222222" threshold={5} lineWidth={2} />
-      </group>
+      </mesh>
 
-      {/* ディテール */}
       {useMemo(() => {
         const detailCount = 8
         const details = []
@@ -86,7 +89,6 @@ export function ProceduralUFO({
         return details
       }, [hullMaterial])}
 
-      {/* エミッション (発光部) */}
       <mesh
         position={[0, 0.05, 0]}
         rotation={[Math.PI / 2, 0, 0]}
