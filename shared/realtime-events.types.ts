@@ -1,3 +1,7 @@
+export const PRESENCE_STATUSES = ['offline', 'online', 'in_game'] as const;
+
+export type PresenceStatus = (typeof PRESENCE_STATUSES)[number];
+
 export type RealtimeNotificationActor = {
   id: string;
   username: string;
@@ -28,4 +32,8 @@ export interface RealtimeClientToServerEvents {}
 
 export interface RealtimeServerToClientEvents {
   'notification:new': (notification: RealtimeNotification) => void;
+  'presence:updated': (update: {
+    userId: string;
+    status: PresenceStatus;
+  }) => void;
 }

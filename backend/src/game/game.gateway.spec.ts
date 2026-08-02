@@ -4,6 +4,7 @@ import { GameGateway } from './game.gateway';
 import { GameService } from './game.service';
 import { SocketAuthService } from '../websocket/socket-auth.service';
 import { SocketPresenceService } from '../websocket/socket-presence.service';
+import { RealtimeGateway } from '../websocket/realtime.gateway';
 
 describe('GameGateway', () => {
   let gateway: GameGateway;
@@ -29,6 +30,10 @@ describe('GameGateway', () => {
         },
         { provide: SocketAuthService, useValue: { authenticate: jest.fn() } },
         SocketPresenceService,
+        {
+          provide: RealtimeGateway,
+          useValue: { emitPresenceUpdatedIfChanged: jest.fn() },
+        },
       ],
     }).compile();
 
@@ -432,7 +437,7 @@ describe('GameGateway', () => {
   });
 
   describe('handleDisconnect', () => {
-    it('唯一のソケットが切断するとgameService.handleGameLeaveが呼ばれること', () => {
+    it('唯一のソケットが切断するとgameService.handleGameLeaveが呼ばれること', async () => {
       const client = createMockSocket();
       client.data.user = { id: 'user-1' };
       client.data.roomId = 'room-1';
@@ -443,7 +448,7 @@ describe('GameGateway', () => {
         socketId: 'socket-123',
       });
 
-      gateway.handleDisconnect(client);
+      await gateway.handleDisconnect(client);
 
       expect(gameService.handleGameLeave).toHaveBeenCalledWith(
         'room-1',
@@ -454,7 +459,7 @@ describe('GameGateway', () => {
       jest.useRealTimers();
     });
 
-    it('同一ユーザーの別ソケットが残っている場合は切断扱いにしないこと(StrictMode/複数タブ対策)', () => {
+    it('同一ユーザーの別ソケットが残っている場合は切断扱いにしないこと(StrictMode/複数タブ対策)', async () => {
       // React StrictMode の二重ソケットや別タブ接続を想定し、同一ユーザーの
       // 2本のソケットを presence に登録する
       const clientA = createMockSocket('socket-a');
@@ -478,22 +483,22 @@ describe('GameGateway', () => {
       });
 
       // 1本目が切断しても、まだ2本目が残っているため handleGameLeave は呼ばれない
-      gateway.handleDisconnect(clientA);
+      await gateway.handleDisconnect(clientA);
       expect(gameService.handleGameLeave).not.toHaveBeenCalled();
 
       // 最後の1本が切断すると呼ばれる。これは最新ソケットが先に閉じても
       // 最終的に切断扱いになることの確認でもある
-      gateway.handleDisconnect(clientB);
+      await gateway.handleDisconnect(clientB);
       expect(gameService.handleGameLeave).toHaveBeenCalledWith(
         'room-1',
         'user-1',
       );
     });
 
-    it('ユーザー情報がない場合、何もしないこと', () => {
+    it('ユーザー情報がない場合、何もしないこと', async () => {
       const client = createMockSocket();
 
-      gateway.handleDisconnect(client);
+      await gateway.handleDisconnect(client);
 
       expect(gameService.handleGameLeave).not.toHaveBeenCalled();
     });

@@ -5,12 +5,14 @@ import { getApiErrorMessage } from '../api/errors'
 
 interface FriendState {
   friends: Friend[]
+  presenceStatuses: Record<string, Friend['status']>
   requests: FriendRequest[]
   loading: boolean
   error: string | null
 
   // Actions - フレンド関連
   setFriends: (friends: Friend[]) => void
+  updateFriendStatus: (friendId: string, status: Friend['status']) => void
   addFriend: (friend: Friend) => void
   removeFriend: (friendId: string) => void
 
@@ -39,22 +41,51 @@ interface FriendState {
 export const useFriendStore = create<FriendState>((set, get) => ({
   // Initial state
   friends: [],
+  presenceStatuses: {},
   requests: [],
   loading: false,
   error: null,
 
   // フレンド関連のアクション
-  setFriends: (friends) => set({ friends }),
+  setFriends: (friends) =>
+    set((state) => ({
+      friends: friends.map((friend) => ({
+        ...friend,
+        status: state.presenceStatuses[friend.id] ?? friend.status,
+      })),
+    })),
+
+  updateFriendStatus: (friendId, status) =>
+    set((state) => ({
+      presenceStatuses: {
+        ...state.presenceStatuses,
+        [friendId]: status,
+      },
+      friends: state.friends.map((friend) =>
+        friend.id === friendId ? { ...friend, status } : friend
+      ),
+    })),
 
   addFriend: (friend) =>
     set((state) => ({
-      friends: [...state.friends, friend],
+      friends: [
+        ...state.friends,
+        {
+          ...friend,
+          status: state.presenceStatuses[friend.id] ?? friend.status,
+        },
+      ],
     })),
 
   removeFriend: (friendId) =>
-    set((state) => ({
-      friends: state.friends.filter((f) => f.id !== friendId),
-    })),
+    set((state) => {
+      const presenceStatuses = { ...state.presenceStatuses }
+      delete presenceStatuses[friendId]
+      return {
+        friends: state.friends.filter((f) => f.id !== friendId),
+        presenceStatuses,
+      }
+    }),
 
   // リクエスト関連のアクション
   setRequests: (requests) => set({ requests }),
@@ -78,7 +109,8 @@ export const useFriendStore = create<FriendState>((set, get) => ({
     try {
       set({ loading: true, error: null })
       const friends = await friendApi.getFriends()
-      set({ friends, loading: false })
+      get().setFriends(friends)
+      set({ loading: false })
     } catch (error) {
       set({
         error: getApiErrorMessage(error, 'フレンド一覧の取得に失敗しました。'),

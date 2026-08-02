@@ -15,6 +15,7 @@ import { GameService } from './game.service';
 import { GameExceptionFilter } from './game-exception.filter';
 import { SocketAuthService } from '../websocket/socket-auth.service';
 import { SocketPresenceService } from '../websocket/socket-presence.service';
+import { RealtimeGateway } from '../websocket/realtime.gateway';
 import { getSocketCorsOrigins } from '../websocket/socket-cors';
 import type { GameSocket } from '../common/types/game.type';
 import type {
@@ -38,6 +39,7 @@ export class GameGateway
     private readonly gameService: GameService,
     private readonly socketAuthService: SocketAuthService,
     private readonly socketPresenceService: SocketPresenceService,
+    private readonly realtimeGateway: RealtimeGateway,
   ) {}
 
   afterInit(server: Server<ClientToServerEvents, ServerToClientEvents>) {
@@ -66,6 +68,9 @@ export class GameGateway
     if (!user) return;
 
     const previousRoomId = client.data.roomId;
+    const previousPresenceStatus = this.socketPresenceService.getStatus(
+      user.id,
+    );
 
     try {
       await client.join(data.roomId);
@@ -99,7 +104,13 @@ export class GameGateway
     }
 
     if (previousRoomId && previousRoomId !== data.roomId) {
-      this.cleanupPlayerConnection(previousRoomId, user.id, client.id, 'leave');
+      await this.cleanupPlayerConnection(
+        previousRoomId,
+        user.id,
+        client.id,
+        'leave',
+        false,
+      );
       try {
         await client.leave(previousRoomId);
       } catch (error) {
@@ -109,6 +120,10 @@ export class GameGateway
           data.roomId,
           user.id,
           client.id,
+        );
+        await this.realtimeGateway.emitPresenceUpdatedIfChanged(
+          user.id,
+          previousPresenceStatus,
         );
         throw error;
       }
@@ -122,9 +137,50 @@ export class GameGateway
       userId: user.id,
       socketId: client.id,
     });
+    await this.realtimeGateway.emitPresenceUpdatedIfChanged(
+      user.id,
+      previousPresenceStatus,
+    );
 
     client.emit('game:init', initData);
     this.gameService.handleGameStart(data.roomId);
+  }
+
+  private async rollbackRoomTransition(
+    client: GameSocket,
+    previousRoomId: string,
+    nextRoomId: string,
+    userId: string,
+    clientId: string,
+  ) {
+    // 新しいゲーム状態とSocket.IO roomへの参加を取り消す。
+    await this.cleanupPlayerConnection(nextRoomId, userId, clientId, 'leave');
+    try {
+      await client.leave(nextRoomId);
+    } catch (error) {
+      this.logger.error(
+        `Failed to rollback new socket room { roomId: '${nextRoomId}', userId: '${userId}' }`,
+        error instanceof Error ? error.stack : String(error),
+      );
+    }
+
+    // 旧ルームのゲーム状態とpresenceを復元する。旧roomからのleaveに
+    // 失敗しているため、Socket.IO上では旧roomに残ったままになる。
+    try {
+      this.gameService.handleGameJoin(previousRoomId, userId);
+      this.socketPresenceService.register({
+        namespace: 'game',
+        roomId: previousRoomId,
+        userId,
+        socketId: clientId,
+      });
+      client.data.roomId = previousRoomId;
+    } catch (error) {
+      this.logger.error(
+        `Failed to restore previous game room { roomId: '${previousRoomId}', userId: '${userId}' }`,
+        error instanceof Error ? error.stack : String(error),
+      );
+    }
   }
 
   @SubscribeMessage('game:leave')
@@ -187,57 +243,22 @@ export class GameGateway
     this.gameService.handleBombPlace(roomId, client.data.user.id);
   }
 
-  handleDisconnect(client: GameSocket) {
+  async handleDisconnect(client: GameSocket) {
     const roomId = client.data.roomId;
     const userId = client.data.user?.id;
     if (!roomId || !userId) return;
 
-    this.cleanupPlayerConnection(roomId, userId, client.id, 'leave');
+    await this.cleanupPlayerConnection(roomId, userId, client.id, 'leave');
   }
 
-  private async rollbackRoomTransition(
-    client: GameSocket,
-    previousRoomId: string,
-    nextRoomId: string,
-    userId: string,
-    clientId: string,
-  ) {
-    // 新しいゲーム状態とSocket.IO roomへの参加を取り消す。
-    this.cleanupPlayerConnection(nextRoomId, userId, clientId, 'leave');
-    try {
-      await client.leave(nextRoomId);
-    } catch (error) {
-      this.logger.error(
-        `Failed to rollback new socket room { roomId: '${nextRoomId}', userId: '${userId}' }`,
-        error instanceof Error ? error.stack : String(error),
-      );
-    }
-
-    // 旧ルームのゲーム状態とpresenceを復元する。旧roomからのleaveに
-    // 失敗しているため、Socket.IO上では旧roomに残ったままになる。
-    try {
-      this.gameService.handleGameJoin(previousRoomId, userId);
-      this.socketPresenceService.register({
-        namespace: 'game',
-        roomId: previousRoomId,
-        userId,
-        socketId: clientId,
-      });
-      client.data.roomId = previousRoomId;
-    } catch (error) {
-      this.logger.error(
-        `Failed to restore previous game room { roomId: '${previousRoomId}', userId: '${userId}' }`,
-        error instanceof Error ? error.stack : String(error),
-      );
-    }
-  }
-
-  private cleanupPlayerConnection(
+  private async cleanupPlayerConnection(
     roomId: string,
     userId: string,
     clientId: string,
     mode: 'leave' | 'retire',
-  ): void {
+    notifyPresence = true,
+  ): Promise<void> {
+    const previousPresenceStatus = this.socketPresenceService.getStatus(userId);
     const remaining = this.socketPresenceService.unregister({
       namespace: 'game',
       roomId,
@@ -250,6 +271,13 @@ export class GameGateway
       this.gameService.handleGameRetire(roomId, userId);
     } else if (mode == 'leave') {
       this.gameService.handleGameLeave(roomId, userId);
+    }
+
+    if (notifyPresence) {
+      await this.realtimeGateway.emitPresenceUpdatedIfChanged(
+        userId,
+        previousPresenceStatus,
+      );
     }
   }
 }

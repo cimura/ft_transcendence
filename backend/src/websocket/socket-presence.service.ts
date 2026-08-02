@@ -1,4 +1,5 @@
 import { Injectable, Logger } from '@nestjs/common';
+import type { PresenceStatus } from '@ft_transcendence/shared/realtime-events.types';
 
 type PresenceKeyInput = {
   namespace: string;
@@ -18,6 +19,10 @@ export class SocketPresenceService {
     string,
     ReturnType<typeof setTimeout>
   >();
+  private readonly activeUserSockets = new Map<
+    string,
+    Map<string, Set<string>>
+  >();
 
   register(input: PresenceInput) {
     const key = this.key(input);
@@ -27,6 +32,14 @@ export class SocketPresenceService {
     sockets.add(input.socketId);
     this.activeSockets.set(key, sockets);
 
+    const users =
+      this.activeUserSockets.get(input.namespace) ??
+      new Map<string, Set<string>>();
+    const userSockets = users.get(input.userId) ?? new Set<string>();
+    userSockets.add(input.socketId);
+    users.set(input.userId, userSockets);
+    this.activeUserSockets.set(input.namespace, users);
+
     return sockets.size;
   }
 
@@ -35,13 +48,27 @@ export class SocketPresenceService {
     const sockets = this.activeSockets.get(key);
     if (!sockets) return 0;
 
-    sockets.delete(input.socketId);
+    const deleted = sockets.delete(input.socketId);
+    if (!deleted) return sockets.size;
+
+    const users = this.activeUserSockets.get(input.namespace);
+    const userSockets = users?.get(input.userId);
+    userSockets?.delete(input.socketId);
+    if (userSockets?.size === 0) users?.delete(input.userId);
+    if (users?.size === 0) this.activeUserSockets.delete(input.namespace);
+
     if (sockets.size === 0) {
       this.activeSockets.delete(key);
       return 0;
     }
 
     return sockets.size;
+  }
+
+  getStatus(userId: string): PresenceStatus {
+    if (this.hasActiveSocket('game', userId)) return 'in_game';
+    if (this.hasActiveSocket('realtime', userId)) return 'online';
+    return 'offline';
   }
 
   scheduleIfInactive(
@@ -73,6 +100,10 @@ export class SocketPresenceService {
 
     clearTimeout(timer);
     this.pendingDisconnects.delete(key);
+  }
+
+  private hasActiveSocket(namespace: string, userId: string) {
+    return (this.activeUserSockets.get(namespace)?.get(userId)?.size ?? 0) > 0;
   }
 
   private key(input: PresenceKeyInput) {

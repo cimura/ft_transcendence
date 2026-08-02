@@ -154,4 +154,73 @@ describe('SocketPresenceService', () => {
       expect(loggerErrorSpy).toHaveBeenCalled();
     });
   });
+
+  describe('getStatus', () => {
+    it('returns offline when the user has no active socket', () => {
+      expect(service.getStatus('user-1')).toBe('offline');
+    });
+
+    it('returns online for an active realtime socket', () => {
+      service.register({
+        namespace: 'realtime',
+        roomId: 'global',
+        userId: 'user-1',
+        socketId: 'socket-1',
+      });
+
+      expect(service.getStatus('user-1')).toBe('online');
+    });
+
+    it('prioritizes in_game while any game socket is active', () => {
+      service.register({
+        namespace: 'realtime',
+        roomId: 'global',
+        userId: 'user-1',
+        socketId: 'realtime-1',
+      });
+      service.register({
+        namespace: 'game',
+        roomId: 'room-1',
+        userId: 'user-1',
+        socketId: 'game-1',
+      });
+
+      expect(service.getStatus('user-1')).toBe('in_game');
+
+      service.unregister({
+        namespace: 'game',
+        roomId: 'room-1',
+        userId: 'user-1',
+        socketId: 'game-1',
+      });
+      expect(service.getStatus('user-1')).toBe('online');
+    });
+
+    it('stays online until the last realtime socket disconnects', () => {
+      for (const socketId of ['realtime-1', 'realtime-2']) {
+        service.register({
+          namespace: 'realtime',
+          roomId: 'global',
+          userId: 'user-1',
+          socketId,
+        });
+      }
+
+      service.unregister({
+        namespace: 'realtime',
+        roomId: 'global',
+        userId: 'user-1',
+        socketId: 'realtime-1',
+      });
+      expect(service.getStatus('user-1')).toBe('online');
+
+      service.unregister({
+        namespace: 'realtime',
+        roomId: 'global',
+        userId: 'user-1',
+        socketId: 'realtime-2',
+      });
+      expect(service.getStatus('user-1')).toBe('offline');
+    });
+  });
 });
