@@ -2,7 +2,7 @@ import { useState, useRef, type ChangeEvent } from 'react'
 
 interface AvatarUploadProps {
   currentAvatar?: string
-  onUpload: (file: File) => voidServer
+  onUpload: (file: File) => void
   error?: string | null
 }
 
