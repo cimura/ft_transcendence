@@ -285,7 +285,7 @@ describe('RoomsGateway', () => {
         throw new Error('unexpected');
       });
       const errorSpy = jest
-        .spyOn((gateway as any).logger, 'error')
+        .spyOn(gateway['logger'], 'error')
         .mockImplementation(() => undefined);
 
       await gateway.handleRoomJoin(client, { roomId: 'room-1' });
@@ -384,13 +384,13 @@ describe('RoomsGateway', () => {
   });
 
   describe('room:leave(明示的退出)', () => {
-    it('presence を即座に解除し、猶予は挟まない(ドメイン退出は REST /leave の責務)', () => {
+    it('presence を即座に解除し、猶予は挟まない(ドメイン退出は REST /leave の責務)', async () => {
       const client = createMockSocket();
       client.data.user = { id: 'user-1' };
       client.data.roomId = 'room-1';
       socketPresenceService.unregister.mockReturnValue(0);
 
-      gateway.handleRoomLeave(client);
+      await gateway.handleRoomLeave(client);
 
       expect(client.leave).toHaveBeenCalledWith('room-1');
       expect(client.data.roomId).toBeUndefined();
@@ -405,24 +405,24 @@ describe('RoomsGateway', () => {
       expect(socketPresenceService.scheduleIfInactive).not.toHaveBeenCalled();
     });
 
-    it('同じユーザーの別タブが残っている場合は presence 解除もしない', () => {
+    it('同じユーザーの別タブが残っている場合は presence 解除もしない', async () => {
       const client = createMockSocket();
       client.data.user = { id: 'user-1' };
       client.data.roomId = 'room-1';
       socketPresenceService.unregister.mockReturnValue(1);
 
-      gateway.handleRoomLeave(client);
+      await gateway.handleRoomLeave(client);
 
       expect(client.leave).toHaveBeenCalledWith('room-1');
       expect(roomsService.evictIfWaiting).not.toHaveBeenCalled();
       expect(socketPresenceService.scheduleIfInactive).not.toHaveBeenCalled();
     });
 
-    it('参加中のルームがなければ何もしない', () => {
+    it('参加中のルームがなければ何もしない', async () => {
       const client = createMockSocket();
       client.data.user = { id: 'user-1' };
 
-      gateway.handleRoomLeave(client);
+      await gateway.handleRoomLeave(client);
 
       expect(client.leave).not.toHaveBeenCalled();
       expect(socketPresenceService.unregister).not.toHaveBeenCalled();
@@ -461,7 +461,7 @@ describe('RoomsGateway', () => {
         throw new Error('boom');
       });
       const warnSpy = jest
-        .spyOn((gateway as any).logger, 'warn')
+        .spyOn(gateway['logger'], 'warn')
         .mockImplementation(() => undefined);
 
       gateway.handleDisconnect(client);
@@ -526,7 +526,7 @@ describe('RoomsGateway', () => {
         new ForbiddenException('You are not a participant of this room'),
       );
       const errorSpy = jest
-        .spyOn((gateway as any).logger, 'error')
+        .spyOn(gateway['logger'], 'error')
         .mockImplementation(() => undefined);
 
       await gateway.handleChatJoin(client, { roomId: 'room-1' });
@@ -543,7 +543,7 @@ describe('RoomsGateway', () => {
       client.data.user = { id: 'user-1' };
       roomsChatService.findMessages.mockRejectedValue(new Error('db down'));
       const errorSpy = jest
-        .spyOn((gateway as any).logger, 'error')
+        .spyOn(gateway['logger'], 'error')
         .mockImplementation(() => undefined);
 
       await gateway.handleChatJoin(client, { roomId: 'room-1' });
@@ -593,7 +593,7 @@ describe('RoomsGateway', () => {
       client.data.user = { id: 'user-1' };
       roomsChatService.createMessage.mockRejectedValue(new Error('db down'));
       const errorSpy = jest
-        .spyOn((gateway as any).logger, 'error')
+        .spyOn(gateway['logger'], 'error')
         .mockImplementation(() => undefined);
 
       const result = await gateway.handleChatMessage(client, {

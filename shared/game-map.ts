@@ -1,13 +1,14 @@
-import type { TileType } from '@ft_transcendence/shared/game-events.types';
-import {
-  BOMBERMAN_GRID_SIZE,
-  MAP_PATTERN,
-} from '@ft_transcendence/shared/game-constants';
+import type { TileType, WorldPosition } from './game-events.types';
+import { BOMBERMAN_GRID_SIZE, MAP_PATTERN } from './game-constants';
 
-// マップ生成のファイル
-// TODO: shared/ へ移行するか、設定ファイルから読み込む
+/**
+ * マップ生成のファイル
+ *
+ * 生成は完全に決定論的なので、サーバーとクライアントが同じ入力から
+ * 同じマップを得られる。待機中のプレビュー描画もこの関数を直接呼ぶ。
+ */
 
-export const START_POSITIONS = [
+export const START_POSITIONS: ReadonlyArray<Readonly<WorldPosition>> = [
   { x: 0, z: 0 },
   { x: BOMBERMAN_GRID_SIZE - 1, z: BOMBERMAN_GRID_SIZE - 1 },
   { x: BOMBERMAN_GRID_SIZE - 1, z: 0 },

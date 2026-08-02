@@ -114,7 +114,7 @@ export class RoomsGateway implements OnGatewayConnection, OnGatewayDisconnect {
     @ConnectedSocket() client: RoomsSocket,
     @MessageBody() dto: RoomJoinDto,
   ) {
-    const userId = this.requireUserId(client);
+    const userId = this.getUserId(client);
     if (!userId) {
       client.emit('room:error', { message: 'Cannot join room' });
       return;
@@ -137,14 +137,14 @@ export class RoomsGateway implements OnGatewayConnection, OnGatewayDisconnect {
   }
 
   @SubscribeMessage('room:leave')
-  handleRoomLeave(@ConnectedSocket() client: RoomsSocket) {
+  async handleRoomLeave(@ConnectedSocket() client: RoomsSocket) {
     // 明示的な退出操作: ドメインからの退出は REST の /rooms/:id/leave が担うため、
     // ここでは presence 解除と socket ルーム離脱のみを即座に行う
     const roomId = client.data.roomId;
-    const userId = this.requireUserId(client);
+    const userId = this.getUserId(client);
     if (!roomId || !userId) return;
 
-    this.leaveCurrentRoomId(client, roomId, userId, /* explicit */ true);
+    await this.leaveCurrentRoomId(client, roomId, userId, /* explicit */ true);
   }
 
   @SubscribeMessage('lobby:join')
@@ -160,7 +160,7 @@ export class RoomsGateway implements OnGatewayConnection, OnGatewayDisconnect {
     @MessageBody() dto: ChatJoinDto,
   ) {
     const roomId = dto.roomId;
-    const userId = this.requireUserId(client);
+    const userId = this.getUserId(client);
     if (!userId) return;
 
     try {
@@ -198,7 +198,7 @@ export class RoomsGateway implements OnGatewayConnection, OnGatewayDisconnect {
     @ConnectedSocket() client: RoomsSocket,
     @MessageBody() dto: ChatMessageDto,
   ) {
-    const userId = this.requireUserId(client);
+    const userId = this.getUserId(client);
     if (!userId) {
       return { ok: false, error: 'メッセージを送信できません' };
     }
@@ -326,7 +326,7 @@ export class RoomsGateway implements OnGatewayConnection, OnGatewayDisconnect {
 
     // 全て成功した後にのみ旧ルームを後始末する。失敗時は旧ルームの購読が保たれる。
     if (previousRoomId && previousRoomId !== roomId) {
-      this.leaveCurrentRoomId(
+      await this.leaveCurrentRoomId(
         client,
         previousRoomId,
         userId,
@@ -336,7 +336,7 @@ export class RoomsGateway implements OnGatewayConnection, OnGatewayDisconnect {
   }
 
   private async runRollbacks(rollbacks: Array<() => void | Promise<void>>) {
-    for (const undo of rollbacks.reverse()) {
+    for (const undo of [...rollbacks].reverse()) {
       try {
         await undo();
       } catch (error) {
@@ -351,7 +351,7 @@ export class RoomsGateway implements OnGatewayConnection, OnGatewayDisconnect {
 
   // --- shared helpers ---
 
-  private requireUserId(client: RoomsSocket): string | undefined {
+  private getUserId(client: RoomsSocket): string | undefined {
     return client.data.user?.id;
   }
 
@@ -370,13 +370,21 @@ export class RoomsGateway implements OnGatewayConnection, OnGatewayDisconnect {
   // が既に担っているため、ここでは presence 解除のみを即座に行い、猶予は挟まない。
   // explicit=false: 切断/ルーム乗り換え。REST 呼び出しを伴わないため、再接続の可能性を
   // 考慮して猶予付きでドメインからも自動退出させる。
-  private leaveCurrentRoomId(
+  private async leaveCurrentRoomId(
     client: RoomsSocket,
     roomId: string,
     userId: string,
     explicit: boolean,
   ) {
-    void client.leave(roomId);
+    try {
+      await client.leave(roomId);
+    } catch (error) {
+      this.logger.warn(
+        `Failed to leave socket room ${roomId}: ${
+          error instanceof Error ? error.message : String(error)
+        }`,
+      );
+    }
     // 呼び出し時点で既に別ルームへ切り替わっている場合(乗り換え成功後の旧ルーム後始末)は
     // 現在の roomId を巻き戻してしまわないようにする
     if (client.data.roomId === roomId) {

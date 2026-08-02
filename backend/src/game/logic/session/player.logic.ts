@@ -1,5 +1,5 @@
 import { GameSession } from '../../../common/types/game.type';
-import { START_POSITIONS } from '../setup/map.logic';
+import { START_POSITIONS } from '@ft_transcendence/shared/game-map';
 
 export const PLAYER_COLORS = [
   { color: '#ff8800', visorColor: '#00ff00' },

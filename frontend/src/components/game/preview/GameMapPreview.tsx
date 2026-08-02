@@ -1,9 +1,9 @@
 import { useEffect, useMemo, useRef } from 'react'
-import { createInitialBombermanMap, initialPlayers } from './map-mock'
+import {
+  createInitialMap,
+  START_POSITIONS,
+} from '@ft_transcendence/shared/game-map'
 import { renderBombermanScene } from './BombermanRenderer'
-
-// TODO: 部屋にいるときにマップ情報を取得して表示できるようにする (現状map-mockを使用)
-// (現在はゲームがスタートしてからサーバーからマップが送られてくるので表示できない)
 
 const PREVIEW_TILE_SIZE = 40
 const MAX_PREVIEW_SCALE = 1
@@ -11,7 +11,7 @@ const MAX_PREVIEW_SCALE = 1
 export function GameMapPreview() {
   const canvasRef = useRef<HTMLCanvasElement | null>(null)
   const containerRef = useRef<HTMLDivElement | null>(null)
-  const map = useMemo(() => createInitialBombermanMap(), [])
+  const map = useMemo(() => createInitialMap(), [])
 
   useEffect(() => {
     const canvas = canvasRef.current
@@ -36,7 +36,7 @@ export function GameMapPreview() {
       renderBombermanScene({
         ctx,
         map,
-        players: initialPlayers,
+        spawnPositions: START_POSITIONS,
         tileSize: PREVIEW_TILE_SIZE,
       })
     }

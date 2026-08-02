@@ -2,8 +2,9 @@
   "name": "@ft_transcendence/shared",
   "version": "1.0.0",
   "private": true,
-  "main": "./game-events.types.ts",
-  "types": "./game-events.types.ts",
+  "scripts": {
+    "build": "tsc -p tsconfig.json"
+  },
   "exports": {
     ".": {
       "types": "./game-events.types.ts",
@@ -23,7 +24,13 @@
     },
     "./game-constants": {
       "types": "./game-constants.ts",
-      "default": "./game-constants.ts"
+      "browser": "./game-constants.ts",
+      "default": "./dist/game-constants.js"
+    },
+    "./game-map": {
+      "types": "./game-map.ts",
+      "browser": "./game-map.ts",
+      "default": "./dist/game-map.js"
     }
   }
 }
