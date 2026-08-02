@@ -7,7 +7,10 @@ all: up
 .env:
 	cp .env.example .env
 
-up: .env
+# compose モデルを構築するターゲットは .env がないと失敗する(down/logs 系は不要)
+up build rebuild rebuild-clean migrate: .env
+
+up:
 	docker compose -f $(COMPOSE_FILE) up -d
 
 build:
