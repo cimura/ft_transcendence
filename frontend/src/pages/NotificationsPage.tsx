@@ -145,7 +145,7 @@ export function NotificationsPage() {
                         avatarUrl={item.actor.avatarUrl}
                         username={item.actor.username}
                         className="h-12 w-12 rounded-full border border-cyan-400 shadow-[0_0_10px_rgba(0,255,255,0.3)]"
-                        fallbackClassName="bg-cyan-900/50 border-cyan-500 text-xl font-bold"
+                        fallbackClassName="bg-cyan-950 text-cyan-300 font-bold text-xl"
                       />
                       <div className="min-w-0">
                         <p className="text-lg font-bold text-white tracking-wide">

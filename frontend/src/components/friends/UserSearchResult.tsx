@@ -51,8 +51,8 @@ export function UserSearchResult({
           <Avatar
             avatarUrl={user.avatarUrl}
             username={user.username}
-            className="w-12 h-12 rounded-full"
-            fallbackClassName="bg-gradient-to-br from-cyan-500 to-blue-500 text-white font-bold text-xl"
+            className="h-12 w-12 rounded-full border border-cyan-400 shadow-[0_0_10px_rgba(0,255,255,0.3)]"
+            fallbackClassName="bg-cyan-950 text-cyan-300 font-bold text-xl"
           />
 
           {/* ユーザー名 */}

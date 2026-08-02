@@ -1,4 +1,5 @@
 import type { Friend } from '../../types/friend'
+import { Avatar } from '../common/Avatar'
 
 interface ConfirmDialogProps {
   isOpen: boolean
@@ -30,9 +31,12 @@ export function ConfirmDialog({
 
         {/* 削除対象のユーザー情報 */}
         <div className="flex items-center gap-4 bg-black/50 border-2 border-white/40 rounded-full px-6 py-4 mb-8">
-          <div className="w-12 h-12 rounded-full bg-gradient-to-br from-green-400 to-green-600 flex items-center justify-center">
-            <span className="text-2xl">🐦</span>
-          </div>
+          <Avatar
+            avatarUrl={friend.avatarUrl}
+            username={friend.username}
+            className="h-12 w-12 rounded-full border border-cyan-400 shadow-[0_0_10px_rgba(0,255,255,0.3)]"
+            fallbackClassName="bg-cyan-950 text-cyan-300 font-bold text-xl"
+          />
           <p className="text-white text-2xl font-medium">{friend.username}</p>
         </div>
 
