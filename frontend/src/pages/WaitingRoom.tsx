@@ -1,6 +1,6 @@
 import { useNavigate, useParams } from 'react-router-dom'
 import { useRoomStore } from '../stores/roomStore'
-import { useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { PlayerCard } from '../components/waitingRoom/PlayerCard'
 import { ChatPanel } from '../components/waitingRoom/ChatPanel'
 import { GameMapPreview } from '../components/game/preview/GameMapPreview'
@@ -32,6 +32,7 @@ export function WaitingRoom() {
   // 明示的な退出中は、currentRoom が空になったことをトリガーに再joinしないようにするフラグ
   // (ホストが部屋を削除した等の外部要因による currentRoom クリアとは区別する必要がある)
   const isLeavingRef = useRef(false)
+  const hasBackGuardRef = useRef(false)
 
   useEffect(() => {
     if (!roomId) {
@@ -106,6 +107,72 @@ export function WaitingRoom() {
     }
   }, [currentRoom, navigate, roomId])
 
+  const handleLeaveRoom = useCallback(async () => {
+    if (isLeavingRef.current || !currentRoom) return
+    isLeavingRef.current = true
+    try {
+      const result = await leaveRoom(currentRoom.id)
+      if (result) {
+        upsertRoom(result)
+      } else {
+        removeRoom(currentRoom.id)
+      }
+      emitRoomLeave()
+      navigate('/lobby', { replace: true })
+      setCurrentRoom(null)
+    } catch (error) {
+      if (
+        axios.isAxiosError(error) &&
+        (error.response?.status === 403 || error.response?.status === 404)
+      ) {
+        emitRoomLeave()
+        removeRoom(currentRoom.id)
+        navigate('/lobby', { replace: true })
+        setCurrentRoom(null)
+        return
+      }
+      isLeavingRef.current = false
+      console.error('Failed to leave room:', error)
+    }
+  }, [
+    currentRoom,
+    emitRoomLeave,
+    navigate,
+    removeRoom,
+    setCurrentRoom,
+    upsertRoom,
+  ])
+
+  // Keep the room mounted for the first browser Back event. Without this guard,
+  // React Router may unmount the page before its popstate handler can leave the
+  // room, which also makes behavior depend on how the host/guest arrived here.
+  useEffect(() => {
+    if (!hasBackGuardRef.current && !isLeavingRef.current) {
+      window.history.pushState(
+        { ...window.history.state, roomExitGuard: roomId },
+        '',
+        window.location.href
+      )
+      hasBackGuardRef.current = true
+    }
+
+    const handleBrowserBack = () => {
+      hasBackGuardRef.current = false
+      void handleLeaveRoom()
+    }
+
+    window.addEventListener('popstate', handleBrowserBack)
+    return () => window.removeEventListener('popstate', handleBrowserBack)
+  }, [handleLeaveRoom, roomId])
+
+  const handleEmergencyExit = () => {
+    if (hasBackGuardRef.current) {
+      window.history.back()
+      return
+    }
+    void handleLeaveRoom()
+  }
+
   if (!currentRoom || !roomId || isLoadingRoom) {
     return null
   }
@@ -140,35 +207,6 @@ export function WaitingRoom() {
     }
   }
 
-  const handleLeaveRoom = async () => {
-    if (isLeavingRef.current) return
-    isLeavingRef.current = true
-    try {
-      const result = await leaveRoom(currentRoom.id)
-      if (result) {
-        upsertRoom(result)
-      } else {
-        removeRoom(currentRoom.id)
-      }
-      emitRoomLeave()
-      navigate('/home')
-      setCurrentRoom(null)
-    } catch (error) {
-      if (
-        axios.isAxiosError(error) &&
-        (error.response?.status === 403 || error.response?.status === 404)
-      ) {
-        emitRoomLeave()
-        removeRoom(currentRoom.id)
-        navigate('/home')
-        setCurrentRoom(null)
-        return
-      }
-      isLeavingRef.current = false
-      console.error('Failed to leave room:', error)
-    }
-  }
-
   return (
     // 変更点: 背景を透過にし、HUD風のフォントに変更
     <div className="min-h-screen bg-transparent text-cyan-100 font-sans relative">
@@ -194,7 +232,7 @@ export function WaitingRoom() {
               </div>
             </div>
             <button
-              onClick={handleLeaveRoom}
+              onClick={handleEmergencyExit}
               className="group relative px-6 py-2 rounded-full border border-red-500/50 bg-red-950/40 text-red-300 font-bold tracking-widest overflow-hidden transition-all hover:bg-red-900/60 hover:text-white hover:border-red-400 hover:shadow-[0_0_20px_rgba(255,0,0,0.5)]"
             >
               <div className="absolute inset-0 bg-red-500/20 translate-y-full group-hover:translate-y-0 transition-transform duration-300 ease-out" />
