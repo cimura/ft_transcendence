@@ -6,6 +6,13 @@ import { MatchResult } from '../generated/prisma/enums';
 import { Prisma } from '../generated/prisma/client.js';
 import type { PlayerRanking } from '@ft_transcendence/shared/game-events.types';
 import { UserStatsDto } from './dto/user-stats.dto';
+import {
+  calculatePlayerMetrics,
+  calculateTravellerProgression,
+  findCompletedAchievementIds,
+} from './achievements/progression';
+import { ACHIEVEMENT_DEFINITIONS } from './achievements/achievements-definitions';
+import { GalacticGuideResponseDto } from './dto/galactic-guide.dto';
 
 type RankingAggregateRow = {
   userId: string;
@@ -44,14 +51,22 @@ export class ScoresService {
 
     if (participants.length === 0) return;
 
-    await this.prisma.match.create({
-      data: {
-        gameType: params.gameType,
-        finishedAt: params.finishedAt,
-        participants: {
-          create: participants,
+    await this.prisma.$transaction(async (tx) => {
+      await tx.match.create({
+        data: {
+          gameType: params.gameType,
+          finishedAt: params.finishedAt,
+          participants: {
+            create: participants,
+          },
         },
-      },
+      });
+
+      const userIds = [...new Set(participants.map(({ userId }) => userId))];
+
+      for (const userId of userIds) {
+        await this.unlockCompletedAchievements(tx, userId);
+      }
     });
   }
 
@@ -236,6 +251,115 @@ export class ScoresService {
     }));
 
     return { data };
+  }
+
+  async getGalacticGuide(userId: string): Promise<GalacticGuideResponseDto> {
+    const user = await this.prisma.user.findUnique({
+      where: { id: userId },
+      select: { id: true },
+    });
+
+    if (!user) {
+      throw new NotFoundException('User not found');
+    }
+
+    const [matches, unlockedRecords] = await this.prisma.$transaction([
+      this.prisma.matchParticipant.findMany({
+        where: { userId },
+        select: {
+          result: true,
+          kills: true,
+        },
+        orderBy: [
+          {
+            match: {
+              finishedAt: 'asc',
+            },
+          },
+          {
+            matchId: 'asc',
+          },
+        ],
+      }),
+      this.prisma.userAchievement.findMany({
+        where: { userId },
+        select: {
+          achievementId: true,
+          unlockedAt: true,
+        },
+      }),
+    ]);
+    const metrics = calculatePlayerMetrics(matches);
+    const completedAchievementIds = new Set(
+      findCompletedAchievementIds(metrics),
+    );
+    const progression = calculateTravellerProgression(matches);
+
+    const unlockedById = new Map(
+      unlockedRecords.map((record) => [
+        record.achievementId,
+        record.unlockedAt,
+      ]),
+    );
+    const achievements = ACHIEVEMENT_DEFINITIONS.map((definition) => {
+      const unlockedAt = unlockedById.get(definition.id);
+
+      return {
+        id: definition.id,
+        name: definition.name,
+        description: definition.description,
+        icon: definition.icon,
+        category: definition.category,
+        progress: metrics[definition.metric],
+        target: definition.target,
+        unlocked: completedAchievementIds.has(definition.id),
+        unlockedAt: unlockedAt?.toISOString() ?? null,
+      };
+    });
+
+    return {
+      progression,
+      unlockedCount: achievements.filter((achievement) => achievement.unlocked)
+        .length,
+      totalCount: achievements.length,
+      achievements,
+    };
+  }
+
+  private async unlockCompletedAchievements(
+    tx: Prisma.TransactionClient,
+    userId: string,
+  ): Promise<void> {
+    const matches = await tx.matchParticipant.findMany({
+      where: { userId },
+      select: {
+        result: true,
+        kills: true,
+      },
+      orderBy: [
+        {
+          match: {
+            finishedAt: 'asc',
+          },
+        },
+        {
+          matchId: 'asc',
+        },
+      ],
+    });
+
+    const metrics = calculatePlayerMetrics(matches);
+    const completedAchievementIds = findCompletedAchievementIds(metrics);
+
+    if (completedAchievementIds.length === 0) return;
+
+    await tx.userAchievement.createMany({
+      data: completedAchievementIds.map((achievementId) => ({
+        userId,
+        achievementId,
+      })),
+      skipDuplicates: true,
+    });
   }
 
   private toStoredResult(

@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import axios from 'axios'
 import { useAuthStore } from '../stores/authStore'
@@ -42,8 +42,9 @@ export function LobbyPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps -- 初回マウント時のみ実行(以降はソケットで同期)
   }, [])
 
-  const visibleRooms = rooms.filter(
-    (room) => room.status === 'waiting' && room.mode !== 'local_cpu'
+  const visibleRooms = useMemo(
+    () => rooms.filter((room) => room.status === 'waiting'),
+    [rooms]
   )
 
   const handleCreateRoom = async (dto: CreateRoomDto) => {

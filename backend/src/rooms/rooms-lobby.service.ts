@@ -6,15 +6,12 @@ import type { RoomSnapshot } from '@ft_transcendence/shared/rooms-events.types';
 export class RoomsLobbyService {
   constructor(private readonly roomsService: RoomsService) {}
 
-  // ロビーに一覧表示する対象: 参加受付中(waiting)かつオンライン対戦のルームのみ
-  // (local_cpu はホスト以外 join できないため一覧から除外する)
+  // ロビーに一覧表示する対象: 参加受付中(waiting)のルームのみ
   getLobbyRooms(): RoomSnapshot[] {
-    return this.roomsService
-      .findAll('waiting')
-      .filter((room) => this.isLobbyVisible(room));
+    return this.roomsService.findAll('waiting');
   }
 
   isLobbyVisible(room: RoomSnapshot): boolean {
-    return room.status === 'waiting' && room.mode === 'online';
+    return room.status === 'waiting';
   }
 }

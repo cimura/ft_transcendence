@@ -2,7 +2,7 @@ import { GameSession } from '../../../common/types/game.type';
 import {
   PLAYER_MOVE_SPEED,
   PLAYER_COLLISION_SIZE,
-} from '../../constants/game-constants';
+} from '@ft_transcendence/shared/game-constants';
 
 export function isPassable(
   room: GameSession,

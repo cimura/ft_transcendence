@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react'
+import { useCallback, useEffect, useRef } from 'react'
 import { io, Socket } from 'socket.io-client'
 import { useGameStore } from '../stores/gameStore'
 import { useAuthStore } from '../stores/authStore'
@@ -185,5 +185,11 @@ export function useGameSocket(roomId: string) {
     setCountdown,
   ])
 
-  return socketRef
+  // 明示的なリタイア操作(ホームへ戻るボタン)専用。unmount(リロード/タブ閉じなど)には
+  // 紐付けない — それらは切断として扱われ、バックエンド側の猶予付き処理に委ねる。
+  const leaveGame = useCallback(() => {
+    socketRef.current?.emit('game:leave')
+  }, [])
+
+  return { socketRef, leaveGame }
 }

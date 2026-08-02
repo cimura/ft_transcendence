@@ -1,5 +1,5 @@
 import { GameSession } from '../../../common/types/game.type';
-import { START_POSITIONS } from '../setup/map.logic';
+import { START_POSITIONS } from '@ft_transcendence/shared/game-map';
 
 export const PLAYER_COLORS = [
   { color: '#ff8800', visorColor: '#00ff00' },
@@ -124,6 +124,33 @@ export function reconnectPlayerToRoom(
   if (room.playerInputs && room.playerInputs[playerId]) {
     // 再接続時はクライアントが送るseqが初期値に戻るため、サーバー側も初期化する
     room.playerInputs[playerId].seq = 0;
+  }
+
+  return { success: true };
+}
+
+export interface RetireResult {
+  success: boolean;
+}
+
+/**
+ * 明示的なゲーム離脱（リタイア）。切断猶予を与えず即座に死亡扱いにする。
+ */
+export function retirePlayerFromRoom(
+  room: GameSession,
+  playerId: string,
+  now: number,
+): RetireResult {
+  const player = room.players[playerId];
+  if (!player || !player.alive) return { success: false };
+
+  player.alive = false;
+  room.stats[playerId].survivalTime = now - (room.startedAt || now);
+
+  // 死亡後に入力が残らないようにする（disconnectPlayerFromRoom と同様）
+  const playerInput = room.playerInputs?.[playerId];
+  if (playerInput) {
+    playerInput.direction = null;
   }
 
   return { success: true };

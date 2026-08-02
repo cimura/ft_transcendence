@@ -116,10 +116,7 @@ export function WaitingRoom() {
   const isHost = currentPlayer?.isHost || false
   const isReady = currentPlayer?.isReady || false
   const allReady = currentRoom.players.every((p) => p.isReady)
-  const isLocalCpu = currentRoom.mode === 'local_cpu'
-  const hasEnoughPlayers = isLocalCpu
-    ? currentRoom.players.length === 1
-    : currentRoom.players.length === currentRoom.maxPlayers
+  const hasEnoughPlayers = currentRoom.players.length === currentRoom.maxPlayers
   const canStart = isHost && allReady && hasEnoughPlayers
 
   const handleToggleReady = async () => {

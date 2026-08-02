@@ -23,6 +23,7 @@ describe('GameGateway', () => {
             handleGameJoin: jest.fn(),
             handleGameStart: jest.fn(),
             handleGameLeave: jest.fn(),
+            handleGameRetire: jest.fn(),
             handlePlayerInput: jest.fn(),
             handleBombPlace: jest.fn(),
           },
@@ -271,7 +272,7 @@ describe('GameGateway', () => {
   });
 
   describe('handleLeave', () => {
-    it('ルームから退出すること', async () => {
+    it('ルームから退出し、リタイア扱いとしてhandleGameRetireが呼ばれること', async () => {
       const client = createMockSocket();
       client.data.user = { id: 'user-1' };
       client.data.roomId = 'room-1';
@@ -287,7 +288,63 @@ describe('GameGateway', () => {
       expect(client.leave).toHaveBeenCalledWith('room-1');
       expect(client.data.roomId).toBeUndefined();
 
-      expect(gameService.handleGameLeave).toHaveBeenCalledWith(
+      expect(gameService.handleGameRetire).toHaveBeenCalledWith(
+        'room-1',
+        'user-1',
+      );
+      expect(gameService.handleGameLeave).not.toHaveBeenCalled();
+    });
+
+    it('リタイア処理がSocket.IOルーム退出より前に、同期的に呼ばれること', async () => {
+      const client = createMockSocket();
+      client.data.user = { id: 'user-1' };
+      client.data.roomId = 'room-1';
+      socketPresenceService.register({
+        namespace: 'game',
+        roomId: 'room-1',
+        userId: 'user-1',
+        socketId: 'socket-123',
+      });
+
+      await gateway.handleLeave(client);
+
+      // 後続のawaitでtickループが進んでしまう前にリタイアが反映されていること
+      const retireOrder =
+        gameService.handleGameRetire.mock.invocationCallOrder[0];
+      const leaveOrder = (client.leave as jest.Mock).mock
+        .invocationCallOrder[0];
+      expect(retireOrder).toBeLessThan(leaveOrder);
+    });
+
+    it('同一ユーザーの別ソケットが残っている場合はリタイア扱いにしないこと(複数タブ対策)', async () => {
+      const clientA = createMockSocket('socket-a');
+      clientA.data.user = { id: 'user-1' };
+      clientA.data.roomId = 'room-1';
+      const clientB = createMockSocket('socket-b');
+      clientB.data.user = { id: 'user-1' };
+      clientB.data.roomId = 'room-1';
+
+      socketPresenceService.register({
+        namespace: 'game',
+        roomId: 'room-1',
+        userId: 'user-1',
+        socketId: 'socket-a',
+      });
+      socketPresenceService.register({
+        namespace: 'game',
+        roomId: 'room-1',
+        userId: 'user-1',
+        socketId: 'socket-b',
+      });
+
+      // 1本目のタブで明示的に離脱しても、2本目がまだ残っているためリタイアさせない
+      await gateway.handleLeave(clientA);
+      expect(gameService.handleGameRetire).not.toHaveBeenCalled();
+      expect(gameService.handleGameLeave).not.toHaveBeenCalled();
+
+      // 最後の1本が明示的に離脱すると、リタイア扱いになる
+      await gateway.handleLeave(clientB);
+      expect(gameService.handleGameRetire).toHaveBeenCalledWith(
         'room-1',
         'user-1',
       );
@@ -301,6 +358,32 @@ describe('GameGateway', () => {
 
       expect(client.leave).not.toHaveBeenCalled();
       expect(gameService.handleGameLeave).not.toHaveBeenCalled();
+      expect(gameService.handleGameRetire).not.toHaveBeenCalled();
+    });
+
+    it('Socket.IOルームからのleaveが失敗しても、roomIdをクリアした上でソケットを切断すること', async () => {
+      const client = createMockSocket();
+      client.data.user = { id: 'user-1' };
+      client.data.roomId = 'room-1';
+      socketPresenceService.register({
+        namespace: 'game',
+        roomId: 'room-1',
+        userId: 'user-1',
+        socketId: 'socket-123',
+      });
+      client.leave.mockRejectedValue(new Error('Socket leave failed'));
+
+      await gateway.handleLeave(client);
+
+      // リタイア扱いの処理自体はleave失敗の影響を受けず、既に反映されていること
+      expect(gameService.handleGameRetire).toHaveBeenCalledWith(
+        'room-1',
+        'user-1',
+      );
+
+      // leaveに失敗しても後続の状態クリアと切断は行われること
+      expect(client.data.roomId).toBeUndefined();
+      expect(client.disconnect).toHaveBeenCalled();
     });
   });
 
@@ -371,6 +454,9 @@ describe('GameGateway', () => {
         'room-1',
         'user-1',
       );
+      // 意図しない切断はリタイア扱いにせず、猶予付きの通常切断処理に委ねること
+      expect(gameService.handleGameRetire).not.toHaveBeenCalled();
+      jest.useRealTimers();
     });
 
     it('同一ユーザーの別ソケットが残っている場合は切断扱いにしないこと(StrictMode/複数タブ対策)', async () => {

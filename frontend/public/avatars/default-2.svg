@@ -1,11 +1,42 @@
-<svg width="256" height="256" viewBox="0 0 256 256" xmlns="http://www.w3.org/2000/svg">
+<svg width="256" height="256" viewBox="0 0 256 256" fill="none" xmlns="http://www.w3.org/2000/svg">
   <defs>
-    <linearGradient id="grad2" x1="0%" y1="0%" x2="100%" y2="100%">
-      <stop offset="0%" style="stop-color:#60a5fa;stop-opacity:1" />
-      <stop offset="100%" style="stop-color:#2563eb;stop-opacity:1" />
+    <linearGradient id="background" x1="37" y1="24" x2="217" y2="235" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#214052"/>
+      <stop offset="1" stop-color="#0A1721"/>
     </linearGradient>
+    <linearGradient id="pot" x1="91" y1="143" x2="160" y2="214" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#B77D5C"/>
+      <stop offset="1" stop-color="#704937"/>
+    </linearGradient>
+    <linearGradient id="leaf" x1="97" y1="62" x2="153" y2="162" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#7F9D72"/>
+      <stop offset="1" stop-color="#405F49"/>
+    </linearGradient>
+    <clipPath id="frame"><circle cx="128" cy="128" r="122"/></clipPath>
   </defs>
-  <circle cx="128" cy="128" r="128" fill="url(#grad2)"/>
-  <circle cx="128" cy="100" r="50" fill="white" opacity="0.9"/>
-  <circle cx="128" cy="200" r="70" fill="white" opacity="0.9"/>
+  <circle cx="128" cy="128" r="122" fill="url(#background)"/>
+  <g clip-path="url(#frame)">
+    <circle cx="48" cy="58" r="2" fill="#D7E3E9" opacity=".5"/>
+    <circle cx="207" cy="72" r="3" fill="#D7E3E9" opacity=".35"/>
+    <circle cx="69" cy="91" r="1.5" fill="#D7E3E9" opacity=".3"/>
+    <path d="M19 207C58 180 90 169 128 169C166 169 198 180 237 207V256H19V207Z" fill="#102838"/>
+    <ellipse cx="128" cy="213" rx="74" ry="14" fill="#071016" opacity=".45"/>
+    <path d="M128 160C128 130 127 103 128 70M128 127C112 111 98 97 84 81M128 118C145 100 157 84 170 65M127 144C107 135 92 124 78 111M130 143C149 132 165 121 180 106" stroke="#78906C" stroke-width="7" stroke-linecap="round"/>
+    <path d="M128 101C105 98 91 84 90 62C112 62 127 76 128 101Z" fill="url(#leaf)" stroke="#AEC2A5" stroke-width="4"/>
+    <path d="M129 119C130 94 145 79 168 78C167 101 153 116 129 119Z" fill="url(#leaf)" stroke="#AEC2A5" stroke-width="4"/>
+    <path d="M112 132C89 132 74 119 70 98C92 96 109 109 112 132Z" fill="url(#leaf)" stroke="#AEC2A5" stroke-width="4"/>
+    <path d="M143 138C147 115 163 102 185 104C182 126 166 139 143 138Z" fill="url(#leaf)" stroke="#AEC2A5" stroke-width="4"/>
+    <path d="M128 86C116 67 118 49 132 35C148 51 147 70 128 86Z" fill="#698962" stroke="#AEC2A5" stroke-width="4"/>
+    <path d="M88 74C99 79 108 87 116 96M162 86C151 93 143 102 136 112M79 108C90 113 98 120 105 127M176 111C164 116 155 123 148 132" stroke="#B9CBB0" stroke-width="3" stroke-linecap="round" opacity=".55"/>
+    <circle cx="128" cy="56" r="12" fill="#B98781" stroke="#E0C2BC" stroke-width="4"/>
+    <circle cx="114" cy="61" r="12" fill="#B98781" stroke="#E0C2BC" stroke-width="4"/>
+    <circle cx="142" cy="61" r="12" fill="#B98781" stroke="#E0C2BC" stroke-width="4"/>
+    <circle cx="119" cy="47" r="12" fill="#B98781" stroke="#E0C2BC" stroke-width="4"/>
+    <circle cx="137" cy="47" r="12" fill="#B98781" stroke="#E0C2BC" stroke-width="4"/>
+    <circle cx="128" cy="55" r="9" fill="#A88E58"/>
+    <path d="M82 153H174L165 204C163 215 154 221 143 221H113C102 221 93 215 91 204L82 153Z" fill="url(#pot)" stroke="#E2C5B3" stroke-width="5" stroke-linejoin="round"/>
+    <path d="M76 146C76 140 81 136 87 136H169C175 136 180 140 180 146V158H76V146Z" fill="#A96F52" stroke="#E2C5B3" stroke-width="5"/>
+    <path d="M94 174C115 181 141 181 162 174" stroke="#D2A084" stroke-width="4" stroke-linecap="round" opacity=".55"/>
+  </g>
+  <circle cx="128" cy="128" r="122" stroke="#7893A5" stroke-width="4"/>
 </svg>

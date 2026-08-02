@@ -5,7 +5,7 @@ import { bombermanGame } from '../games/games.constants';
 import { GamesService } from '../games/games.service';
 import { RoomsService } from './rooms.service';
 import { RoomsStateService } from './rooms-state.service';
-import type { Room } from '../common/types/room.type';
+import type { Room, RoomParticipant } from '../common/types/room.type';
 import {
   ROOM_CREATED_EVENT,
   ROOM_UPDATED_EVENT,
@@ -28,6 +28,18 @@ const guest = {
   username: 'Guest',
   avatarUrl: null,
 };
+
+const buildParticipant = (
+  overrides: Partial<RoomParticipant> = {},
+): RoomParticipant => ({
+  userId: user.id,
+  username: 'Host',
+  avatarUrl: null,
+  isHost: true,
+  isReady: true,
+  joinedAt: new Date(),
+  ...overrides,
+});
 
 describe('RoomsService', () => {
   let service: RoomsService;
@@ -65,16 +77,8 @@ describe('RoomsService', () => {
       hostId: user.id,
       maxPlayers: 2,
       status: 'waiting',
-      mode: 'online',
       participants: {
-        [user.id]: {
-          userId: user.id,
-          username: 'Host',
-          avatarUrl: null,
-          isHost: true,
-          isReady: true,
-          joinedAt: new Date(),
-        },
+        [user.id]: buildParticipant(),
       },
       messages: [],
       invitations: {},
@@ -93,7 +97,6 @@ describe('RoomsService', () => {
       name: 'Test Room',
       gameId: 'bomberman',
       maxPlayers: 2,
-      mode: 'online',
     });
 
     expect(result.name).toBe('Test Room');
@@ -312,20 +315,6 @@ describe('RoomsService', () => {
     expect(() => service.start('room-1', user.id)).toThrow(ConflictException);
   });
 
-  it('creates a local CPU room when requested', async () => {
-    prisma.user.findUnique.mockResolvedValue(user);
-
-    const result = await service.create(user.id, {
-      name: 'CPU Practice',
-      gameId: 'bomberman',
-      maxPlayers: 4,
-      mode: 'local_cpu',
-    });
-
-    expect(result.mode).toBe('local_cpu');
-    expect(roomsState.getAllRooms()[0].mode).toBe('local_cpu');
-  });
-
   it('starts when the host requests it and all participants are ready', () => {
     setupRoom({
       maxPlayers: 2,
@@ -355,39 +344,95 @@ describe('RoomsService', () => {
     expect(roomsState.getRoom('room-1')?.status).toBe('playing');
   });
 
-  it('starts a local CPU room with only the host participant', () => {
-    setupRoom({ mode: 'local_cpu', maxPlayers: 4 });
+  describe('canSubscribe', () => {
+    it('allows an existing participant even if the room is no longer waiting', () => {
+      setupRoom({ status: 'playing' });
 
-    const result = service.start('room-1', user.id);
-
-    expect(result.status).toBe('playing');
-    expect(result.mode).toBe('local_cpu');
-  });
-
-  it('does not start a local CPU room after another human has joined', () => {
-    setupRoom({
-      mode: 'local_cpu',
-      maxPlayers: 4,
-      participants: {
-        [user.id]: {
-          userId: user.id,
-          username: 'Host',
-          avatarUrl: null,
-          isHost: true,
-          isReady: true,
-          joinedAt: new Date(),
-        },
-        [guest.id]: {
-          userId: guest.id,
-          username: 'Guest',
-          avatarUrl: null,
-          isHost: false,
-          isReady: true,
-          joinedAt: new Date(),
-        },
-      },
+      expect(service.canSubscribe('room-1', user.id)).toBe(true);
     });
 
-    expect(() => service.start('room-1', user.id)).toThrow(ConflictException);
+    it('allows a non-participant to subscribe when the room is waiting and has space', () => {
+      setupRoom({ maxPlayers: 2 });
+
+      expect(service.canSubscribe('room-1', guest.id)).toBe(true);
+    });
+
+    it('denies a non-participant when the room is not waiting', () => {
+      setupRoom({ status: 'playing' });
+
+      expect(service.canSubscribe('room-1', guest.id)).toBe(false);
+    });
+
+    it('denies a non-participant when the room is full', () => {
+      setupRoom({
+        maxPlayers: 2,
+        participants: {
+          [user.id]: buildParticipant(),
+          'other-user': buildParticipant({
+            userId: 'other-user',
+            username: 'Other',
+            isHost: false,
+            isReady: false,
+          }),
+        },
+      });
+
+      expect(service.canSubscribe('room-1', guest.id)).toBe(false);
+    });
+
+    it('throws NotFoundException for an unknown room', () => {
+      expect(() => service.canSubscribe('missing-room', guest.id)).toThrow(
+        NotFoundException,
+      );
+    });
+  });
+
+  describe('evictIfWaiting', () => {
+    it('removes a participant from a waiting room', () => {
+      setupRoom({
+        participants: {
+          [user.id]: buildParticipant({
+            joinedAt: new Date(Date.now() - 1000),
+          }),
+          [guest.id]: buildParticipant({
+            userId: guest.id,
+            username: 'Guest',
+            isHost: false,
+            isReady: false,
+          }),
+        },
+      });
+
+      service.evictIfWaiting('room-1', guest.id);
+
+      expect(
+        roomsState.getRoom('room-1')?.participants[guest.id],
+      ).toBeUndefined();
+      expect(eventEmitter.emit).toHaveBeenCalledWith(
+        ROOM_UPDATED_EVENT,
+        expect.any(RoomUpdatedEvent),
+      );
+    });
+
+    it('does nothing when the room is no longer waiting', () => {
+      setupRoom({ status: 'playing' });
+
+      expect(() => service.evictIfWaiting('room-1', user.id)).not.toThrow();
+      expect(eventEmitter.emit).not.toHaveBeenCalled();
+    });
+
+    it('does nothing when the user is not a participant', () => {
+      setupRoom();
+
+      expect(() => service.evictIfWaiting('room-1', guest.id)).not.toThrow();
+      expect(eventEmitter.emit).not.toHaveBeenCalled();
+    });
+
+    it('does nothing when the room no longer exists', () => {
+      expect(() =>
+        service.evictIfWaiting('missing-room', user.id),
+      ).not.toThrow();
+      expect(eventEmitter.emit).not.toHaveBeenCalled();
+    });
   });
 });
