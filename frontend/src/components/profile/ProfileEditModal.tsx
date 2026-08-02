@@ -137,7 +137,8 @@ export const ProfileEditModal = ({
 
             <div className="mb-8 p-5 rounded-xl border border-cyan-900/50 bg-cyan-950/20 relative">
               <label className="flex items-center gap-2 text-cyan-400 font-mono text-xs tracking-widest mb-3">
-                <span className="w-1.5 h-1.5 bg-cyan-400 rounded-full" /> USERNAME
+                <span className="w-1.5 h-1.5 bg-cyan-400 rounded-full" />{' '}
+                USERNAME
               </label>
               <input
                 type="text"
