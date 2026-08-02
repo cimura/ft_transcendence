@@ -8,6 +8,8 @@ services:
       context: ../
       dockerfile: docker/frontend/Dockerfile
     container_name: frontend
+    env_file:
+      - ../.env
     restart: always
     volumes:
       - ../:/app

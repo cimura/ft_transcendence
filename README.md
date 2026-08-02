@@ -34,6 +34,8 @@ cp .env.example .env
 | POSTGRES_USER     | The user of PostgreSQL.                                                                   |
 | POSTGRES_PASSWORD | The password of PostgreSQL.                                                               |
 | POSTGRES_DB       | The name of PostgreSQL.                                                                   |
+| SOCKET_IO_CORS_ORIGIN | Comma-separated origins allowed to connect to the Socket.IO namespaces.               |
+| VITE_USE_POLLING  | Set to `true` to make the Vite dev server poll for file changes. Only needed when hot reload does not react to edits (e.g. the repository lives on a Windows/macOS filesystem mounted into Docker). Polling consumes CPU continuously, so keep it `false` otherwise. |
 
 ## Services
 This project currently starts four services:
