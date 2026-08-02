@@ -59,13 +59,10 @@ export function ProceduralUFO({
         <cylinderGeometry args={[0.8, 1.5, 0.2, 32]} />
       </mesh>
 
-      <mesh position={[0, 0.3, 0]} material={glassMaterial}>
-        <sphereGeometry args={[0.6, 32, 16, 0, Math.PI * 2, 0, Math.PI / 2]} />
-      </mesh>
-
-      {/* groupからmeshに変更し、visible={false}を設定 */}
-      <mesh position={[0, 0.3, 0]} scale={0.61} visible={false}>
+      {/* groupからmeshに変更し、ベースの球体のみを不可視にしてEdgesを描画させる */}
+      <mesh position={[0, 0.3, 0]} scale={0.61}>
         <sphereGeometry args={[1, 16, 8, 0, Math.PI * 2, 0, Math.PI / 2]} />
+        <meshBasicMaterial visible={false} />
         <Edges color="#222222" threshold={5} lineWidth={2} />
       </mesh>
 

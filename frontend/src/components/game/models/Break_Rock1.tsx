@@ -26,7 +26,7 @@ export function BreakRock1({ color = '#4a3018', ...props }: BreakRock1Props) {
   return (
     <group {...props} dispose={null}>
       <mesh geometry={nodes.Icosphere.geometry} position={[0, 0, 0]}>
-        <meshStandardMaterial color={color} roughness={1.0} metalness={1.9} />
+        <meshStandardMaterial color={color} roughness={1.0} metalness={0.2} />
       </mesh>
     </group>
   )
