@@ -33,6 +33,7 @@ export function WaitingRoom() {
   // (ホストが部屋を削除した等の外部要因による currentRoom クリアとは区別する必要がある)
   const isLeavingRef = useRef(false)
   const hasBackGuardRef = useRef(false)
+  const hasCompletedLeaveRef = useRef(false)
 
   useEffect(() => {
     if (!roomId) {
@@ -108,7 +109,7 @@ export function WaitingRoom() {
   }, [currentRoom, navigate, roomId])
 
   const handleLeaveRoom = useCallback(async () => {
-    if (isLeavingRef.current || !currentRoom) return
+    if (isLeavingRef.current || !currentRoom) return false
     isLeavingRef.current = true
     try {
       const result = await leaveRoom(currentRoom.id)
@@ -118,8 +119,7 @@ export function WaitingRoom() {
         removeRoom(currentRoom.id)
       }
       emitRoomLeave()
-      navigate('/lobby', { replace: true })
-      setCurrentRoom(null)
+      return true
     } catch (error) {
       if (
         axios.isAxiosError(error) &&
@@ -127,21 +127,13 @@ export function WaitingRoom() {
       ) {
         emitRoomLeave()
         removeRoom(currentRoom.id)
-        navigate('/lobby', { replace: true })
-        setCurrentRoom(null)
-        return
+        return true
       }
       isLeavingRef.current = false
       console.error('Failed to leave room:', error)
+      return false
     }
-  }, [
-    currentRoom,
-    emitRoomLeave,
-    navigate,
-    removeRoom,
-    setCurrentRoom,
-    upsertRoom,
-  ])
+  }, [currentRoom, emitRoomLeave, removeRoom, upsertRoom])
 
   // Keep the room mounted for the first browser Back event. Without this guard,
   // React Router may unmount the page before its popstate handler can leave the
@@ -156,21 +148,44 @@ export function WaitingRoom() {
       hasBackGuardRef.current = true
     }
 
-    const handleBrowserBack = () => {
-      hasBackGuardRef.current = false
-      void handleLeaveRoom()
+    const handleBrowserBack = async () => {
+      if (hasCompletedLeaveRef.current) {
+        hasBackGuardRef.current = false
+        navigate('/lobby', { replace: true })
+        setCurrentRoom(null)
+        return
+      }
+
+      // Back has just consumed the guard entry. Restore it immediately so a
+      // repeated Back cannot leave the page while the API request is pending.
+      window.history.pushState(
+        { ...window.history.state, roomExitGuard: roomId },
+        '',
+        window.location.href
+      )
+      hasBackGuardRef.current = true
+
+      const didLeave = await handleLeaveRoom()
+      if (didLeave) {
+        hasCompletedLeaveRef.current = true
+        window.history.back()
+      }
     }
 
     window.addEventListener('popstate', handleBrowserBack)
     return () => window.removeEventListener('popstate', handleBrowserBack)
-  }, [handleLeaveRoom, roomId])
+  }, [handleLeaveRoom, navigate, roomId, setCurrentRoom])
 
   const handleEmergencyExit = () => {
-    if (hasBackGuardRef.current) {
-      window.history.back()
-      return
+    if (!hasBackGuardRef.current) {
+      window.history.pushState(
+        { ...window.history.state, roomExitGuard: roomId },
+        '',
+        window.location.href
+      )
+      hasBackGuardRef.current = true
     }
-    void handleLeaveRoom()
+    window.history.back()
   }
 
   if (!currentRoom || !roomId || isLoadingRoom) {
