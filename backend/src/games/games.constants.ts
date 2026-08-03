@@ -18,7 +18,3 @@ export const bombermanGame = {
     messageMaxLength: 200,
   },
 } as const;
-
-export const games = [bombermanGame] as const;
-
-export type GameMaster = (typeof games)[number];

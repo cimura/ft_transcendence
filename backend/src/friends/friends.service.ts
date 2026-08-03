@@ -14,7 +14,6 @@ import {
   FriendDeleteResponseDto,
   FriendInfoDto,
   FriendRejectResponseDto,
-  ReceivedFriendRequestDto,
 } from './dto/friends-response.dto';
 import { FriendRequestResponseDto } from './dto/friends-response.dto';
 import { RealtimeGateway } from '../websocket/realtime.gateway';
@@ -143,36 +142,6 @@ export class FriendsService {
       message: 'Friend request has been successfully sent.',
       status: FriendRequestStatus.PENDING,
     };
-  }
-
-  async getFriendsRequests(
-    currentUserId: string,
-  ): Promise<ReceivedFriendRequestDto[]> {
-    const requesters = await this.prisma.friendship.findMany({
-      where: {
-        receiverId: currentUserId,
-        status: FriendRequestStatus.PENDING,
-      },
-      include: {
-        requester: {
-          select: {
-            id: true,
-            username: true,
-            avatarUrl: true,
-          },
-        },
-      },
-    });
-
-    return requesters.map((req) => ({
-      id: req.id, // friendship レコード自体のID (requestId)
-      status: req.status, // "PENDING"
-      requester: {
-        id: req.requester.id,
-        username: req.requester.username,
-        avatarUrl: req.requester.avatarUrl,
-      },
-    }));
   }
 
   async acceptRequest(

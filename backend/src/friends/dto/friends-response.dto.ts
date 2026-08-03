@@ -55,54 +55,6 @@ export class FriendRequestResponseDto {
 }
 
 /**
- * フレンド申請を送ってきたユーザーの情報を表すDTO
- */
-export class PendingRequesterInfoDto {
-  @ApiProperty({
-    example: 'a1b2c3d4-e5f6-7a8b-9c0d-1e2f3a4b5c6d',
-    description: '申請者のユーザーID',
-  })
-  id: string;
-
-  @ApiProperty({
-    example: 'Alice',
-    description: '申請者のユーザー名',
-  })
-  username: string;
-
-  @ApiProperty({
-    example: 'http://localhost:8443/uploads/avatars/alice.png',
-    description: '申請者のプロフィール画像URL',
-    nullable: true,
-  })
-  avatarUrl: string | null;
-}
-
-/**
- * 5. 届いているフレンド申請の一覧を表すDTO（GET /api/friends/requests）
- */
-export class ReceivedFriendRequestDto {
-  @ApiProperty({
-    example: '7a8b9c0d-1e2f-3a4b-5c6d-7e8f9a0b1c2d',
-    description: 'フレンドシップ（申請レコード）自体のユニークID（requestId）',
-  })
-  id: string;
-
-  @ApiProperty({
-    enum: FriendRequestStatus,
-    example: FriendRequestStatus.PENDING,
-    description: '申請の現在のステータス',
-  })
-  status: FriendRequestStatus;
-
-  @ApiProperty({
-    description: '申請を送ってきたユーザーの詳細情報',
-    type: PendingRequesterInfoDto,
-  })
-  requester: PendingRequesterInfoDto;
-}
-
-/**
  * フレンド申請承認時のレスポンスDTO（PUT /api/friends/:requestId/accept）
  */
 export class FriendAcceptResponseDto {

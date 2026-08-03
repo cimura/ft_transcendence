@@ -28,7 +28,6 @@ import type { UserRequest } from '../users/interfaces/user-request.interface';
 import {
   FriendInfoDto,
   FriendRequestResponseDto,
-  ReceivedFriendRequestDto,
   FriendAcceptResponseDto,
   FriendRejectResponseDto,
   FriendDeleteResponseDto,
@@ -76,21 +75,6 @@ export class FriendsController {
     const currentUserId = req.user.userId;
     const targetUserId = body.targetUserId;
     return this.friendsService.sendRequest(currentUserId, targetUserId);
-  }
-
-  // get all request(list)
-  @Get('requests')
-  @ApiOperation({ summary: '届いているフレンド申請一覧を取得' })
-  @ApiOkResponse({
-    description: '成功時',
-    type: ReceivedFriendRequestDto,
-    isArray: true,
-  })
-  friendsRequests(
-    @Request() req: UserRequest,
-  ): Promise<ReceivedFriendRequestDto[]> {
-    const currentUserId = req.user.userId;
-    return this.friendsService.getFriendsRequests(currentUserId);
   }
 
   @Put(':requestId/accept')
