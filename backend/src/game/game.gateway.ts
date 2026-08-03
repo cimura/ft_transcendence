@@ -193,7 +193,7 @@ export class GameGateway
 
     // 明示的な離脱はリタイア扱い。切断猶予を待たずに即座に死亡させる。
     // 後続のawaitでtickが進んでしまう前に、同期的に処理しておく。
-    this.cleanupPlayerConnection(
+    await this.cleanupPlayerConnection(
       roomId,
       client.data.user.id,
       client.id,
