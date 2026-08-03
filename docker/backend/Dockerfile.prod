@@ -36,6 +36,11 @@ COPY --from=builder /app/backend/dist ./backend/dist
 COPY backend/prisma ./backend/prisma
 COPY backend/prisma.config.ts ./backend/
 
+# アプリが起動後に書き込む uploads を runtime user 所有で準備してから non-root に切り替える
+RUN mkdir -p /app/backend/uploads && chown -R node:node /app/backend/uploads
+
+USER node
+
 WORKDIR /app/backend
 
 EXPOSE 3000

@@ -27,3 +27,17 @@ RUN openssl req -x509 -nodes -days 365 -newkey rsa:2048 \
 
 COPY --from=builder /app/frontend/dist /usr/share/nginx/html
 COPY docker/nginx/conf/nginx.prod.conf /etc/nginx/conf.d/default.conf
+
+# non-root で動作させる: イメージ組み込みの nginx ユーザーに切り替え、
+# worker が書き込む一時ディレクトリと pid ファイル、証明書の所有権を調整する。
+# master 自体が非特権ユーザーで起動するため、privileged port (<1024) には
+# bind できず、listen は 8443 に変更している (nginx.prod.conf 側と Compose の
+# port mapping も合わせて更新)。
+RUN sed -i '/^user  *nginx;/d' /etc/nginx/nginx.conf \
+    && sed -i 's#pid\s*/run/nginx.pid;#pid /tmp/nginx.pid;#' /etc/nginx/nginx.conf \
+    && chown -R nginx:nginx /var/cache/nginx /etc/ssl/private /etc/ssl/certs \
+    && chmod 400 /etc/ssl/private/nginx-selfsigned.key
+
+USER nginx
+
+EXPOSE 8443
