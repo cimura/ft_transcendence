@@ -33,7 +33,6 @@ export default function SignIn({
       const data = await signInApi(credentials)
 
       setAccessToken(data.accessToken)
-      console.log('SignIn successful!')
       onSignInSuccess()
     } catch (err) {
       if (err instanceof AuthApiError) {

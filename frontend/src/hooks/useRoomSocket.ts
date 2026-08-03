@@ -37,9 +37,7 @@ export function useRoomSocket(roomId?: string) {
       console.error('[RoomSocket] connection error:', error)
     })
 
-    socket.on('disconnect', (reason: string) => {
-      console.log('[RoomSocket] disconnected:', reason)
-    })
+    socket.on('disconnect', (reason: string) => {})
 
     socket.on('room:updated', (snapshot: RoomSnapshot) => {
       upsertRoom(snapshot)
