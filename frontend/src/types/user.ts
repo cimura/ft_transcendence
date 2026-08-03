@@ -23,13 +23,6 @@ export interface LoginCredentials {
   password: string
 }
 
-export interface RegisterCredentials {
-  email: string
-  username: string
-  password: string
-  passwordConfirm: string
-}
-
 export interface UserProfile extends Omit<User, 'email'> {
   email?: string
   isFriend: boolean
