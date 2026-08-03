@@ -54,7 +54,6 @@ export function CameraRig() {
     // ミュータブルなオブジェクトであり、Reactの状態ではない（公式のuseFrame例と同じ手続き的更新）
     // eslint-disable-next-line react-hooks/immutability -- 意図的な three.js オブジェクトの直接更新
     camera.aspect = aspect
-    // eslint-disable-next-line react-hooks/immutability -- 意図的な three.js オブジェクトの直接更新
     camera.fov = SCENE_CONFIG.camera.fov // fovの設定を追加
     camera.position.copy(TARGET).addScaledVector(DIRECTION, distance)
     camera.lookAt(TARGET)

@@ -53,13 +53,11 @@ export function useGameSocket(roomId: string) {
       (data: Parameters<ServerToClientEvents['game:countdown']>[0]) => {
         setGamePhase('countdown')
         setCountdown(data)
-        console.log(`[gamesocket:countdown] set countdown ${data.seconds}`)
       }
     )
 
     socket.on('game:playing', () => {
       setGamePhase('playing')
-      console.log('[gamesocket:start]')
     })
 
     socket.on(
@@ -174,7 +172,6 @@ export function useGameSocket(roomId: string) {
       setErrorMessage(undefined)
       setGamePhase('waiting')
       setCountdown(null)
-      console.log(`[gamesocket:cleanup] set countdown null`)
     }
   }, [
     setGameState,
