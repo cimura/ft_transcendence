@@ -1,14 +1,11 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { io, Socket } from 'socket.io-client'
+import { Socket } from 'socket.io-client'
 import type { ChatConnectionStatus, ChatMessage } from '../types/chat'
+import { createSocket } from '../utils/socket'
 import type {
   RoomClientToServerEvents,
   RoomServerToClientEvents,
 } from '@ft_transcendence/shared/rooms-events.types'
-
-const BACKEND_URL = import.meta.env.VITE_BACKEND_URL || window.location.origin
-// RoomsGatewayの名前空間に合わせて接続先URLを構成
-const ROOMS_NAMESPACE = `${BACKEND_URL.replace(/\/$/, '')}/rooms`
 
 export function useRoomChat(roomId: string, accessToken: string | null) {
   const socketRef = useRef<Socket<
@@ -35,10 +32,10 @@ export function useRoomChat(roomId: string, accessToken: string | null) {
       return
     }
 
-    const socket = io(ROOMS_NAMESPACE, {
-      autoConnect: false,
-      auth: { token: `Bearer ${accessToken}` },
-    })
+    const socket = createSocket<
+      RoomServerToClientEvents,
+      RoomClientToServerEvents
+    >('/rooms', accessToken, { autoConnect: false })
     socketRef.current = socket
 
     socket.on('connect', () => {

@@ -1,11 +1,9 @@
 import { useCallback, useEffect, useRef } from 'react'
-import { io, Socket } from 'socket.io-client'
+import { Socket } from 'socket.io-client'
 import { useGameStore } from '../stores/gameStore'
 import { useAuthStore } from '../stores/authStore'
+import { createSocket } from '../utils/socket'
 import type { ServerToClientEvents } from '@ft_transcendence/shared/game-events.types'
-
-const BACKEND_URL = import.meta.env.VITE_BACKEND_URL || window.location.origin
-const GAME_NAMESPACE = `${BACKEND_URL.replace(/\/$/, '')}/game`
 
 export function useGameSocket(roomId: string) {
   const socketRef = useRef<Socket | null>(null)
@@ -22,15 +20,11 @@ export function useGameSocket(roomId: string) {
   useEffect(() => {
     if (!accessToken) return
 
-    if (!socketRef.current) {
-      socketRef.current = io(GAME_NAMESPACE, {
-        transports: ['websocket'],
-        secure: true,
-        auth: { token: `Bearer ${accessToken}` },
-      })
-    }
-
-    const socket = socketRef.current
+    const socket = createSocket('/game', accessToken, {
+      transports: ['websocket'],
+      secure: true,
+    })
+    socketRef.current = socket
 
     socket.on(
       'game:init',
@@ -122,6 +116,7 @@ export function useGameSocket(roomId: string) {
     return () => {
       socket.off('game:init')
       socket.off('game:countdown')
+      socket.off('game:playing')
       socket.off('game:state')
       socket.off('bomb:spawn')
       socket.off('bomb:explode')
