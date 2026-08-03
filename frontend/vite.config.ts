@@ -2,6 +2,7 @@ import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 import tailwindcss from '@tailwindcss/vite'
 
+const FILE_WATCH_POLL_INTERVAL_MS = 1_000
 // バインドマウント経由で inotify が届かない環境でのみポーリングを使う(常時有効だと CPU を消費し続けるため)
 const usePolling = process.env.VITE_USE_POLLING === 'true'
 
@@ -13,7 +14,7 @@ export default defineConfig({
     port: 5173,
     watch: {
       usePolling,
-      interval: 1000,
+      interval: FILE_WATCH_POLL_INTERVAL_MS,
     },
     hmr: {
       protocol: 'wss',
