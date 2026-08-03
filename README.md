@@ -115,14 +115,12 @@ functionality described below and demonstrated in the running application.
 
 - Docker
 - Docker Compose
-- Docker Buildx 0.17 or later
 
 Check the installed versions with:
 
 ```bash
 docker --version
 docker compose version
-docker buildx version
 ```
 
 ### Configure environment variables
@@ -159,14 +157,15 @@ For later starts, use:
 make
 ```
 
-After the containers are running, apply the Prisma migrations:
+After the containers are running, apply the committed Prisma migrations:
 
 ```bash
 make migrate
 ```
 
-Run this migration command after first startup, after recreating the PostgreSQL
-volume, or after pulling new migrations.
+This deployment-safe command applies existing migrations without creating new
+ones. Run it after first startup, after recreating the PostgreSQL volume, or
+after pulling new migrations.
 
 ### Access the application
 
@@ -181,8 +180,8 @@ your browser will show a security warning that must be accepted for local use.
 You can verify the HTTPS endpoints from a terminal:
 
 ```bash
-curl -kI https://localhost:8443
-curl -k https://localhost:8443/api/
+curl -kfsS -o /dev/null https://localhost:8443
+curl -kfsS https://localhost:8443/api/
 ```
 
 ### Useful commands
