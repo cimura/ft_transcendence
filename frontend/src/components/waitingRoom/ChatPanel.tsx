@@ -1,3 +1,4 @@
+// frontend/src/components/waitingRoom/ChatPanel.tsx
 import { useEffect, useRef, useState, type FormEvent } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useRoomChat } from '../../hooks/useRoomChat'
@@ -50,14 +51,14 @@ export function ChatPanel({
 
   const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault()
-
     if (sendMessage(draft)) {
       setDraft('')
     }
   }
 
   return (
-    <aside className="flex h-[560px] min-h-[420px] flex-col overflow-hidden rounded-2xl border border-cyan-500/30 bg-black/50 backdrop-blur-md shadow-[0_0_30px_rgba(0,255,255,0.05)]">
+    // 修正: min-h-[420px] を min-h-0 に変更
+    <aside className="flex h-full min-h-0 flex-col overflow-hidden rounded-2xl border border-cyan-500/30 bg-black/50 backdrop-blur-md shadow-[0_0_30px_rgba(0,255,255,0.05)]">
       {/* ヘッダー */}
       <div className="flex items-center justify-between border-b border-cyan-500/30 bg-cyan-950/20 px-5 py-4 relative">
         <div className="absolute top-0 left-0 w-full h-[1px] bg-gradient-to-r from-cyan-400 to-transparent opacity-50" />
