@@ -1,0 +1,48 @@
+# ===== builder =====
+FROM node:24-alpine AS builder
+
+WORKDIR /app
+
+COPY package*.json ./
+COPY shared/package*.json ./shared/
+COPY backend/package*.json ./backend/
+
+RUN npm ci --workspace=backend --workspace=shared
+
+COPY shared/ ./shared/
+COPY backend/ ./backend/
+
+ENV DATABASE_URL="postgresql://placeholder:placeholder@localhost:5432/placeholder"
+
+# backend の prebuild フックが prisma generate と shared のビルドを行い、
+# nest build が backend/dist を生成する
+RUN npm run build --workspace=backend
+
+# ===== runtime =====
+FROM node:24-alpine
+
+ENV NODE_ENV=production
+WORKDIR /app
+
+COPY package*.json ./
+COPY shared/package*.json ./shared/
+COPY backend/package*.json ./backend/
+
+RUN npm ci --workspace=backend --workspace=shared --omit=dev
+
+COPY shared/*.ts ./shared/
+COPY --from=builder /app/shared/dist ./shared/dist
+COPY --from=builder /app/backend/dist ./backend/dist
+COPY backend/prisma ./backend/prisma
+COPY backend/prisma.config.ts ./backend/
+
+# アプリが起動後に書き込む uploads を runtime user 所有で準備してから non-root に切り替える
+RUN mkdir -p /app/backend/uploads && chown -R node:node /app/backend/uploads
+
+USER node
+
+WORKDIR /app/backend
+
+EXPOSE 3000
+
+CMD ["sh", "-c", "npm run prisma:deploy && exec node dist/main.js"]

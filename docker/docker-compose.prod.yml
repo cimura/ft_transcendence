@@ -1,34 +1,28 @@
+name: ft_transcendence_prod
+
 networks:
   transcendence:
     driver: bridge
 
 services:
-  frontend:
-    build:
-      context: ../
-      dockerfile: docker/frontend/Dockerfile
-    container_name: frontend
-    env_file:
-      - ../.env
-    restart: always
-    volumes:
-      - ../:/app
-      - /app/node_modules
-      - /app/frontend/node_modules
-    networks:
-      - transcendence
   backend:
     build:
       context: ../
-      dockerfile: docker/backend/Dockerfile
+      dockerfile: docker/backend/Dockerfile.prod
     container_name: backend
     env_file:
       - ../.env
+    environment:
+      NODE_ENV: production
     restart: always
+    healthcheck:
+      test:
+        ["CMD-SHELL", "wget -qO- --spider http://localhost:3000/api || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 15s
     volumes:
-      - ../:/app
-      - /app/node_modules
-      - /app/backend/node_modules
       - uploads_data:/app/backend/uploads
     depends_on:
       postgres:
@@ -37,14 +31,15 @@ services:
       - transcendence
   nginx:
     build:
-      context: nginx
+      context: ../
+      dockerfile: docker/nginx/Dockerfile.prod
     container_name: nginx
-    ports:
-      - "8443:443"
     restart: always
+    ports:
+      - "8443:8443"
     depends_on:
-      - frontend
-      - backend
+      backend:
+        condition: service_healthy
     volumes:
       - uploads_data:/usr/share/nginx/uploads:ro
     networks:

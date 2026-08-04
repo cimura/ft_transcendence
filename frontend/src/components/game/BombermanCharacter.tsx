@@ -1,8 +1,9 @@
+// frontend/src/components/game/BombermanCharacter.tsx
 import { forwardRef, useImperativeHandle, useRef, useEffect } from 'react'
 import { useFrame } from '@react-three/fiber'
-import { Box, Sphere } from '@react-three/drei'
 import type { Group, Mesh, Material } from 'three'
 import type { PlayerSnapshot } from '@ft_transcendence/shared/game-events.types'
+import { ProceduralUFO } from './models/ProceduralUFO'
 import { PlayerNameLabel } from './PlayerNameLabel'
 import { SCENE_CONFIG } from './constants/scene-constants'
 
@@ -11,33 +12,14 @@ type BombermanCharacterProps = {
 }
 
 const MOVEMENT_EPSILON = 0.001
-const WALK_BOB_FREQUENCY = 15
-const WALK_BOB_AMPLITUDE = 0.1
-const IDLE_BOB_FREQUENCY = 3
-const IDLE_BOB_AMPLITUDE = 0.05
-const CHARACTER_BASE_HEIGHT = 0.3
+const WALK_BOB_FREQUENCY = 10
+const WALK_BOB_AMPLITUDE = 0.05
+const IDLE_BOB_FREQUENCY = 2
+const IDLE_BOB_AMPLITUDE = 0.08
+const CHARACTER_BASE_HEIGHT = 0.5
 const ROTATION_SMOOTHING = 0.2
-const LEG_SWING_AMPLITUDE = 0.6
 const FULL_TURN_RADIANS = Math.PI * 2
-const BODY_SIZE: [number, number, number] = [0.5, 0.4, 0.4]
-const HEAD_RADIUS = 0.25
-const HEAD_SEGMENTS = 16
-const HEAD_POSITION: [number, number, number] = [0, 0.35, 0]
-const VISOR_SIZE: [number, number, number] = [0.4, 0.1, 0.15]
-const VISOR_POSITION: [number, number, number] = [0, 0.35, 0.2]
-const VISOR_EMISSIVE_INTENSITY = 3
-const BACKPACK_SIZE: [number, number, number] = [0.3, 0.3, 0.2]
-const BACKPACK_POSITION: [number, number, number] = [0, 0, -0.25]
-const LEG_SIZE: [number, number, number] = [0.15, 0.3, 0.15]
-const LEG_MESH_POSITION: [number, number, number] = [0, -0.15, 0]
-const LEFT_LEG_POSITION: [number, number, number] = [-0.15, -0.2, 0]
-const RIGHT_LEG_POSITION: [number, number, number] = [0.15, -0.2, 0]
-const BODY_ROUGHNESS = 0.3
-const BODY_METALNESS = 0.5
-const HEAD_ROUGHNESS = 0.2
-const HEAD_METALNESS = 0.8
 
-// Blinking effect constants
 const DISCONNECTED_BLINK_SPEED = 5
 const MIN_OPACITY = 0.2
 const MAX_OPACITY = 0.7
@@ -45,13 +27,13 @@ const MAX_OPACITY = 0.7
 export const BombermanCharacter = forwardRef<Group, BombermanCharacterProps>(
   ({ player }, ref) => {
     const groupRef = useRef<Group>(null)
-    const leftLegRef = useRef<Group>(null)
-    const rightLegRef = useRef<Group>(null)
     const lastPositionRef = useRef({ ...player.position })
     const materialsRef = useRef<Material[]>([])
+    const baseOpacitiesRef = useRef<number[]>([]) // 初期opacityを保存するRef
 
     useImperativeHandle(ref, () => groupRef.current as Group)
 
+    // player.color を依存配列に追加し、色変更時に正しくマテリアルを再取得する
     useEffect(() => {
       if (groupRef.current) {
         const materials: Material[] = []
@@ -62,8 +44,9 @@ export const BombermanCharacter = forwardRef<Group, BombermanCharacterProps>(
           }
         })
         materialsRef.current = materials
+        baseOpacitiesRef.current = materials.map((material) => material.opacity)
       }
-    }, [])
+    }, [player.color])
 
     useFrame((state) => {
       const group = groupRef.current
@@ -93,32 +76,21 @@ export const BombermanCharacter = forwardRef<Group, BombermanCharacterProps>(
         group.rotation.y += diff * ROTATION_SMOOTHING
       }
 
-      if (leftLegRef.current && rightLegRef.current) {
-        leftLegRef.current.rotation.x = isMoving
-          ? Math.sin(time * WALK_BOB_FREQUENCY) * LEG_SWING_AMPLITUDE
-          : 0
-        rightLegRef.current.rotation.x = isMoving
-          ? Math.sin(time * WALK_BOB_FREQUENCY + Math.PI) * LEG_SWING_AMPLITUDE
-          : 0
-      }
-
-      // --- BLINKING LOGIC ---
       if (player.isDisconnected) {
-        // Calculate a pulsating opacity using a sine wave based on elapsed time
         const blinkOpacity =
           MIN_OPACITY +
           Math.abs(Math.sin(time * DISCONNECTED_BLINK_SPEED)) *
             (MAX_OPACITY - MIN_OPACITY)
 
-        // Traverse the 3D group and update opacity directly for performance
         for (let i = 0; i < materialsRef.current.length; i++) {
           materialsRef.current[i].opacity = blinkOpacity
         }
       } else {
-        // Guarantee opacity is fully reset if the player reconnects mid-blink
+        // 切断から復帰した時、1ではなく各マテリアルの初期opacity（UFOのガラス等は0.6）に戻す
         for (let i = 0; i < materialsRef.current.length; i++) {
-          if (materialsRef.current[i].opacity !== 1) {
-            materialsRef.current[i].opacity = 1
+          const baseOpacity = baseOpacitiesRef.current[i] ?? 1
+          if (materialsRef.current[i].opacity !== baseOpacity) {
+            materialsRef.current[i].opacity = baseOpacity
           }
         }
       }
@@ -131,47 +103,10 @@ export const BombermanCharacter = forwardRef<Group, BombermanCharacterProps>(
     return (
       <>
         <group ref={groupRef}>
-          <Box args={BODY_SIZE} position={[0, 0, 0]}>
-            <meshStandardMaterial
-              color={player.color}
-              roughness={BODY_ROUGHNESS}
-              metalness={BODY_METALNESS}
-              transparent={true}
-            />
-          </Box>
-          <Sphere
-            args={[HEAD_RADIUS, HEAD_SEGMENTS, HEAD_SEGMENTS]}
-            position={HEAD_POSITION}
-          >
-            <meshStandardMaterial
-              color="#dddddd"
-              roughness={HEAD_ROUGHNESS}
-              metalness={HEAD_METALNESS}
-              transparent={true}
-            />
-          </Sphere>
-          <Box args={VISOR_SIZE} position={VISOR_POSITION}>
-            <meshStandardMaterial
-              color={player.visorColor}
-              emissive={player.visorColor}
-              emissiveIntensity={VISOR_EMISSIVE_INTENSITY}
-              toneMapped={false}
-              transparent={true}
-            />
-          </Box>
-          <Box args={BACKPACK_SIZE} position={BACKPACK_POSITION}>
-            <meshStandardMaterial color="#222222" transparent={true} />
-          </Box>
-          <group position={LEFT_LEG_POSITION} ref={leftLegRef}>
-            <Box args={LEG_SIZE} position={LEG_MESH_POSITION}>
-              <meshStandardMaterial color="#333333" transparent={true} />
-            </Box>
-          </group>
-          <group position={RIGHT_LEG_POSITION} ref={rightLegRef}>
-            <Box args={LEG_SIZE} position={LEG_MESH_POSITION}>
-              <meshStandardMaterial color="#333333" transparent={true} />
-            </Box>
-          </group>
+          <ProceduralUFO
+            playerColor={player.color}
+            scale={[0.25, 0.25, 0.25]}
+          />
         </group>
         <PlayerNameLabel
           playerId={player.id}

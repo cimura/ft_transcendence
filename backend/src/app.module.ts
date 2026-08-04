@@ -6,7 +6,6 @@ import { PrismaModule } from './prisma.module';
 import { UploadsModule } from './uploads/uploads.module';
 import { UsersModule } from './users/users.module';
 import { FriendsModule } from './friends/friends.module';
-import { GameGateway } from './game/game.gateway';
 import { GameModule } from './game/game.module';
 import { ScoresModule } from './scores/scores.module';
 import { GamesModule } from './games/games.module';
@@ -32,6 +31,5 @@ import { AppWebsocketModule } from './websocket/websocket.module';
     NotificationsModule,
     AppWebsocketModule,
   ],
-  providers: [GameGateway],
 })
 export class AppModule {}
