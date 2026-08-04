@@ -17,7 +17,7 @@ services:
     restart: always
     healthcheck:
       test:
-        ["CMD-SHELL", "wget -qO- --spider http://localhost:3000/api || exit 1"]
+        ["CMD-SHELL", "wget -qO- --spider http://localhost:3000/api/health || exit 1"]
       interval: 10s
       timeout: 5s
       retries: 5
