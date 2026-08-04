@@ -1,10 +1,10 @@
 _This project has been created as part of the 42 curriculum by sshimura, ryomori, ttakino, rseki, yutakagi._
 
-# ft_transcendence - Galactic Bomber
+# ft_transcendence - DON'T PANIC!
 
 ## Description
 
-**Galactic Bomber** is a real-time multiplayer Bomberman-style web game built
+**DON'T PANIC!** is a real-time multiplayer Bomberman-style web game built
 as the final project of the 42 curriculum. Players can create or join game
 rooms, play live matches from separate devices, manage their profiles and
 friends, invite friends to games, and track their progress through match
