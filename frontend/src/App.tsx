@@ -69,16 +69,14 @@ function AuthenticatedRoutes() {
   const navigate = useNavigate()
   const location = useLocation()
   const authStatus = useAuthStore((state) => state.authStatus)
-  const sessionExpiresAt = useAuthStore((state) => state.sessionExpiresAt)
   const verifySession = useAuthStore((state) => state.verifySession)
-  const forceSignOut = useAuthStore((state) => state.forceSignOut)
   const isLoggedIn = authStatus === 'authenticated'
   const isVerifyingRef = useRef(false)
   useRealtimeSocket()
 
   // 起動直後、および新規サインイン/サインアップ直後(setAccessTokenがauthStatusを
   // 'checking' に戻す)に、保存済みトークンが本当に有効かをバックエンドへ確認する。
-  // GET /auth/session は常に200を返すため、無効なトークンでもコンソールにログは出ない。
+  // 無効なら 401 が返り、client.ts の interceptor が forceSignOut して SignIn へ委ねる。
   useEffect(() => {
     if (authStatus === 'checking' && !isVerifyingRef.current) {
       isVerifyingRef.current = true
@@ -87,21 +85,6 @@ function AuthenticatedRoutes() {
       })
     }
   }, [authStatus, verifySession])
-
-  // ログイン中にアクセストークンの有効期限が切れたら、通信を発生させずに
-  // 静かにサインアウトさせる(期限はバックエンドが返した値をそのまま使う)。
-  useEffect(() => {
-    if (!isLoggedIn || !sessionExpiresAt) return
-
-    const remainingMs = sessionExpiresAt - Date.now()
-    if (remainingMs <= 0) {
-      forceSignOut()
-      return
-    }
-
-    const timer = window.setTimeout(forceSignOut, remainingMs)
-    return () => window.clearTimeout(timer)
-  }, [isLoggedIn, sessionExpiresAt, forceSignOut])
 
   useEffect(() => {
     if (

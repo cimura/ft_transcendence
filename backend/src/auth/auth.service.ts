@@ -12,9 +12,6 @@ import {
   SignUpConflictResponseDto,
 } from './dto/signup.dto';
 import { SignInRequestDto, SignInResponseDto } from './dto/signin.dto';
-import { SessionResponseDto } from './dto/session.dto';
-import type { JwtPayload } from './interfaces/jwt-payload.interface';
-import { UsersService } from '../users/users.service';
 import * as bcrypt from 'bcrypt';
 
 @Injectable()
@@ -22,7 +19,6 @@ export class AuthService {
   constructor(
     private jwtService: JwtService,
     private prisma: PrismaService,
-    private usersService: UsersService,
   ) {}
 
   // 1. サインアップ（新規登録）
@@ -101,48 +97,5 @@ export class AuthService {
 
   private async generateToken(userId: string): Promise<string> {
     return await this.jwtService.signAsync({ sub: userId });
-  }
-
-  // 3. セッション検証（アクセストークンが有効かどうかをフロントに教える）
-  //
-  // JwtAuthGuard を使わず自前で検証する点が重要: トークンが無効でも例外を投げず
-  // 常に 200 で { valid: false } を返す。401 を返すと devtools のコンソールに
-  // "Failed to load resource: ... 401" がブラウザ自身によって出力されてしまい、
-  // 「トークン失効時は静かにSignInへ戻す」という要件を満たせなくなるため。
-  async getSession(authorization?: string): Promise<SessionResponseDto> {
-    const token = this.extractBearerToken(authorization);
-    if (!token) {
-      return { valid: false };
-    }
-
-    let payload: JwtPayload;
-    try {
-      payload = this.jwtService.verify<JwtPayload>(token);
-    } catch {
-      // 期限切れ・署名不正・形式不正など
-      return { valid: false };
-    }
-
-    if (!payload.exp) {
-      return { valid: false };
-    }
-
-    try {
-      const user = await this.usersService.profile(payload.sub);
-      return {
-        valid: true,
-        expiresAt: new Date(payload.exp * 1000).toISOString(),
-        user,
-      };
-    } catch {
-      // ユーザーが既に削除されている等
-      return { valid: false };
-    }
-  }
-
-  private extractBearerToken(value: unknown): string | null {
-    if (typeof value !== 'string') return null;
-    if (!value.startsWith('Bearer ')) return null;
-    return value.slice('Bearer '.length);
   }
 }

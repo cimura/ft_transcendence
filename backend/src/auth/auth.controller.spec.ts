@@ -17,7 +17,6 @@ describe('AuthController', () => {
         accessToken: 'mock_token',
       }),
       signIn: jest.fn().mockResolvedValue({ accessToken: 'mock_token' }),
-      getSession: jest.fn().mockResolvedValue({ valid: false }),
     };
 
     const module: TestingModule = await Test.createTestingModule({
@@ -62,15 +61,5 @@ describe('AuthController', () => {
 
     expect(authService.signIn).toHaveBeenCalledWith(dto);
     expect(result).toEqual({ accessToken: 'mock_token' });
-  });
-
-  // テストケース3: GetSession
-  it('should pass the raw Authorization header to authService.getSession', async () => {
-    const result = await controller.getSession('Bearer some.jwt.token');
-
-    expect(authService.getSession).toHaveBeenCalledWith(
-      'Bearer some.jwt.token',
-    );
-    expect(result).toEqual({ valid: false });
   });
 });

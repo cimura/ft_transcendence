@@ -124,36 +124,6 @@ export const getCurrentUser = async (): Promise<User> => {
   return mapToUser(response.data.user)
 }
 
-export type SessionResult =
-  | { valid: false }
-  | { valid: true; user: User; expiresAt: number }
-
-interface SessionResponse {
-  valid: boolean
-  expiresAt?: string
-  user?: UserResponse
-}
-
-/**
- * アクセストークンが有効かどうかをバックエンドに確認する。
- * トークンが無効・期限切れ・未送信のいずれでも `GET /auth/session` は
- * 401 ではなく常に 200 を返すため、devtoolsのコンソールにエラーは出ない。
- */
-export const getSession = async (): Promise<SessionResult> => {
-  const response = await api.get<SessionResponse>('/auth/session')
-  const { valid, expiresAt, user } = response.data
-
-  if (!valid || !expiresAt || !user) {
-    return { valid: false }
-  }
-
-  return {
-    valid: true,
-    user: mapToUser(user),
-    expiresAt: new Date(expiresAt).getTime(),
-  }
-}
-
 /**
  * Logout current user
  * @returns Promise<void>

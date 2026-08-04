@@ -16,8 +16,6 @@ interface AuthState {
   currentUser: User | null
   accessToken: string | null
   authStatus: AuthStatus
-  /** アクセストークンの有効期限 (epoch ms)。バックエンドの GET /auth/session が返す値。 */
-  sessionExpiresAt: number | null
   loading: boolean
   error: string | null
 
@@ -31,7 +29,7 @@ interface AuthState {
   logout: () => Promise<void>
   /** トークンが無効だと判明したときに呼ぶ。メッセージは出さず静かにサインアウトする。 */
   forceSignOut: () => void
-  /** トークンの有効性を GET /auth/session でバックエンドに確認する。 */
+  /** トークンの有効性を GET /users/profile でバックエンドに確認する。401なら interceptor が forceSignOut する。 */
   verifySession: () => Promise<void>
 }
 
@@ -42,7 +40,6 @@ export const useAuthStore = create<AuthState>((set) => ({
   currentUser: null,
   accessToken: initialAccessToken,
   authStatus: initialAccessToken ? 'checking' : 'unauthenticated',
-  sessionExpiresAt: null,
   loading: false,
   error: null,
 
@@ -52,8 +49,7 @@ export const useAuthStore = create<AuthState>((set) => ({
     storeAccessToken(token)
     // サインイン/サインアップ直後も、トークンをそのまま信頼せず
     // 'checking' を経由させる。これによりゲート(App.tsx)側で
-    // verifySession() が走り、currentUser / sessionExpiresAt が
-    // 埋まってから画面が描画される。
+    // verifySession() が走り、currentUser が埋まってから画面が描画される。
     set({
       accessToken: token,
       authStatus: token ? 'checking' : 'unauthenticated',
@@ -68,7 +64,6 @@ export const useAuthStore = create<AuthState>((set) => ({
       currentUser: null,
       accessToken: null,
       authStatus: 'unauthenticated',
-      sessionExpiresAt: null,
       error: null,
       loading: false,
     })
@@ -81,32 +76,16 @@ export const useAuthStore = create<AuthState>((set) => ({
         currentUser: null,
         accessToken: null,
         authStatus: 'unauthenticated',
-        sessionExpiresAt: null,
       })
       return
     }
 
     try {
-      const result = await authApi.getSession()
-
-      if (!result.valid) {
-        storeAccessToken(null)
-        set({
-          currentUser: null,
-          accessToken: null,
-          authStatus: 'unauthenticated',
-          sessionExpiresAt: null,
-        })
-        return
-      }
-
-      set({
-        currentUser: result.user,
-        sessionExpiresAt: result.expiresAt,
-        authStatus: 'authenticated',
-      })
+      const user = await authApi.getCurrentUser()
+      set({ currentUser: user, authStatus: 'authenticated' })
     } catch (error) {
-      // interceptor が先に forceSignOut 済みのケース。何もせず終える(無言遷移)。
+      // トークンが無効なら 401 が返り、interceptor が先に forceSignOut 済み。
+      // 何もせず終える(無言でSignInへ)。
       if (isSessionExpiredError(error)) return
 
       // ネットワーク障害など、トークンの正当性とは無関係な失敗ではサインアウトさせない
@@ -160,7 +139,6 @@ export const useAuthStore = create<AuthState>((set) => ({
         currentUser: null,
         accessToken: null,
         authStatus: 'unauthenticated',
-        sessionExpiresAt: null,
         loading: false,
       })
     }

@@ -6,11 +6,6 @@ import { SessionExpiredError, notifySessionExpired } from './session'
 // 常にトークン無しで叩き、Authorization ヘッダも付与しない。
 const NO_AUTH_PATHS = ['/auth/signin', '/auth/signup']
 
-// トークンが「あれば付与するが、無くてもブロックしない」パス。
-// GET /auth/session はトークンが無くても常に200 + {valid:false}を返す設計なので、
-// 未保持の状態でも到達できる必要がある。
-const OPTIONAL_AUTH_PATHS = ['/auth/session']
-
 const matchesPath = (url: string | undefined, paths: string[]) =>
   Boolean(url && paths.some((path) => url.includes(path)))
 
@@ -30,27 +25,20 @@ api.interceptors.request.use((config) => {
 
   if (accessToken) {
     config.headers.Authorization = `Bearer ${accessToken}`
-    return config
   }
 
-  if (matchesPath(config.url, OPTIONAL_AUTH_PATHS)) {
-    return config
-  }
-
-  // トークンが無い(未保持)場合、どうせ401になるリクエストをそもそも送らない。
-  // これにより devtools のコンソール/Networkにエラーを出さずに済む。
-  notifySessionExpired()
-  return Promise.reject(new SessionExpiredError())
+  return config
 })
 
+// アクセストークンが無効・期限切れの場合、バックエンドは 401 を返す。
+// ここで検知して強制サインアウト(store側で accessToken を null にして SignIn へ)する。
 api.interceptors.response.use(
   (response) => response,
   (error) => {
     if (
       axios.isAxiosError(error) &&
       error.response?.status === 401 &&
-      !matchesPath(error.config?.url, NO_AUTH_PATHS) &&
-      !matchesPath(error.config?.url, OPTIONAL_AUTH_PATHS)
+      !matchesPath(error.config?.url, NO_AUTH_PATHS)
     ) {
       notifySessionExpired()
       return Promise.reject(new SessionExpiredError())
