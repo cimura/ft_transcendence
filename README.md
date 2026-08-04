@@ -1,4 +1,4 @@
-*This project has been created as part of the 42 curriculum by sshimura, ryomori, ttakino, rseki, yutakagi.*
+_This project has been created as part of the 42 curriculum by sshimura, ryomori, ttakino, rseki, yutakagi._
 
 # ft_transcendence - Galactic Bomber
 
@@ -29,13 +29,13 @@ Key features include:
 All team members contributed to development in addition to their primary
 responsibilities.
 
-| Member | Primary role | Responsibilities |
-| --- | --- | --- |
-| [@sshimura](https://github.com/cimura) (Shimu) | Product Owner and Developer | Defined the product vision, prioritized the backlog, validated completed work, and coordinated feature integration. |
-| [@ryomori](https://github.com/ryomori0113) | Project Manager and Developer | Organized planning and regular meetings, tracked progress and blockers, and coordinated project communication. |
-| [@ttakino](https://github.com/taka2162) | Technical Lead and Developer | Defined the technical architecture, made stack decisions, maintained code quality, and reviewed critical changes. |
-| [@rseki](https://github.com/rt6500) | Developer | Implemented and tested user-facing account, profile, social, and statistics functionality. |
-| [@yutakagi](https://github.com/LaLaSero) | Developer | Implemented and stabilized real-time room, chat, and game-state behavior. |
+| Member                                         | Primary role                  | Responsibilities                                                                                                    |
+| ---------------------------------------------- | ----------------------------- | ------------------------------------------------------------------------------------------------------------------- |
+| [@sshimura](https://github.com/cimura) (Shimu) | Product Owner and Developer   | Defined the product vision, prioritized the backlog, validated completed work, and coordinated feature integration. |
+| [@ryomori](https://github.com/ryomori0113)     | Project Manager and Developer | Organized planning and regular meetings, tracked progress and blockers, and coordinated project communication.      |
+| [@ttakino](https://github.com/taka2162)        | Technical Lead and Developer  | Defined the technical architecture, made stack decisions, maintained code quality, and reviewed critical changes.   |
+| [@rseki](https://github.com/rt6500)            | Developer                     | Implemented and tested user-facing account, profile, social, and statistics functionality.                          |
+| [@yutakagi](https://github.com/LaLaSero)       | Developer                     | Implemented and stabilized real-time room, chat, and game-state behavior.                                           |
 
 ## Project Management
 
@@ -50,64 +50,65 @@ in branches, reviewed by teammates, and integrated through GitHub pull requests.
 
 ## Technical Stack
 
-| Area | Technologies | Why we chose them |
-| --- | --- | --- |
-| Frontend | React 19, TypeScript, Vite, React Router | Component-based UI, type safety, fast local development, and client-side routing. |
-| Styling and 3D rendering | Tailwind CSS, Three.js, React Three Fiber, React Three Drei | Reusable visual primitives and an expressive 3D renderer for the game scene. |
-| Client state and HTTP | Zustand, Axios | Lightweight state stores and a consistent API client. |
-| Backend | Node.js, NestJS, Express adapter | A modular, testable server architecture with validation, dependency injection, and REST support. |
-| Real-time communication | Socket.IO | Authenticated bidirectional events for lobby, rooms, chat, notifications, presence, and game state. |
-| Database | PostgreSQL 16, Prisma ORM | Relational integrity for users and match data, plus type-safe database access and migrations. |
-| Authentication and validation | JWT, Passport, bcrypt, class-validator | Password hashing, authenticated API access, and validated client input. |
-| File uploads | Multer, Docker volume | Validated avatar uploads stored persistently outside the application container. |
-| Deployment | Docker Compose, nginx, self-signed TLS certificate | One-command local deployment and HTTPS as the public entry point. |
-| Quality | Jest, ESLint, Prettier, GitHub Actions | Automated tests, static checks, formatting checks, and CI for frontend and backend changes. |
+| Area                          | Technologies                                                | Why we chose them                                                                                   |
+| ----------------------------- | ----------------------------------------------------------- | --------------------------------------------------------------------------------------------------- |
+| Frontend                      | React 19, TypeScript, Vite, React Router                    | Component-based UI, type safety, fast local development, and client-side routing.                   |
+| Styling and 3D rendering      | Tailwind CSS, Three.js, React Three Fiber, React Three Drei | Reusable visual primitives and an expressive 3D renderer for the game scene.                        |
+| Client state and HTTP         | Zustand, Axios                                              | Lightweight state stores and a consistent API client.                                               |
+| Backend                       | Node.js, NestJS, Express adapter                            | A modular, testable server architecture with validation, dependency injection, and REST support.    |
+| Real-time communication       | Socket.IO                                                   | Authenticated bidirectional events for lobby, rooms, chat, notifications, presence, and game state. |
+| Database                      | PostgreSQL 16, Prisma ORM                                   | Relational integrity for users and match data, plus type-safe database access and migrations.       |
+| Authentication and validation | JWT, Passport, bcrypt, class-validator                      | Password hashing, authenticated API access, and validated client input.                             |
+| File uploads                  | Multer, Docker volume                                       | Validated avatar uploads stored persistently outside the application container.                     |
+| Deployment                    | Docker Compose, nginx, self-signed TLS certificate          | One-command local deployment and HTTPS as the public entry point.                                   |
+| Quality                       | Jest, ESLint, Prettier, GitHub Actions                      | Automated tests, static checks, formatting checks, and CI for frontend and backend changes.         |
 
 ## Database Schema
 
 PostgreSQL is managed through Prisma migrations. The following description is
 the current logical schema; a separate ER diagram is intentionally omitted.
 
-| Table / model | Key fields | Relationships |
-| --- | --- | --- |
-| `User` | `id` UUID string, unique `email`, unique `username`, `passwordHash`, optional `avatarUrl`, timestamps | Sends and receives `Friendship` records, participates in matches through `MatchParticipant`, and owns `UserAchievement` records. |
-| `Friendship` | `id` UUID string, `requesterId`, `receiverId`, unique `pairKey`, `status` enum (`PENDING`, `ACCEPTED`), timestamps | Many friendship requests belong to two `User` records: requester and receiver. The requester/receiver pair is unique. |
-| `UploadedImage` | `id` UUID string, original and stored filenames, MIME type, byte size, URL, creation timestamp | Stores upload metadata. A user's `avatarUrl` refers to the stored URL; this is deliberately a URL reference rather than a database foreign key. |
-| `Match` | `id` UUID string, `gameType`, `finishedAt`, `createdAt` | Has one or more `MatchParticipant` records. |
-| `MatchParticipant` | `id` UUID string, `matchId`, `userId`, `result` enum (`WIN`, `LOSS`, `DRAW`), optional `kills`, `score`, and `rank` | Join model between `Match` and `User`; each user can appear only once in a match. |
-| `UserAchievement` | composite key `userId` and `achievementId`, `unlockedAt` | Belongs to a `User`. Achievement definitions are maintained in application code, so `achievementId` is not a foreign key to a separate table. |
+| Table / model      | Key fields                                                                                                          | Relationships                                                                                                                                   |
+| ------------------ | ------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------- |
+| `User`             | `id` UUID string, unique `email`, unique `username`, `passwordHash`, optional `avatarUrl`, timestamps               | Sends and receives `Friendship` records, participates in matches through `MatchParticipant`, and owns `UserAchievement` records.                |
+| `Friendship`       | `id` UUID string, `requesterId`, `receiverId`, unique `pairKey`, `status` enum (`PENDING`, `ACCEPTED`), timestamps  | Many friendship requests belong to two `User` records: requester and receiver. The requester/receiver pair is unique.                           |
+| `UploadedImage`    | `id` UUID string, original and stored filenames, MIME type, byte size, URL, creation timestamp                      | Stores upload metadata. A user's `avatarUrl` refers to the stored URL; this is deliberately a URL reference rather than a database foreign key. |
+| `Match`            | `id` UUID string, `gameType`, `finishedAt`, `createdAt`                                                             | Has one or more `MatchParticipant` records.                                                                                                     |
+| `MatchParticipant` | `id` UUID string, `matchId`, `userId`, `result` enum (`WIN`, `LOSS`, `DRAW`), optional `kills`, `score`, and `rank` | Join model between `Match` and `User`; each user can appear only once in a match.                                                               |
+| `UserAchievement`  | composite key `userId` and `achievementId`, `unlockedAt`                                                            | Belongs to a `User`. Achievement definitions are maintained in application code, so `achievementId` is not a foreign key to a separate table.   |
 
 ## Features List
 
-| Feature | Functionality | Contributors |
-| --- | --- | --- |
-| Authentication | Sign up and sign in with email and password; bcrypt hashing and JWT-protected requests. | @ttakino, @rseki, @sshimura |
-| Profiles and avatars | View and edit profiles, select a default avatar, upload validated avatar images, and manage account details. | @rseki, @ryomori |
-| Friends and presence | Search users, send and manage friend requests, remove friends, and display online, in-game, or offline presence. | @rseki, @sshimura |
-| Lobby and invitations | Create, browse, join, leave, and manage rooms; invite eligible friends to a room. | @ttakino, @sshimura, @rseki |
-| Real-time Bomberman | Run synchronized two-to-four-player matches with server-owned state, disconnect/reconnect handling, retirement, and touch or keyboard input. | @ttakino, @yutakagi, @sshimura |
-| Room chat | Send and receive messages within a game room through Socket.IO event handlers. | @yutakagi, @ttakino |
-| Notifications | Receive and view in-application notifications for friend requests and game invitations. | @sshimura, @ttakino |
-| Scores and progression | Persist match results, show history and rankings, calculate statistics, and unlock Galactic Guide achievements. | @rseki, @ttakino |
-| Design system | Deliver the galactic pixel-art visual language across the home, lobby, room, profile, friend, and settings screens. | @ryomori, @rseki |
-| Delivery and quality | Provide Docker-based HTTPS deployment, formatting and lint checks, automated backend tests, and GitHub Actions workflows. | @ttakino, @rseki, @sshimura |
+| Feature                | Functionality                                                                                                                                | Contributors                   |
+| ---------------------- | -------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------ |
+| Authentication         | Sign up and sign in with email and password; bcrypt hashing and JWT-protected requests.                                                      | @ttakino, @rseki, @sshimura    |
+| Profiles and avatars   | View and edit profiles, select a default avatar, upload validated avatar images, and manage account details.                                 | @rseki, @ryomori               |
+| Friends and presence   | Search users, send and manage friend requests, remove friends, and display online, in-game, or offline presence.                             | @rseki, @sshimura              |
+| Lobby and invitations  | Create, browse, join, leave, and manage rooms; invite eligible friends to a room.                                                            | @ttakino, @sshimura, @rseki    |
+| Real-time Bomberman    | Run synchronized two-to-four-player matches with server-owned state, disconnect/reconnect handling, retirement, and touch or keyboard input. | @ttakino, @yutakagi, @sshimura |
+| Room chat              | Send and receive messages within a game room through Socket.IO event handlers.                                                               | @yutakagi, @ttakino            |
+| Notifications          | Receive and view in-application notifications for friend requests and game invitations.                                                      | @sshimura, @ttakino            |
+| Scores and progression | Persist match results, show history and rankings, calculate statistics, and unlock Galactic Guide achievements.                              | @rseki, @ttakino               |
+| Design system          | Deliver the galactic pixel-art visual language across the home, lobby, room, profile, friend, and settings screens.                          | @ryomori, @rseki               |
+| Delivery and quality   | Provide Docker-based HTTPS deployment, formatting and lint checks, automated backend tests, and GitHub Actions workflows.                    | @ttakino, @rseki, @sshimura    |
 
 ## Modules
 
-The selected modules total **14 points**. A module is claimed only through the
+The selected modules total **16 points**. A module is claimed only through the
 functionality described below and demonstrated in the running application.
 
-| Category | Module | Type | Points | Implementation and contributors |
-| --- | --- | --- | ---: | --- |
-| Web | Frameworks for frontend and backend | Major | 2 | React frontend and NestJS backend provide the project structure, routing, validation, and API layers. Contributors: all team members. |
-| Web | Real-time features | Major | 2 | Socket.IO broadcasts authenticated lobby, room, presence, notification, and game updates, with connection and reconnection handling. Contributors: @ttakino, @yutakagi, @sshimura. |
-| Web | User interaction | Major | 2 | Users can access profiles, manage friends, and exchange messages in game rooms. Contributors: @rseki, @yutakagi, @ttakino. |
-| Gaming and user experience | Complete web-based game | Major | 2 | A live Bomberman-style game with clear elimination and ranking outcomes is rendered in the browser from server-owned state. Contributors: @ttakino, @yutakagi, @sshimura. |
-| Gaming and user experience | Remote players | Major | 2 | Players on separate devices can join the same room, receive synchronized state, and recover from temporary disconnections. Contributors: @ttakino, @yutakagi. |
-| User management | Standard user management and authentication | Major | 2 | Users can authenticate, edit profiles, upload or select avatars, add friends, view profiles, and see presence state. Contributors: @rseki, @ttakino. |
-| Web | Notification system | Minor | 1 | The application delivers and displays real-time in-app friend-request and game-invitation notifications. Contributors: @sshimura, @ttakino. |
-| User management | Game statistics and match history | Minor | 1 | Match results are persisted and exposed through personal history, rankings, statistics, and achievement progression. Contributors: @rseki, @ttakino. |
-|  | **Total** |  | **14** |  |
+| Category                   | Module                                      | Type  | Points | Implementation and contributors                                                                                                                                                    |
+| -------------------------- | ------------------------------------------- | ----- | -----: | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Web                        | Frameworks for frontend and backend         | Major |      2 | React frontend and NestJS backend provide the project structure, routing, validation, and API layers. Contributors: all team members.                                              |
+| Web                        | Real-time features                          | Major |      2 | Socket.IO broadcasts authenticated lobby, room, presence, notification, and game updates, with connection and reconnection handling. Contributors: @ttakino, @yutakagi, @sshimura. |
+| Web                        | User interaction                            | Major |      2 | Users can access profiles, manage friends, and exchange messages in game rooms. Contributors: @rseki, @yutakagi, @ttakino.                                                         |
+| Gaming and user experience | Complete web-based game                     | Major |      2 | A live Bomberman-style game with clear elimination and ranking outcomes is rendered in the browser from server-owned state. Contributors: @ttakino, @yutakagi, @sshimura.          |
+| Gaming and user experience | Remote players                              | Major |      2 | Players on separate devices can join the same room, receive synchronized state, and recover from temporary disconnections. Contributors: @ttakino, @yutakagi.                      |
+| Gaming and user experience | Multiplayer game                            | Major |      2 | Ensure smooth, fair gameplay and accurate state synchronization for 2-4 players. Contributors: @sshimura, @ttakino, @ryomori.                                                      |
+| User management            | Standard user management and authentication | Major |      2 | Users can authenticate, edit profiles, upload or select avatars, add friends, view profiles, and see presence state. Contributors: @rseki, @ttakino.                               |
+| Web                        | Notification system                         | Minor |      1 | The application delivers and displays real-time in-app friend-request and game-invitation notifications. Contributors: @sshimura, @ttakino.                                        |
+| User management            | Game statistics and match history           | Minor |      1 | Match results are persisted and exposed through personal history, rankings, statistics, and achievement progression. Contributors: @rseki, @ttakino.                               |
+|                            | **Total**                                   |       | **16** |                                                                                                                                                                                    |
 
 ## Instructions
 
@@ -131,14 +132,14 @@ Create your local environment file from the provided example:
 cp .env.example .env
 ```
 
-| Variable | Purpose |
-| --- | --- |
-| `JWT_SECRET` | Secret used to sign and verify JSON Web Tokens. |
-| `JWT_EXPIRES_IN` | JWT lifetime, for example `1d` or `60s`. |
-| `DATABASE_URL` | PostgreSQL connection URL used by Prisma. |
-| `POSTGRES_USER` | PostgreSQL user name. |
-| `POSTGRES_PASSWORD` | PostgreSQL password. |
-| `POSTGRES_DB` | PostgreSQL database name. |
+| Variable                | Purpose                                                                 |
+| ----------------------- | ----------------------------------------------------------------------- |
+| `JWT_SECRET`            | Secret used to sign and verify JSON Web Tokens.                         |
+| `JWT_EXPIRES_IN`        | JWT lifetime, for example `1d` or `60s`.                                |
+| `DATABASE_URL`          | PostgreSQL connection URL used by Prisma.                               |
+| `POSTGRES_USER`         | PostgreSQL user name.                                                   |
+| `POSTGRES_PASSWORD`     | PostgreSQL password.                                                    |
+| `POSTGRES_DB`           | PostgreSQL database name.                                               |
 | `SOCKET_IO_CORS_ORIGIN` | Comma-separated origins allowed to connect to the Socket.IO namespaces. |
 
 Never commit `.env`; it contains local secrets. Before deploying, replace the
