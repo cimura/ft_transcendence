@@ -131,6 +131,7 @@ export default function Signup({
               name="username"
               required
               minLength={3}
+              maxLength={50}
               className={`w-full px-4 py-2 bg-black/50 border rounded-md text-white placeholder-gray-500 focus:outline-none focus:ring-2 transition-all ${
                 fieldErrors.username
                   ? 'border-red-500 focus:ring-red-500 focus:border-transparent'

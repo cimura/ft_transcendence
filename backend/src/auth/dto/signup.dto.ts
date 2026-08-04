@@ -3,6 +3,7 @@ import {
   IsNotEmpty,
   IsString,
   MinLength,
+  MaxLength,
   Matches,
 } from 'class-validator';
 import { ApiProperty } from '@nestjs/swagger';
@@ -19,6 +20,7 @@ export class SignUpRequestDto {
   })
   @IsEmail({}, { message: 'Eメールアドレスを正しく入力してください' })
   @IsNotEmpty({ message: 'Eメールアドレスを入力してください' })
+  @MaxLength(255, { message: 'Eメールアドレスは255文字以内で入力してください' })
   email: string;
 
   @ApiProperty({
@@ -26,6 +28,8 @@ export class SignUpRequestDto {
     description: 'ユーザーの名前（ユニーク）',
   })
   @IsNotEmpty({ message: 'ユーザー名を入力してください.' })
+  @MinLength(3, { message: 'ユーザー名は3文字以上で入力してください' })
+  @MaxLength(50, { message: 'ユーザー名は50文字以内で入力してください' })
   @Matches(/^[a-zA-Z0-9_-]+$/, {
     message: 'ユーザー名には英数字、アンダースコア、ハイフンのみ使用できます',
   })
@@ -33,11 +37,12 @@ export class SignUpRequestDto {
 
   @ApiProperty({
     example: 'password123',
-    description: 'サインイン用のパスワード (8文字以上)',
+    description: 'サインイン用のパスワード (8文字以上72文字以内)',
   })
   @IsString()
   @IsNotEmpty({ message: 'パスワードを入力してください' })
   @MinLength(8, { message: 'パスワードは最低8文字以上必要です' })
+  @MaxLength(72, { message: 'パスワードは72文字以内で入力してください' })
   password: string;
 }
 
