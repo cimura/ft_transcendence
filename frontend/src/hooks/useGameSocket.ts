@@ -8,6 +8,8 @@ import type { ServerToClientEvents } from '@ft_transcendence/shared/game-events.
 export function useGameSocket(roomId: string) {
   const socketRef = useRef<Socket | null>(null)
   const accessToken = useAuthStore((state) => state.accessToken)
+  const authStatus = useAuthStore((state) => state.authStatus)
+  const verifySession = useAuthStore((state) => state.verifySession)
   const setGameState = useGameStore((state) => state.setGameState)
   const setGamePhase = useGameStore((state) => state.setGamePhase)
   const setCountdown = useGameStore((state) => state.setCountdown)
@@ -18,7 +20,7 @@ export function useGameSocket(roomId: string) {
   const applyBombExplosion = useGameStore((state) => state.applyBombExplosion)
 
   useEffect(() => {
-    if (!accessToken) return
+    if (!accessToken || authStatus !== 'authenticated') return
 
     const socket = createSocket('/game', accessToken, {
       transports: ['websocket'],
@@ -96,17 +98,23 @@ export function useGameSocket(roomId: string) {
       setErrorMessage(data.message)
     })
 
-    socket.on('connect_error', (error: Error) => {
-      console.error('Socket connection error:', error)
+    socket.on('connect_error', () => {
       setErrorMessage('接続エラー: サーバーに接続できません。')
     })
 
     socket.on('disconnect', (reason: string) => {
-      if (reason === 'io server disconnect') {
-        setErrorMessage(
-          'サーバーから切断されました（認証エラーの可能性があります）'
-        )
-      }
+      if (reason !== 'io server disconnect') return
+
+      // トークン失効が理由の切断かもしれないのでバックエンドに確認させる。
+      // 無効なら verifySession 内で forceSignOut され、静かに SignIn へ委ねられる。
+      // 有効なままなら(認証以外の理由での切断)ここでエラーメッセージを出す。
+      void verifySession().then(() => {
+        if (useAuthStore.getState().authStatus === 'authenticated') {
+          setErrorMessage(
+            'サーバーから切断されました（認証エラーの可能性があります）'
+          )
+        }
+      })
     })
 
     socket.emit('game:join', { roomId })
@@ -128,6 +136,8 @@ export function useGameSocket(roomId: string) {
     }
   }, [
     accessToken,
+    authStatus,
+    verifySession,
     roomId,
     setGameState,
     setCountdown,

@@ -1,6 +1,5 @@
 import { useNavigate } from 'react-router-dom'
-import { useEffect } from 'react'
-import { useAuthStore } from '../stores/authStore'
+import { useCurrentUser } from '../stores/authStore'
 import { useNotifications } from '../hooks/useNotifications'
 
 const signalBars = [
@@ -34,7 +33,7 @@ type HomeNavItem = {
  */
 export function Home() {
   const navigate = useNavigate()
-  const { currentUser, fetchCurrentUser, loading } = useAuthStore()
+  const currentUser = useCurrentUser()
   const { notifications } = useNotifications()
   const navItems: HomeNavItem[] = [
     {
@@ -58,24 +57,8 @@ export function Home() {
     },
   ]
 
-  useEffect(() => {
-    if (!currentUser) {
-      fetchCurrentUser()
-    }
-  }, [currentUser, fetchCurrentUser])
-
-  const handleMyProfileClick = async () => {
-    if (currentUser) {
-      navigate(`/profile/${currentUser.id}`)
-      return
-    }
-
-    await fetchCurrentUser()
-    const fetchedUser = useAuthStore.getState().currentUser
-
-    if (fetchedUser) {
-      navigate(`/profile/${fetchedUser.id}`)
-    }
+  const handleMyProfileClick = () => {
+    navigate(`/profile/${currentUser.id}`)
   }
 
   const handleStartMatchClick = () => {
@@ -133,7 +116,6 @@ export function Home() {
         <div className="flex w-full justify-between gap-12 px-8 relative">
           <button
             onClick={handleMyProfileClick}
-            disabled={loading}
             className="group relative flex-1 bg-cyan-900/30 backdrop-blur-md p-1 transition-all duration-300 hover:-translate-y-1 hover:shadow-[0_10px_30px_rgba(0,255,255,0.3)] hover:bg-cyan-800/40"
             style={{
               clipPath:

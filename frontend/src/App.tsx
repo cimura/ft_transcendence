@@ -1,4 +1,4 @@
-import { useEffect } from 'react'
+import { useEffect, useRef } from 'react'
 import SignIn from './components/SignIn'
 import Signup from './components/SignUp'
 import {
@@ -27,6 +27,7 @@ import { useRealtimeSocket } from './hooks/useRealtimeSocket'
 import BackgroundVideo from './components/common/BackgroundVideo'
 import { PrivacyPolicyPage } from './pages/legal/PrivacyPolicyPage'
 import { TermsOfServicePage } from './pages/legal/TermsOfServicePage'
+import { SessionRetry } from './components/common/SessionRetry'
 
 function App() {
   return (
@@ -68,8 +69,24 @@ function AppRoutes() {
 function AuthenticatedRoutes() {
   const navigate = useNavigate()
   const location = useLocation()
-  const isLoggedIn = useAuthStore((state) => Boolean(state.accessToken))
+  const authStatus = useAuthStore((state) => state.authStatus)
+  const verifySession = useAuthStore((state) => state.verifySession)
+  const currentUser = useAuthStore((state) => state.currentUser)
+  const isLoggedIn = authStatus === 'authenticated'
+  const isVerifyingRef = useRef(false)
   useRealtimeSocket()
+
+  // 起動直後、および新規サインイン/サインアップ直後(setAccessTokenがauthStatusを
+  // 'checking' に戻す)に、保存済みトークンが本当に有効かをバックエンドへ確認する。
+  // 無効なら 401 が返り、client.ts の interceptor が forceSignOut して SignIn へ委ねる。
+  useEffect(() => {
+    if (authStatus === 'checking' && !isVerifyingRef.current) {
+      isVerifyingRef.current = true
+      void verifySession().finally(() => {
+        isVerifyingRef.current = false
+      })
+    }
+  }, [authStatus, verifySession])
 
   useEffect(() => {
     if (
@@ -92,6 +109,17 @@ function AuthenticatedRoutes() {
 
   const handleLogoutSuccess = () => {
     navigate('/signin', { replace: true })
+  }
+
+  // トークン検証中は何も描画しない(背景動画のみが見える状態)。
+  if (authStatus === 'checking') {
+    return null
+  }
+
+  // トークンは残っているがユーザー情報を取得できていない。保護ルートは描画せず、
+  // ここで再試行させる(currentUser の null チェックは不変条件の保険)。
+  if (authStatus === 'verification-failed' || (isLoggedIn && !currentUser)) {
+    return <SessionRetry />
   }
 
   if (!isLoggedIn) {

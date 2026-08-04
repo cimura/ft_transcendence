@@ -9,6 +9,7 @@ import { useGameSocket } from '../hooks/useGameSocket'
 import type { PlayerSnapshot } from '@ft_transcendence/shared/game-events.types'
 import type { RoomSnapshot } from '@ft_transcendence/shared/rooms-events.types'
 import { getRoom } from '../api/rooms'
+import { logApiError } from '../api/errors'
 import BackgroundVideo from '../components/common/BackgroundVideo'
 
 export function GameRoomPage() {
@@ -49,7 +50,7 @@ export function GameRoomPage() {
           navigate(`/room/${fetchedRoom.id}`, { replace: true })
         }
       } catch (error) {
-        console.error('Failed to load game room:', error)
+        logApiError('Failed to load game room:', error)
         if (!cancelled) {
           navigate('/home', { replace: true })
         }

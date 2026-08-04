@@ -2,6 +2,7 @@ import { useNavigate } from 'react-router-dom'
 import { useUserSearch } from '../../hooks/friends/useUserSearch'
 import { UserSearchBar } from '../../components/friends/UserSearchBar'
 import { UserSearchResult } from '../../components/friends/UserSearchResult'
+import { logApiError } from '../../api/errors'
 
 /**
  * UserSearchPage component
@@ -17,7 +18,7 @@ export function UserSearchPage() {
     try {
       await sendRequest(userId)
     } catch (err) {
-      console.error('Failed to send friend request:', err)
+      logApiError('Failed to send friend request:', err)
     }
   }
 

@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import { useParams, useNavigate, useLocation } from 'react-router-dom'
 import { useProfile } from '../hooks/useProfile'
-import { useAuthStore } from '../stores/authStore'
+import { useAuthStore, useCurrentUser } from '../stores/authStore'
 import { ProfileHeader } from '../components/profile/ProfileHeader'
 import { ProfileEditModal } from '../components/profile/ProfileEditModal'
 import { StatsTab } from '../components/profile/StatsTab'
@@ -15,13 +15,9 @@ export const ProfilePage = () => {
   const { userId } = useParams<{ userId: string }>()
   const navigate = useNavigate()
   const location = useLocation()
-  const {
-    currentUser,
-    fetchCurrentUser,
-    setCurrentUser,
-    error: authError,
-  } = useAuthStore()
-  const currentUserId = currentUser?.id
+  const currentUser = useCurrentUser()
+  const setCurrentUser = useAuthStore((state) => state.setCurrentUser)
+  const currentUserId = currentUser.id
   const {
     profile: fetchedProfile,
     loading,
@@ -38,33 +34,21 @@ export const ProfilePage = () => {
       ? location.state.from
       : '/home'
 
-  // 現在のユーザー情報を取得
-  useEffect(() => {
-    if (!currentUser) {
-      fetchCurrentUser()
-    }
-  }, [currentUser, fetchCurrentUser])
-
   // プロフィール情報にisCurrentUserフラグを追加
   useEffect(() => {
-    if (fetchedProfile && currentUserId) {
+    if (fetchedProfile) {
       // 取得したプロフィールに現在のユーザー情報を追加
       // eslint-disable-next-line react-hooks/set-state-in-effect
       setProfile({
         ...fetchedProfile,
         isCurrentUser: fetchedProfile.id === currentUserId,
       })
-    } else if (fetchedProfile) {
-      setProfile({
-        ...fetchedProfile,
-        isCurrentUser: false,
-      })
     }
   }, [fetchedProfile, currentUserId])
 
   const handleProfileUpdate = (updatedProfile: UserProfile) => {
     setProfile(updatedProfile)
-    if (currentUser && updatedProfile.id === currentUser.id) {
+    if (updatedProfile.id === currentUser.id) {
       setCurrentUser({
         ...currentUser,
         username: updatedProfile.username,
@@ -75,7 +59,7 @@ export const ProfilePage = () => {
     }
   }
 
-  if (loading || (!currentUser && !authError)) {
+  if (loading) {
     return (
       <div className="min-h-screen bg-black flex items-center justify-center">
         <div className="text-white/60 text-lg">プロフィールを読み込み中...</div>
@@ -83,12 +67,10 @@ export const ProfilePage = () => {
     )
   }
 
-  const pageError = error ?? authError
-
-  if (pageError) {
+  if (error) {
     return (
       <div className="min-h-screen bg-black flex items-center justify-center">
-        <div className="text-red-500 text-lg">エラー: {pageError}</div>
+        <div className="text-red-500 text-lg">エラー: {error}</div>
       </div>
     )
   }

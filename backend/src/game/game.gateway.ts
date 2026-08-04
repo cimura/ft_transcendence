@@ -105,7 +105,7 @@ export class GameGateway
     }
 
     if (previousRoomId && previousRoomId !== data.roomId) {
-      await this.cleanupPlayerConnection(
+      this.cleanupPlayerConnection(
         previousRoomId,
         user.id,
         client.id,
@@ -122,7 +122,7 @@ export class GameGateway
           user.id,
           client.id,
         );
-        await this.notifyPresenceChanged(user.id, previousPresenceStatus);
+        void this.notifyPresenceChanged(user.id, previousPresenceStatus);
         throw error;
       }
     }
@@ -135,7 +135,7 @@ export class GameGateway
       userId: user.id,
       socketId: client.id,
     });
-    await this.notifyPresenceChanged(user.id, previousPresenceStatus);
+    void this.notifyPresenceChanged(user.id, previousPresenceStatus);
 
     client.emit('game:init', initData);
     this.gameService.handleGameStart(data.roomId);
@@ -149,7 +149,7 @@ export class GameGateway
     clientId: string,
   ) {
     // 新しいゲーム状態とSocket.IO roomへの参加を取り消す。
-    await this.cleanupPlayerConnection(nextRoomId, userId, clientId, 'leave');
+    this.cleanupPlayerConnection(nextRoomId, userId, clientId, 'leave');
     try {
       await client.leave(nextRoomId);
     } catch (error) {
@@ -188,7 +188,7 @@ export class GameGateway
 
     // 明示的な離脱はリタイア扱い。切断猶予を待たずに即座に死亡させる。
     // 後続のawaitでtickが進んでしまう前に、同期的に処理しておく。
-    await this.cleanupPlayerConnection(
+    this.cleanupPlayerConnection(
       roomId,
       client.data.user.id,
       client.id,
@@ -238,21 +238,21 @@ export class GameGateway
     this.gameService.handleBombPlace(roomId, client.data.user.id);
   }
 
-  async handleDisconnect(client: GameSocket) {
+  handleDisconnect(client: GameSocket) {
     const roomId = client.data.roomId;
     const userId = client.data.user?.id;
     if (!roomId || !userId) return;
 
-    await this.cleanupPlayerConnection(roomId, userId, client.id, 'leave');
+    this.cleanupPlayerConnection(roomId, userId, client.id, 'leave');
   }
 
-  private async cleanupPlayerConnection(
+  private cleanupPlayerConnection(
     roomId: string,
     userId: string,
     clientId: string,
     mode: 'leave' | 'retire',
     notifyPresence = true,
-  ): Promise<void> {
+  ): void {
     const previousPresenceStatus = this.socketPresenceService.getStatus(userId);
     const remaining = this.socketPresenceService.unregister({
       namespace: 'game',
@@ -269,7 +269,7 @@ export class GameGateway
     }
 
     if (notifyPresence) {
-      await this.notifyPresenceChanged(userId, previousPresenceStatus);
+      void this.notifyPresenceChanged(userId, previousPresenceStatus);
     }
   }
 

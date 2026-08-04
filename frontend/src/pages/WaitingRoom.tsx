@@ -5,7 +5,7 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { PlayerCard } from '../components/waitingRoom/PlayerCard'
 import { ChatPanel } from '../components/waitingRoom/ChatPanel'
 import { GameMapPreview } from '../components/game/preview/GameMapPreview'
-import { useAuthStore } from '../stores/authStore'
+import { useAuthStore, useCurrentUser } from '../stores/authStore'
 import {
   createRoomInvitation,
   getRoom,
@@ -16,7 +16,7 @@ import {
 } from '../api/rooms'
 import { useRoomSocket } from '../hooks/useRoomSocket'
 import axios from 'axios'
-import { getApiErrorMessage } from '../api/errors'
+import { getApiErrorMessage, logApiError } from '../api/errors'
 import { useFriends } from '../hooks/friends/useFriends'
 import type { RoomSnapshot } from '@ft_transcendence/shared/rooms-events.types'
 
@@ -24,9 +24,10 @@ export function WaitingRoom() {
   const { roomId } = useParams<{ roomId: string }>()
   const navigate = useNavigate()
   const { currentRoom, setCurrentRoom, removeRoom, upsertRoom } = useRoomStore()
-  const { currentUser, accessToken, fetchCurrentUser } = useAuthStore()
+  const currentUser = useCurrentUser()
+  const accessToken = useAuthStore((state) => state.accessToken)
   const [isLoadingRoom, setIsLoadingRoom] = useState(true)
-  const currentUserId = currentUser?.id
+  const currentUserId = currentUser.id
 
   const { leaveRoom: emitRoomLeave } = useRoomSocket(roomId)
 
@@ -71,13 +72,13 @@ export function WaitingRoom() {
               navigate(`/game/${room.id}`, { replace: true })
             }
           } catch (refreshError) {
-            console.error('Failed to refresh room:', refreshError)
+            logApiError('Failed to refresh room:', refreshError)
             if (!cancelled) navigate('/home', { replace: true })
           }
           return
         }
 
-        console.error('Failed to join room:', error)
+        logApiError('Failed to join room:', error)
         if (!cancelled) navigate('/home', { replace: true })
       } finally {
         if (!cancelled) {
@@ -92,12 +93,6 @@ export function WaitingRoom() {
       cancelled = true
     }
   }, [navigate, roomId, setCurrentRoom, upsertRoom])
-
-  useEffect(() => {
-    if (!currentUser) {
-      fetchCurrentUser()
-    }
-  }, [currentUser, fetchCurrentUser])
 
   useEffect(() => {
     if (
@@ -131,7 +126,7 @@ export function WaitingRoom() {
         return true
       }
       isLeavingRef.current = false
-      console.error('Failed to leave room:', error)
+      logApiError('Failed to leave room:', error)
       return false
     }
   }, [currentRoom, emitRoomLeave, removeRoom, upsertRoom])
@@ -208,7 +203,7 @@ export function WaitingRoom() {
       upsertRoom(room)
       setCurrentRoom(room)
     } catch (error) {
-      console.error('Failed to update ready state:', error)
+      logApiError('Failed to update ready state:', error)
     }
   }
 
@@ -219,7 +214,7 @@ export function WaitingRoom() {
       setCurrentRoom(room)
       navigate(`/game/${room.id}`)
     } catch (error) {
-      console.error('Failed to start game:', error)
+      logApiError('Failed to start game:', error)
     }
   }
 

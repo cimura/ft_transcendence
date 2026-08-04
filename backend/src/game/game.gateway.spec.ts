@@ -263,13 +263,15 @@ describe('GameGateway', () => {
       expect(client.data.roomId).toBeUndefined();
     });
 
-    it('presence通知が失敗しても、参加処理を完了させること', async () => {
+    it('presence通知が完了していなくても、参加処理(game:init送信・ゲーム開始)を待たずに完了させること', async () => {
       const client = createMockSocket();
       client.data.user = { id: 'user-1' };
       const initData = { phase: 'waiting' };
       gameService.handleGameJoin.mockReturnValue(initData as any);
-      realtimeGateway.emitPresenceUpdatedIfChanged.mockRejectedValue(
-        new Error('Presence notify failed'),
+      // 意図的に解決しないPromiseを返し、参加処理がpresence通知の完了を
+      // 待ってブロックされないことを検証する
+      realtimeGateway.emitPresenceUpdatedIfChanged.mockReturnValue(
+        new Promise(() => {}),
       );
 
       await expect(
@@ -406,7 +408,7 @@ describe('GameGateway', () => {
       expect(client.disconnect).toHaveBeenCalled();
     });
 
-    it('presence通知が失敗しても、Socket.IOルームからの退出を中断しないこと', async () => {
+    it('presence通知が完了していなくても、Socket.IOルームからの退出とroomIdクリアを待たずに完了させること', async () => {
       const client = createMockSocket();
       client.data.user = { id: 'user-1' };
       client.data.roomId = 'room-1';
@@ -416,11 +418,13 @@ describe('GameGateway', () => {
         userId: 'user-1',
         socketId: 'socket-123',
       });
-      realtimeGateway.emitPresenceUpdatedIfChanged.mockRejectedValue(
-        new Error('Presence notify failed'),
+      // 意図的に解決しないPromiseを返し、退出処理がpresence通知の完了を
+      // 待ってブロックされないことを検証する
+      realtimeGateway.emitPresenceUpdatedIfChanged.mockReturnValue(
+        new Promise(() => {}),
       );
 
-      // 通知の失敗が呼び出し元へ伝播しないこと
+      // 通知が完了していなくても呼び出し元へ伝播しないこと
       await expect(gateway.handleLeave(client)).resolves.toBeUndefined();
 
       expect(gameService.handleGameRetire).toHaveBeenCalledWith(
@@ -485,7 +489,7 @@ describe('GameGateway', () => {
   });
 
   describe('handleDisconnect', () => {
-    it('唯一のソケットが切断するとgameService.handleGameLeaveが呼ばれること', async () => {
+    it('唯一のソケットが切断するとgameService.handleGameLeaveが呼ばれること', () => {
       const client = createMockSocket();
       client.data.user = { id: 'user-1' };
       client.data.roomId = 'room-1';
@@ -496,7 +500,7 @@ describe('GameGateway', () => {
         socketId: 'socket-123',
       });
 
-      await gateway.handleDisconnect(client);
+      gateway.handleDisconnect(client);
 
       expect(gameService.handleGameLeave).toHaveBeenCalledWith(
         'room-1',
@@ -507,7 +511,7 @@ describe('GameGateway', () => {
       jest.useRealTimers();
     });
 
-    it('同一ユーザーの別ソケットが残っている場合は切断扱いにしないこと(StrictMode/複数タブ対策)', async () => {
+    it('同一ユーザーの別ソケットが残っている場合は切断扱いにしないこと(StrictMode/複数タブ対策)', () => {
       // React StrictMode の二重ソケットや別タブ接続を想定し、同一ユーザーの
       // 2本のソケットを presence に登録する
       const clientA = createMockSocket('socket-a');
@@ -531,22 +535,22 @@ describe('GameGateway', () => {
       });
 
       // 1本目が切断しても、まだ2本目が残っているため handleGameLeave は呼ばれない
-      await gateway.handleDisconnect(clientA);
+      gateway.handleDisconnect(clientA);
       expect(gameService.handleGameLeave).not.toHaveBeenCalled();
 
       // 最後の1本が切断すると呼ばれる。これは最新ソケットが先に閉じても
       // 最終的に切断扱いになることの確認でもある
-      await gateway.handleDisconnect(clientB);
+      gateway.handleDisconnect(clientB);
       expect(gameService.handleGameLeave).toHaveBeenCalledWith(
         'room-1',
         'user-1',
       );
     });
 
-    it('ユーザー情報がない場合、何もしないこと', async () => {
+    it('ユーザー情報がない場合、何もしないこと', () => {
       const client = createMockSocket();
 
-      await gateway.handleDisconnect(client);
+      gateway.handleDisconnect(client);
 
       expect(gameService.handleGameLeave).not.toHaveBeenCalled();
     });

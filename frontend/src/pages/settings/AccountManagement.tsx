@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
 import { useOutletContext } from 'react-router-dom'
 import type { User } from '../../types/user'
 import { useAuthStore } from '../../stores/authStore'
@@ -15,12 +15,6 @@ export const AccountManagement = () => {
     useAuthStore()
   const [openModal, setOpenModal] = useState<OpenModal>(null)
   const [success, setSuccess] = useState('')
-
-  useEffect(() => {
-    if (!currentUser && !loading && !error) {
-      void fetchCurrentUser()
-    }
-  }, [currentUser, error, fetchCurrentUser, loading])
 
   const closeModal = () => setOpenModal(null)
   const hasCurrentUser = currentUser !== null

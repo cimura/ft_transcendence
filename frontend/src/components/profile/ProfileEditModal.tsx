@@ -4,6 +4,7 @@ import { AvatarUpload } from './AvatarUpload'
 import { DefaultAvatarSelector } from './DefaultAvatarSelector'
 import { useUpdateProfile, useUploadAvatar } from '../../hooks/useProfile'
 import type { UserProfile } from '../../types/user'
+import { logApiError } from '../../api/errors'
 
 interface ProfileEditModalProps {
   isOpen: boolean
@@ -72,7 +73,7 @@ export const ProfileEditModal = ({
       setUploadedFile(null)
       onClose()
     } catch (error) {
-      console.error('Failed to update profile:', error)
+      logApiError('Failed to update profile:', error)
     }
   }
 

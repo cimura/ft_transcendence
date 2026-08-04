@@ -92,16 +92,28 @@ export const signInApi = async (credentials: LoginCredentials) => {
   }
 }
 
-interface CurrentUserResponse {
-  user: {
-    id: string
-    email: string
-    username: string
-    avatarUrl: string | null
-    createdAt: string
-    updatedAt: string
-  }
+interface UserResponse {
+  id: string
+  email: string
+  username: string
+  avatarUrl: string | null
+  createdAt: string
+  updatedAt: string
 }
+
+interface CurrentUserResponse {
+  user: UserResponse
+}
+
+const mapToUser = (user: UserResponse): User => ({
+  id: user.id,
+  email: user.email,
+  username: user.username,
+  avatarUrl: user.avatarUrl ?? undefined,
+  isGuest: false,
+  createdAt: new Date(user.createdAt),
+  updatedAt: new Date(user.updatedAt),
+})
 
 /**
  * Get current logged-in user
@@ -109,17 +121,7 @@ interface CurrentUserResponse {
  */
 export const getCurrentUser = async (): Promise<User> => {
   const response = await api.get<CurrentUserResponse>('/users/profile')
-  const user = response.data.user
-
-  return {
-    id: user.id,
-    email: user.email,
-    username: user.username,
-    avatarUrl: user.avatarUrl ?? undefined,
-    isGuest: false,
-    createdAt: new Date(user.createdAt),
-    updatedAt: new Date(user.updatedAt),
-  }
+  return mapToUser(response.data.user)
 }
 
 /**
