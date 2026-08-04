@@ -1,48 +1,33 @@
 import { create } from 'zustand'
-import type { Friend, FriendRequest } from '../types/friend'
+import type { Friend } from '../types/friend'
 import * as friendApi from '../api/friend'
 import { getApiErrorMessage } from '../api/errors'
 
 interface FriendState {
   friends: Friend[]
   presenceStatuses: Record<string, Friend['status']>
-  requests: FriendRequest[]
   loading: boolean
   error: string | null
 
   // Actions - フレンド関連
   setFriends: (friends: Friend[]) => void
   updateFriendStatus: (friendId: string, status: Friend['status']) => void
-  addFriend: (friend: Friend) => void
   removeFriend: (friendId: string) => void
-
-  // Actions - リクエスト関連
-  setRequests: (requests: FriendRequest[]) => void
-  addRequest: (request: FriendRequest) => void
-  removeRequest: (requestId: string) => void
-
-  // Actions - ローディング・エラー
-  setLoading: (loading: boolean) => void
-  setError: (error: string | null) => void
 
   // Actions - API呼び出し
   fetchFriends: () => Promise<void>
-  fetchRequests: () => Promise<void>
   sendRequest: (userId: string) => Promise<void>
-  acceptRequest: (requestId: string) => Promise<void>
-  rejectRequest: (requestId: string) => Promise<void>
   deleteFriend: (friendId: string) => Promise<void>
 }
 
 /**
  * Friend store
- * Manages friends, friend requests, loading, and error states
+ * Manages friends, loading, and error states
  */
 export const useFriendStore = create<FriendState>((set, get) => ({
   // Initial state
   friends: [],
   presenceStatuses: {},
-  requests: [],
   loading: false,
   error: null,
 
@@ -66,17 +51,6 @@ export const useFriendStore = create<FriendState>((set, get) => ({
       ),
     })),
 
-  addFriend: (friend) =>
-    set((state) => ({
-      friends: [
-        ...state.friends,
-        {
-          ...friend,
-          status: state.presenceStatuses[friend.id] ?? friend.status,
-        },
-      ],
-    })),
-
   removeFriend: (friendId) =>
     set((state) => {
       const presenceStatuses = { ...state.presenceStatuses }
@@ -86,23 +60,6 @@ export const useFriendStore = create<FriendState>((set, get) => ({
         presenceStatuses,
       }
     }),
-
-  // リクエスト関連のアクション
-  setRequests: (requests) => set({ requests }),
-
-  addRequest: (request) =>
-    set((state) => ({
-      requests: [...state.requests, request],
-    })),
-
-  removeRequest: (requestId) =>
-    set((state) => ({
-      requests: state.requests.filter((r) => r.id !== requestId),
-    })),
-
-  // ローディング・エラー
-  setLoading: (loading) => set({ loading }),
-  setError: (error) => set({ error }),
 
   // API呼び出しアクション
   fetchFriends: async () => {
@@ -119,22 +76,6 @@ export const useFriendStore = create<FriendState>((set, get) => ({
     }
   },
 
-  fetchRequests: async () => {
-    try {
-      set({ loading: true, error: null })
-      const requests = await friendApi.getFriendRequests()
-      set({ requests, loading: false })
-    } catch (error) {
-      set({
-        error: getApiErrorMessage(
-          error,
-          'フレンドリクエストの取得に失敗しました。'
-        ),
-        loading: false,
-      })
-    }
-  },
-
   sendRequest: async (userId) => {
     try {
       set({ loading: true, error: null })
@@ -145,53 +86,6 @@ export const useFriendStore = create<FriendState>((set, get) => ({
         error: getApiErrorMessage(
           error,
           'フレンドリクエストの送信に失敗しました。'
-        ),
-        loading: false,
-      })
-      throw error
-    }
-  },
-
-  acceptRequest: async (requestId) => {
-    try {
-      set({ loading: true, error: null })
-      await friendApi.acceptFriendRequest(requestId)
-
-      // リクエストを削除
-      const { removeRequest } = get()
-      removeRequest(requestId)
-
-      // フレンド一覧を再取得
-      await get().fetchFriends()
-
-      set({ loading: false })
-    } catch (error) {
-      set({
-        error: getApiErrorMessage(
-          error,
-          'フレンドリクエストの承認に失敗しました。'
-        ),
-        loading: false,
-      })
-      throw error
-    }
-  },
-
-  rejectRequest: async (requestId) => {
-    try {
-      set({ loading: true, error: null })
-      await friendApi.rejectFriendRequest(requestId)
-
-      // リクエストを削除
-      const { removeRequest } = get()
-      removeRequest(requestId)
-
-      set({ loading: false })
-    } catch (error) {
-      set({
-        error: getApiErrorMessage(
-          error,
-          'フレンドリクエストの拒否に失敗しました。'
         ),
         loading: false,
       })

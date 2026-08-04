@@ -18,15 +18,18 @@ async function bootstrap() {
     }),
   );
 
-  const config = new DocumentBuilder()
-    .setTitle('ft_transcendence API')
-    .setDescription('The ft_transcendence API description')
-    .setVersion('1.0')
-    .addBearerAuth()
-    .build();
+  // 本番環境では API スキーマ全体が公開されてしまうため Swagger UI をマウントしない
+  if (process.env.NODE_ENV !== 'production') {
+    const config = new DocumentBuilder()
+      .setTitle('ft_transcendence API')
+      .setDescription('The ft_transcendence API description')
+      .setVersion('1.0')
+      .addBearerAuth()
+      .build();
 
-  const document = SwaggerModule.createDocument(app, config);
-  SwaggerModule.setup('api', app, document);
+    const document = SwaggerModule.createDocument(app, config);
+    SwaggerModule.setup('api', app, document);
+  }
 
   await app.listen(process.env.PORT ?? 3000);
 }

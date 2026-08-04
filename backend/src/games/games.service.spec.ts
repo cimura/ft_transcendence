@@ -9,20 +9,12 @@ describe('GamesService', () => {
     service = new GamesService();
   });
 
-  it('returns the public game list', () => {
-    expect(service.findAll()).toEqual([
+  it('returns the bomberman master data', () => {
+    expect(service.findById(BOMBERMAN_GAME_ID)).toEqual(
       expect.objectContaining({
         id: BOMBERMAN_GAME_ID,
         name: 'Bomberman',
         supportedPlayers: [2, 3, 4],
-      }),
-    ]);
-  });
-
-  it('returns the bomberman master data', () => {
-    expect(service.findBomberman()).toEqual(
-      expect.objectContaining({
-        id: BOMBERMAN_GAME_ID,
         settings: expect.objectContaining({
           mapId: 'classic',
           maxMessages: 50,

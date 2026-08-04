@@ -40,16 +40,6 @@ export function FriendsMenuPage() {
             </span>
           </button>
 
-          {/* フレンドリクエストボタン */}
-          <button
-            onClick={() => navigate('/friends/requests')}
-            className="group w-full bg-cyan-950/30 text-cyan-100 text-2xl font-bold py-6 rounded-tr-2xl rounded-bl-2xl rounded-tl-sm rounded-br-sm border border-cyan-500/40 hover:border-cyan-300 hover:bg-cyan-900/50 hover:shadow-[0_0_20px_rgba(0,255,255,0.4)] hover:-translate-y-1 transition-all duration-300"
-          >
-            <span className="relative z-10 transition-all duration-300 group-hover:tracking-[0.2em]">
-              フレンドリクエスト
-            </span>
-          </button>
-
           {/* ユーザー検索ボタン */}
           <button
             onClick={() => navigate('/friends/search')}

@@ -22,6 +22,7 @@ import type {
   ClientToServerEvents,
   ServerToClientEvents,
 } from '@ft_transcendence/shared/game-events.types';
+import type { PresenceStatus } from '@ft_transcendence/shared/realtime-events.types';
 
 @WebSocketGateway({
   namespace: '/game',
@@ -121,10 +122,7 @@ export class GameGateway
           user.id,
           client.id,
         );
-        await this.realtimeGateway.emitPresenceUpdatedIfChanged(
-          user.id,
-          previousPresenceStatus,
-        );
+        await this.notifyPresenceChanged(user.id, previousPresenceStatus);
         throw error;
       }
     }
@@ -137,10 +135,7 @@ export class GameGateway
       userId: user.id,
       socketId: client.id,
     });
-    await this.realtimeGateway.emitPresenceUpdatedIfChanged(
-      user.id,
-      previousPresenceStatus,
-    );
+    await this.notifyPresenceChanged(user.id, previousPresenceStatus);
 
     client.emit('game:init', initData);
     this.gameService.handleGameStart(data.roomId);
@@ -193,7 +188,7 @@ export class GameGateway
 
     // 明示的な離脱はリタイア扱い。切断猶予を待たずに即座に死亡させる。
     // 後続のawaitでtickが進んでしまう前に、同期的に処理しておく。
-    this.cleanupPlayerConnection(
+    await this.cleanupPlayerConnection(
       roomId,
       client.data.user.id,
       client.id,
@@ -274,9 +269,25 @@ export class GameGateway
     }
 
     if (notifyPresence) {
+      await this.notifyPresenceChanged(userId, previousPresenceStatus);
+    }
+  }
+
+  // presence通知の失敗は、ゲーム状態の更新やSocket.IOルームの出入りを
+  // 中断する理由にならない。呼び出し元へrejectを伝播させず、ログのみ残す。
+  private async notifyPresenceChanged(
+    userId: string,
+    previousPresenceStatus: PresenceStatus,
+  ): Promise<void> {
+    try {
       await this.realtimeGateway.emitPresenceUpdatedIfChanged(
         userId,
         previousPresenceStatus,
+      );
+    } catch (error) {
+      this.logger.error(
+        `Failed to notify presence update { userId: '${userId}' }`,
+        error instanceof Error ? error.stack : String(error),
       );
     }
   }

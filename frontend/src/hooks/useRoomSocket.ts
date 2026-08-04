@@ -1,15 +1,13 @@
 import { useCallback, useEffect, useRef } from 'react'
-import { io, Socket } from 'socket.io-client'
+import { Socket } from 'socket.io-client'
 import { useRoomStore } from '../stores/roomStore'
 import { useAuthStore } from '../stores/authStore'
+import { createSocket } from '../utils/socket'
 import type {
   RoomClientToServerEvents,
   RoomServerToClientEvents,
   RoomSnapshot,
 } from '@ft_transcendence/shared/rooms-events.types'
-
-const BACKEND_URL = import.meta.env.VITE_BACKEND_URL || window.location.origin
-const ROOMS_NAMESPACE = `${BACKEND_URL.replace(/\/$/, '')}/rooms`
 
 export function useRoomSocket(roomId?: string) {
   const accessToken = useAuthStore((state) => state.accessToken)
@@ -23,10 +21,10 @@ export function useRoomSocket(roomId?: string) {
 
     const { upsertRoom, removeRoom } = useRoomStore.getState()
 
-    const socket = io(ROOMS_NAMESPACE, {
-      autoConnect: false,
-      auth: { token: `Bearer ${accessToken}` },
-    })
+    const socket = createSocket<
+      RoomServerToClientEvents,
+      RoomClientToServerEvents
+    >('/rooms', accessToken, { autoConnect: false })
     socketRef.current = socket
 
     socket.on('connect', () => {
@@ -35,10 +33,6 @@ export function useRoomSocket(roomId?: string) {
 
     socket.on('connect_error', (error: Error) => {
       console.error('[RoomSocket] connection error:', error)
-    })
-
-    socket.on('disconnect', (reason: string) => {
-      console.log('[RoomSocket] disconnected:', reason)
     })
 
     socket.on('room:updated', (snapshot: RoomSnapshot) => {

@@ -49,7 +49,6 @@ export default function Signup({
 
       setAccessToken(data.accessToken)
 
-      console.log('Signup successful!')
       onSignupSuccess()
     } catch (err) {
       if (err instanceof AuthApiError) {

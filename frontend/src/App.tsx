@@ -14,7 +14,6 @@ import { WaitingRoom } from './pages/WaitingRoom'
 import { GameRoomPage } from './pages/GameRoomPage'
 import { FriendsMenuPage } from './pages/friends/FriendsMenuPage'
 import { FriendsListPage } from './pages/friends/FriendsListPage'
-import { FriendRequestsPage } from './pages/friends/FriendRequestsPage'
 import { UserSearchPage } from './pages/friends/UserSearchPage'
 import { ProfilePage } from './pages/ProfilePage'
 import { RankingsPage } from './pages/RankingsPage'
@@ -137,7 +136,6 @@ function AuthenticatedRoutes() {
       {/* フレンド機能 */}
       <Route path="/friends" element={<FriendsMenuPage />} />
       <Route path="/friends/list" element={<FriendsListPage />} />
-      <Route path="/friends/requests" element={<FriendRequestsPage />} />
       <Route path="/friends/search" element={<UserSearchPage />} />
 
       {/* プロフィール */}

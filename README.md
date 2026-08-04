@@ -139,10 +139,19 @@ cp .env.example .env
 | `POSTGRES_USER` | PostgreSQL user name. |
 | `POSTGRES_PASSWORD` | PostgreSQL password. |
 | `POSTGRES_DB` | PostgreSQL database name. |
+| `SOCKET_IO_CORS_ORIGIN` | Comma-separated origins allowed to connect to the Socket.IO namespaces. |
 
-Never commit `.env`; it contains local secrets.
+Never commit `.env`; it contains local secrets. Before deploying, replace the
+placeholder `JWT_SECRET` with a real secret; nothing checks this automatically.
 
 ### Build and start
+
+`docker/docker-compose.prod.yml` builds self-contained production images:
+nginx serves the frontend's static `vite build` output directly (no separate
+frontend container) and acts as the HTTPS reverse proxy, while the backend runs
+the compiled `nest build` output with `node` directly (no devDependencies in
+the final image). The Swagger UI is disabled in production, since it would
+otherwise expose the full API schema publicly.
 
 Start the application for the first time, or rebuild images after dependency or
 Dockerfile changes:
@@ -157,25 +166,22 @@ For later starts, use:
 make
 ```
 
-After the containers are running, apply the committed Prisma migrations:
-
-```bash
-make migrate
-```
-
-This deployment-safe command applies existing migrations without creating new
-ones. Run it after first startup, after recreating the PostgreSQL volume, or
-after pulling new migrations.
+The first startup may take a little longer while Docker builds the images.
+Prisma migrations are applied automatically each time the backend container
+starts, so no manual migration step is needed.
 
 ### Access the application
 
 - Application: <https://localhost:8443>
-- API and Swagger UI: <https://localhost:8443/api/>
+- API: <https://localhost:8443/api/>
 - Privacy Policy: <https://localhost:8443/legal/privacy-policy>
 - Terms of Service: <https://localhost:8443/legal/terms-of-service>
 
 nginx is the public HTTPS entry point. The local certificate is self-signed, so
 your browser will show a security warning that must be accepted for local use.
+For a real deployment behind a public domain, replace it with a real
+certificate (for example, mount it instead of generating it at build time in
+`docker/nginx/Dockerfile.prod`).
 
 You can verify the HTTPS endpoints from a terminal:
 
@@ -195,13 +201,7 @@ make rebuild    # Rebuild and recreate containers
 To check Prisma migration status:
 
 ```bash
-docker compose -f docker/docker-compose.yml exec -w /app/backend backend npm run prisma:migrate:status
-```
-
-To run backend formatting checks:
-
-```bash
-docker compose -f docker/docker-compose.yml exec backend npm run format:check
+docker compose -f docker/docker-compose.prod.yml exec -w /app/backend backend npm run prisma:migrate:status
 ```
 
 ## Individual Contributions

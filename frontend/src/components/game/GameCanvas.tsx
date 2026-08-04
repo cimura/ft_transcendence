@@ -15,12 +15,24 @@ export function GameCanvas({ socketRef }: GameCanvasProps) {
   const { activeControl, handleTouchInput } = useGameInput(socketRef)
 
   return (
-    <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_180px]">
-      <div className="relative min-h-[560px] overflow-hidden rounded-lg border border-cyan-500/20 bg-gray-950">
+    // 全体をrelativeにして、子要素を重ね合わせられるようにする
+    <div className="relative w-full h-full overflow-hidden bg-transparent">
+      {/* 3Dシーン（最背面・全画面） */}
+      <div className="absolute inset-0 z-0">
         <BombermanScene gameState={gameState} />
         <GameCountdownOverlay />
       </div>
-      <TouchControls onInput={handleTouchInput} activeControl={activeControl} />
+
+      {/* コントローラー（右手前側にフロート配置・レスポンシブスケール） */}
+      <div className="absolute top-4 right-4 sm:top-8 sm:right-8 z-10 pointer-events-none">
+        {/* スマホ画面(小さめ)、タブレット(普通)、PC(最大)でスケールを自動調整 */}
+        <div className="pointer-events-auto origin-top-right scale-75 sm:scale-90 lg:scale-100 transition-transform duration-300">
+          <TouchControls
+            onInput={handleTouchInput}
+            activeControl={activeControl}
+          />
+        </div>
+      </div>
     </div>
   )
 }
