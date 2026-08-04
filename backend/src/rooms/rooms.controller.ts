@@ -24,12 +24,10 @@ import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import type { UserRequest } from '../users/interfaces/user-request.interface';
 import { CreateRoomInvitationDto } from './dto/create-room-invitation.dto';
 import { CreateRoomDto } from './dto/create-room.dto';
-import { CreateRoomMessageDto } from './dto/create-room-message.dto';
 import { QueryRoomsDto } from './dto/query-rooms.dto';
 import { ReadyRoomDto } from './dto/ready-room.dto';
 import { RoomsService } from './rooms.service';
 import { RoomsInvitationService } from './rooms-invitation.service';
-import { RoomsChatService } from './rooms-chat.service';
 import type { RoomSnapshot } from '@ft_transcendence/shared/rooms-events.types';
 
 @ApiTags('rooms')
@@ -40,7 +38,6 @@ export class RoomsController {
   constructor(
     private readonly roomsService: RoomsService,
     private readonly roomsInvitationService: RoomsInvitationService,
-    private readonly roomsChatService: RoomsChatService,
   ) {}
 
   @Get()
@@ -151,23 +148,5 @@ export class RoomsController {
   @ApiResponse({ status: 201, description: '成功時' })
   start(@Request() req: UserRequest, @Param('roomId') roomId: string) {
     return this.roomsService.start(roomId, req.user.userId);
-  }
-
-  @Get(':roomId/messages')
-  @ApiOperation({ summary: 'チャットメッセージを取得' })
-  @ApiResponse({ status: 200, description: '成功時' })
-  findMessages(@Request() req: UserRequest, @Param('roomId') roomId: string) {
-    return this.roomsChatService.findMessages(roomId, req.user.userId);
-  }
-
-  @Post(':roomId/messages')
-  @ApiOperation({ summary: 'チャットメッセージを送信' })
-  @ApiResponse({ status: 201, description: '成功時' })
-  createMessage(
-    @Request() req: UserRequest,
-    @Param('roomId') roomId: string,
-    @Body() dto: CreateRoomMessageDto,
-  ) {
-    return this.roomsChatService.createMessage(roomId, req.user.userId, dto);
   }
 }

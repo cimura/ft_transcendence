@@ -61,14 +61,15 @@ send_friend_request()
 		-d "{\"targetUserId\":\"$target_user_id\"}"
 }
 
-get_friend_requests()
+# 届いているフレンド申請は通知API経由で取得する（専用の一覧APIは廃止済み）
+get_notifications()
 {
 	token="$1"
 
 	echo
-	echo "== Get friend requests =="
+	echo "== Get notifications =="
 
-	curl -k -s -X GET "$BASE_URL/friends/requests" \
+	curl -k -s -X GET "$BASE_URL/notifications" \
 		-H "Authorization: Bearer $token" \
 		| jq
 }
@@ -77,9 +78,9 @@ get_first_request_id()
 {
 	token="$1"
 
-	curl -k -s -X GET "$BASE_URL/friends/requests" \
+	curl -k -s -X GET "$BASE_URL/notifications" \
 		-H "Authorization: Bearer $token" \
-		| jq -r '.[0].id'
+		| jq -r '[.[] | select(.type == "friend_request")][0].friendRequestId'
 }
 
 accept_friend_request()
@@ -184,7 +185,7 @@ echo "BOB_ID=$BOB_ID"
 send_friend_request "$TOKEN_ALICE" "$BOB_ID"
 
 # Bob gets request id
-get_friend_requests "$TOKEN_BOB"
+get_notifications "$TOKEN_BOB"
 REQUEST_ID=$(get_first_request_id "$TOKEN_BOB")
 echo "REQUEST_ID=$REQUEST_ID"
 

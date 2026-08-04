@@ -39,10 +39,6 @@ export interface UpdateProfileDto {
   username: string
 }
 
-export interface UploadAvatarDto {
-  file: File
-}
-
 export interface PaginatedResponse<T> {
   data: T[]
   hasMore: boolean

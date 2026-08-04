@@ -11,6 +11,7 @@ describe('GameGateway', () => {
   let gameService: jest.Mocked<GameService>;
   let socketAuthService: jest.Mocked<SocketAuthService>;
   let socketPresenceService: SocketPresenceService;
+  let realtimeGateway: jest.Mocked<RealtimeGateway>;
 
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
@@ -41,6 +42,7 @@ describe('GameGateway', () => {
     gameService = module.get(GameService);
     socketAuthService = module.get(SocketAuthService);
     socketPresenceService = module.get(SocketPresenceService);
+    realtimeGateway = module.get(RealtimeGateway);
   });
 
   // モックのソケットオブジェクトを作成するヘルパー関数
@@ -261,6 +263,24 @@ describe('GameGateway', () => {
       expect(client.data.roomId).toBeUndefined();
     });
 
+    it('presence通知が失敗しても、参加処理を完了させること', async () => {
+      const client = createMockSocket();
+      client.data.user = { id: 'user-1' };
+      const initData = { phase: 'waiting' };
+      gameService.handleGameJoin.mockReturnValue(initData as any);
+      realtimeGateway.emitPresenceUpdatedIfChanged.mockRejectedValue(
+        new Error('Presence notify failed'),
+      );
+
+      await expect(
+        gateway.handleJoin({ roomId: 'room-1' }, client),
+      ).resolves.toBeUndefined();
+
+      expect(client.data.roomId).toBe('room-1');
+      expect(client.emit).toHaveBeenCalledWith('game:init', initData);
+      expect(gameService.handleGameStart).toHaveBeenCalledWith('room-1');
+    });
+
     it('client.data.userが存在しない場合、処理を中断すること', async () => {
       const client = createMockSocket(); // userを設定しない
       const joinData = { roomId: 'room-1' };
@@ -384,6 +404,34 @@ describe('GameGateway', () => {
       // leaveに失敗しても後続の状態クリアと切断は行われること
       expect(client.data.roomId).toBeUndefined();
       expect(client.disconnect).toHaveBeenCalled();
+    });
+
+    it('presence通知が失敗しても、Socket.IOルームからの退出を中断しないこと', async () => {
+      const client = createMockSocket();
+      client.data.user = { id: 'user-1' };
+      client.data.roomId = 'room-1';
+      socketPresenceService.register({
+        namespace: 'game',
+        roomId: 'room-1',
+        userId: 'user-1',
+        socketId: 'socket-123',
+      });
+      realtimeGateway.emitPresenceUpdatedIfChanged.mockRejectedValue(
+        new Error('Presence notify failed'),
+      );
+
+      // 通知の失敗が呼び出し元へ伝播しないこと
+      await expect(gateway.handleLeave(client)).resolves.toBeUndefined();
+
+      expect(gameService.handleGameRetire).toHaveBeenCalledWith(
+        'room-1',
+        'user-1',
+      );
+
+      // 通知失敗後もルーム退出と状態クリアが行われること
+      expect(client.leave).toHaveBeenCalledWith('room-1');
+      expect(client.data.roomId).toBeUndefined();
+      expect(client.disconnect).not.toHaveBeenCalled();
     });
   });
 

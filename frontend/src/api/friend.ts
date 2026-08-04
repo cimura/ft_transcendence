@@ -1,25 +1,5 @@
 import api from './client'
-import type { Friend, FriendRequest, SearchResult } from '../types/friend'
-
-type BackendFriendRequest = {
-  id: string
-  status: 'PENDING' | 'ACCEPTED'
-  requester: {
-    id: string
-    username: string
-    avatarUrl: string | null
-  }
-}
-
-const toFriendRequest = (request: BackendFriendRequest): FriendRequest => ({
-  id: request.id,
-  requester: {
-    id: request.requester.id,
-    username: request.requester.username,
-    avatarUrl: request.requester.avatarUrl ?? undefined,
-  },
-  status: request.status.toLowerCase() as FriendRequest['status'],
-})
+import type { Friend, SearchResult } from '../types/friend'
 
 /**
  * Get friends list
@@ -28,15 +8,6 @@ const toFriendRequest = (request: BackendFriendRequest): FriendRequest => ({
 export const getFriends = async (): Promise<Friend[]> => {
   const response = await api.get<Friend[]>('/friends')
   return response.data
-}
-
-/**
- * Get friend requests list
- * @returns Promise<FriendRequest[]> List of received friend requests
- */
-export const getFriendRequests = async (): Promise<FriendRequest[]> => {
-  const response = await api.get<BackendFriendRequest[]>('/friends/requests')
-  return response.data.map(toFriendRequest)
 }
 
 /**
