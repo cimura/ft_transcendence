@@ -12,14 +12,14 @@ import { getApiErrorMessage } from '../api/errors'
  */
 export const useProfile = (
   userId: string | undefined,
-  currentUserId: string | undefined
+  currentUserId: string
 ) => {
   const [profile, setProfile] = useState<UserProfile | null>(null)
   const [loading, setLoading] = useState<boolean>(false)
   const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
-    if (!userId || !currentUserId) {
+    if (!userId) {
       // 必要なユーザーIDが未取得の場合は初期状態にリセット
       // eslint-disable-next-line react-hooks/set-state-in-effect
       setProfile(null)

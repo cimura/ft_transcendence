@@ -7,10 +7,15 @@ import { getStoredAccessToken, storeAccessToken } from '../utils/accessToken'
 
 /**
  * - checking: 起動時（または新規サインイン直後）、トークンの有効性をバックエンドに確認している間
- * - authenticated: ログイン済み(トークン有効)
+ * - authenticated: ログイン済み(トークン有効)。この状態では currentUser が必ず存在する。
+ * - verification-failed: トークンは有効かもしれないが、通信障害等でユーザー情報を取得できなかった
  * - unauthenticated: 未ログイン、またはトークンが無効と判明した
  */
-export type AuthStatus = 'checking' | 'authenticated' | 'unauthenticated'
+export type AuthStatus =
+  | 'checking'
+  | 'authenticated'
+  | 'verification-failed'
+  | 'unauthenticated'
 
 interface AuthState {
   currentUser: User | null
@@ -82,15 +87,17 @@ export const useAuthStore = create<AuthState>((set) => ({
 
     try {
       const user = await authApi.getCurrentUser()
-      set({ currentUser: user, authStatus: 'authenticated' })
+      set({ currentUser: user, authStatus: 'authenticated', error: null })
     } catch (error) {
       // トークンが無効なら 401 が返り、interceptor が先に forceSignOut 済み。
       // 何もせず終える(無言でSignInへ)。
       if (isSessionExpiredError(error)) return
 
-      // ネットワーク障害など、トークンの正当性とは無関係な失敗ではサインアウトさせない
+      // ネットワーク障害など、トークンの正当性とは無関係な失敗ではサインアウトさせない。
+      // ただし currentUser が無いまま authenticated にはしない
+      // (App.tsx のゲートが再試行画面を描画する)。
       set({
-        authStatus: 'authenticated',
+        authStatus: 'verification-failed',
         error: getApiErrorMessage(
           error,
           'アカウント情報の取得に失敗しました。'
@@ -150,3 +157,15 @@ export const useAuthStore = create<AuthState>((set) => ({
 }))
 
 setSessionExpiredHandler(() => useAuthStore.getState().forceSignOut())
+
+/**
+ * 認証ゲート(App.tsx)が currentUser の存在を保証した保護ルート配下でのみ使う。
+ * ゲートを通っていれば throw されないため、呼び出し側は null 分岐が不要になる。
+ */
+export const useCurrentUser = (): User => {
+  const currentUser = useAuthStore((state) => state.currentUser)
+  if (!currentUser) {
+    throw new Error('useCurrentUser must be used inside authenticated routes')
+  }
+  return currentUser
+}

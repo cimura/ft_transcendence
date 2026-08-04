@@ -1,5 +1,5 @@
 import { useNavigate } from 'react-router-dom'
-import { useAuthStore } from '../stores/authStore'
+import { useCurrentUser } from '../stores/authStore'
 import { useNotifications } from '../hooks/useNotifications'
 
 const signalBars = [
@@ -33,7 +33,7 @@ type HomeNavItem = {
  */
 export function Home() {
   const navigate = useNavigate()
-  const { currentUser } = useAuthStore()
+  const currentUser = useCurrentUser()
   const { notifications } = useNotifications()
   const navItems: HomeNavItem[] = [
     {
@@ -58,8 +58,6 @@ export function Home() {
   ]
 
   const handleMyProfileClick = () => {
-    if (!currentUser) return
-
     navigate(`/profile/${currentUser.id}`)
   }
 

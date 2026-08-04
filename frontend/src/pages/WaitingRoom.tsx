@@ -5,7 +5,7 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { PlayerCard } from '../components/waitingRoom/PlayerCard'
 import { ChatPanel } from '../components/waitingRoom/ChatPanel'
 import { GameMapPreview } from '../components/game/preview/GameMapPreview'
-import { useAuthStore } from '../stores/authStore'
+import { useAuthStore, useCurrentUser } from '../stores/authStore'
 import {
   createRoomInvitation,
   getRoom,
@@ -24,9 +24,10 @@ export function WaitingRoom() {
   const { roomId } = useParams<{ roomId: string }>()
   const navigate = useNavigate()
   const { currentRoom, setCurrentRoom, removeRoom, upsertRoom } = useRoomStore()
-  const { currentUser, accessToken } = useAuthStore()
+  const currentUser = useCurrentUser()
+  const accessToken = useAuthStore((state) => state.accessToken)
   const [isLoadingRoom, setIsLoadingRoom] = useState(true)
-  const currentUserId = currentUser?.id
+  const currentUserId = currentUser.id
 
   const { leaveRoom: emitRoomLeave } = useRoomSocket(roomId)
 
