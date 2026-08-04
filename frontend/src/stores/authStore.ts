@@ -87,11 +87,16 @@ export const useAuthStore = create<AuthState>((set) => ({
 
     try {
       const user = await authApi.getCurrentUser()
+      // 検証中に logout/forceSignOut/再サインインでトークンが変わっていたら、
+      // この応答はもう最新ではないので状態を上書きしない
+      if (getStoredAccessToken() !== token) return
       set({ currentUser: user, authStatus: 'authenticated', error: null })
     } catch (error) {
       // トークンが無効なら 401 が返り、interceptor が先に forceSignOut 済み。
       // 何もせず終える(無言でSignInへ)。
       if (isSessionExpiredError(error)) return
+
+      if (getStoredAccessToken() !== token) return
 
       // ネットワーク障害など、トークンの正当性とは無関係な失敗ではサインアウトさせない。
       // ただし currentUser が無いまま authenticated にはしない
