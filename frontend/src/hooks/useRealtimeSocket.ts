@@ -1,5 +1,4 @@
 import { useEffect } from 'react'
-import { io, Socket } from 'socket.io-client'
 import type {
   RealtimeClientToServerEvents,
   RealtimeServerToClientEvents,
@@ -7,9 +6,7 @@ import type {
 import { useAuthStore } from '../stores/authStore'
 import { useNotificationStore } from '../stores/notificationStore'
 import { useFriendStore } from '../stores/friendStore'
-
-const BACKEND_URL = import.meta.env.VITE_BACKEND_URL || window.location.origin
-const REALTIME_NAMESPACE = `${BACKEND_URL.replace(/\/$/, '')}/realtime`
+import { createSocket } from '../utils/socket'
 
 export function useRealtimeSocket() {
   const accessToken = useAuthStore((state) => state.accessToken)
@@ -18,13 +15,10 @@ export function useRealtimeSocket() {
   useEffect(() => {
     if (!accessToken || authStatus !== 'authenticated') return
 
-    const socket: Socket<
+    const socket = createSocket<
       RealtimeServerToClientEvents,
       RealtimeClientToServerEvents
-    > = io(REALTIME_NAMESPACE, {
-      autoConnect: false,
-      auth: { token: `Bearer ${accessToken}` },
-    })
+    >('/realtime', accessToken, { autoConnect: false })
 
     const handleConnect = () => {
       void useNotificationStore.getState().fetchNotifications()
