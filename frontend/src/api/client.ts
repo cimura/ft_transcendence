@@ -6,8 +6,11 @@ import { SessionExpiredError, notifySessionExpired } from './session'
 // 常にトークン無しで叩き、Authorization ヘッダも付与しない。
 const NO_AUTH_PATHS = ['/auth/signin', '/auth/signup']
 
-const matchesPath = (url: string | undefined, paths: string[]) =>
-  Boolean(url && paths.some((path) => url.includes(path)))
+const matchesPath = (url: string | undefined, paths: readonly string[]) => {
+  if (!url) return false
+
+  return paths.includes(new URL(url, 'http://localhost').pathname)
+}
 
 const api = axios.create({
   baseURL: '/api',
