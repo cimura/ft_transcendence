@@ -1,3 +1,4 @@
+// frontend/src/components/game/TouchControls.tsx
 import type { BombermanInput, ActiveControl } from '../../types/game'
 import type { Direction } from '@ft_transcendence/shared/game-events.types'
 
@@ -6,29 +7,100 @@ type TouchControlsProps = {
   activeControl: ActiveControl
 }
 
-const directions: { label: string; direction: Direction; className: string }[] =
-  [
-    { label: '上', direction: 'up', className: 'col-start-2 row-start-1' },
-    { label: '左', direction: 'left', className: 'col-start-1 row-start-2' },
-    { label: '下', direction: 'down', className: 'col-start-2 row-start-2' },
-    { label: '右', direction: 'right', className: 'col-start-3 row-start-2' },
-  ]
+// アイコン共通化コンポーネント
+function GameIcon({
+  children,
+  className = 'w-6 h-6',
+  strokeWidth = '3',
+}: {
+  children: React.ReactNode
+  className?: string
+  strokeWidth?: string
+}) {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth={strokeWidth}
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      className={className}
+    >
+      {children}
+    </svg>
+  )
+}
+
+const directions: {
+  label: string
+  direction: Direction
+  className: string
+  icon: React.ReactNode
+}[] = [
+  {
+    label: '上',
+    direction: 'up',
+    className: 'col-start-2 row-start-1',
+    icon: (
+      <GameIcon>
+        <path d="M12 20V4" />
+        <path d="m5 11 7-7 7 7" />
+      </GameIcon>
+    ),
+  },
+  {
+    label: '左',
+    direction: 'left',
+    className: 'col-start-1 row-start-2',
+    icon: (
+      <GameIcon>
+        <path d="M20 12H4" />
+        <path d="m11 19-7-7 7-7" />
+      </GameIcon>
+    ),
+  },
+  {
+    label: '下',
+    direction: 'down',
+    className: 'col-start-2 row-start-2',
+    icon: (
+      <GameIcon>
+        <path d="M12 4v16" />
+        <path d="m19 13-7 7-7-7" />
+      </GameIcon>
+    ),
+  },
+  {
+    label: '右',
+    direction: 'right',
+    className: 'col-start-3 row-start-2',
+    icon: (
+      <GameIcon>
+        <path d="M4 12h16" />
+        <path d="m13 5 7 7-7 7" />
+      </GameIcon>
+    ),
+  },
+]
 
 const panelStyles =
-  'flex touch-none select-none flex-col gap-3 rounded-lg border border-gray-200 bg-white p-4 shadow-sm'
+  'relative flex flex-col items-center justify-center gap-2 p-3 bg-gradient-to-br from-gray-700 via-gray-800 to-gray-900 rounded-2xl border-2 border-gray-600 shadow-[0_8px_20px_rgba(0,0,0,0.6),inset_0_1px_2px_rgba(255,255,255,0.2)] w-max mx-auto select-none touch-none'
 
 const directionButtonStyles = {
-  base: 'h-12 touch-none rounded-md text-sm font-semibold transition-colors',
-  idle: 'bg-gray-800 text-white active:bg-gray-600',
-  active: 'bg-yellow-300 text-gray-950 shadow-lg ring-2 ring-yellow-500',
-  inactive: 'bg-gray-300 text-gray-500 opacity-45',
+  base: 'w-12 h-12 touch-none rounded-xl flex items-center justify-center transition-all duration-100 border-[2px]',
+  idle: 'border-gray-500 text-gray-200 bg-gradient-to-b from-gray-500 to-gray-700 shadow-[0_4px_6px_rgba(0,0,0,0.4),inset_0_1px_1px_rgba(255,255,255,0.3)] hover:from-gray-400 hover:to-gray-600',
+  active:
+    'border-cyan-500/80 text-cyan-300 bg-gray-800 shadow-[inset_0_4px_8px_rgba(0,0,0,0.6),0_0_10px_rgba(0,255,255,0.2)] scale-95 translate-y-[2px]',
+  inactive: 'border-gray-700 text-gray-500 bg-gray-800/80 shadow-none',
 }
 
 const bombButtonStyles = {
-  base: 'h-12 touch-none rounded-md font-semibold transition-colors',
-  idle: 'bg-red-600 text-white active:bg-red-500',
-  active: directionButtonStyles.active,
-  inactive: 'bg-red-200 text-red-500 opacity-45',
+  base: 'w-full h-12 touch-none rounded-xl flex items-center justify-center transition-all duration-100 border-[2px]',
+  idle: 'border-gray-500 text-red-400 bg-gradient-to-b from-gray-500 to-gray-700 shadow-[0_4px_6px_rgba(0,0,0,0.4),inset_0_1px_1px_rgba(255,255,255,0.3)] hover:from-gray-400 hover:to-gray-600',
+  active:
+    'border-red-500/80 text-red-400 bg-gray-800 shadow-[inset_0_4px_8px_rgba(0,0,0,0.6),0_0_10px_rgba(255,0,0,0.2)] scale-95 translate-y-[2px]',
+  inactive: 'border-gray-700 text-gray-500 bg-gray-800/80 shadow-none',
 }
 
 export function TouchControls({ onInput, activeControl }: TouchControlsProps) {
@@ -58,8 +130,13 @@ export function TouchControls({ onInput, activeControl }: TouchControlsProps) {
 
   return (
     <div className={panelStyles}>
-      <div className="grid grid-cols-3 grid-rows-2 gap-2">
-        {directions.map(({ label, direction, className }) => (
+      <div className="absolute top-2 left-2 w-1.5 h-1.5 bg-gray-400 rounded-full shadow-[inset_0_1px_2px_rgba(0,0,0,0.6),0_1px_0_rgba(255,255,255,0.2)] pointer-events-none" />
+      <div className="absolute top-2 right-2 w-1.5 h-1.5 bg-gray-400 rounded-full shadow-[inset_0_1px_2px_rgba(0,0,0,0.6),0_1px_0_rgba(255,255,255,0.2)] pointer-events-none" />
+      <div className="absolute bottom-2 left-2 w-1.5 h-1.5 bg-gray-400 rounded-full shadow-[inset_0_1px_2px_rgba(0,0,0,0.6),0_1px_0_rgba(255,255,255,0.2)] pointer-events-none" />
+      <div className="absolute bottom-2 right-2 w-1.5 h-1.5 bg-gray-400 rounded-full shadow-[inset_0_1px_2px_rgba(0,0,0,0.6),0_1px_0_rgba(255,255,255,0.2)] pointer-events-none" />
+
+      <div className="grid grid-cols-3 grid-rows-2 gap-1 relative z-10 px-1">
+        {directions.map(({ label, direction, className, icon }) => (
           <button
             key={direction}
             type="button"
@@ -78,13 +155,15 @@ export function TouchControls({ onInput, activeControl }: TouchControlsProps) {
               handlePointerUp()
             }}
           >
-            {label}
+            {icon}
           </button>
         ))}
       </div>
+
       <button
         type="button"
-        className={`${bombButtonStyles.base} ${getBombClassName()}`}
+        aria-label="爆弾"
+        className={`${bombButtonStyles.base} ${getBombClassName()} relative z-10 mt-1`}
         onPointerDown={(event) => {
           event.preventDefault()
           onInput({ type: 'place_bomb' })
@@ -96,7 +175,13 @@ export function TouchControls({ onInput, activeControl }: TouchControlsProps) {
           event.preventDefault()
         }}
       >
-        爆弾
+        <GameIcon className="w-7 h-7" strokeWidth="2.5">
+          <circle cx="11" cy="14" r="6" />
+          <path d="M15 10c1.5-1.5 2.5-1.5 4-2" />
+          <path d="M21 7.5a1.5 1.5 0 0 0-3 0" />
+          <path d="M19 6v3" />
+          <path d="M17.5 7.5h3" />
+        </GameIcon>
       </button>
     </div>
   )
