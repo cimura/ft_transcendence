@@ -72,4 +72,51 @@ describe('AuthController (E2E)', () => {
         expect(res.body.fields).not.toContain('email'); // emailは入っていないはず
       });
   });
+
+  // テストケース③: GET /auth/session
+  //
+  // ここが今回の要件の肝: トークンが無効・未送信でも 401 ではなく 200 で
+  // { valid: false } を返すこと。401 を返すとブラウザが devtools のコンソールへ
+  // 自動でエラーログを出力してしまい、無音でSignInへ戻す挙動が壊れるため。
+  describe('/auth/session (GET)', () => {
+    it('有効なトークンなら 200 + valid:true + user を返すこと', async () => {
+      const signUpRes = await request(app.getHttpServer())
+        .post('/auth/signup')
+        .send({
+          email: 'session@example.com',
+          username: 'sessionUser',
+          password: 'password123',
+        });
+      const accessToken = signUpRes.body.accessToken as string;
+
+      return request(app.getHttpServer())
+        .get('/auth/session')
+        .set('Authorization', `Bearer ${accessToken}`)
+        .expect(HttpStatus.OK)
+        .expect((res) => {
+          expect(res.body.valid).toBe(true);
+          expect(res.body.user).toHaveProperty('username', 'sessionUser');
+          expect(res.body).toHaveProperty('expiresAt');
+        });
+    });
+
+    it('不正なトークンでも 401 を返さず 200 + valid:false を返すこと', async () => {
+      return request(app.getHttpServer())
+        .get('/auth/session')
+        .set('Authorization', 'Bearer this.is.garbage')
+        .expect(HttpStatus.OK)
+        .expect((res) => {
+          expect(res.body).toEqual({ valid: false });
+        });
+    });
+
+    it('Authorizationヘッダが無くても 401 を返さず 200 + valid:false を返すこと', async () => {
+      return request(app.getHttpServer())
+        .get('/auth/session')
+        .expect(HttpStatus.OK)
+        .expect((res) => {
+          expect(res.body).toEqual({ valid: false });
+        });
+    });
+  });
 });

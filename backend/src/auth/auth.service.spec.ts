@@ -3,6 +3,7 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { AuthService } from './auth.service';
 import { JwtService } from '@nestjs/jwt';
 import { PrismaService } from '../prisma.service';
+import { UsersService } from '../users/users.service';
 import { ConflictException, UnauthorizedException } from '@nestjs/common';
 import * as bcrypt from 'bcrypt';
 
@@ -25,6 +26,12 @@ describe('AuthService', () => {
   // 2. JwtService のモック定義
   const mockJwtService = {
     signAsync: jest.fn(),
+    verify: jest.fn(),
+  };
+
+  // 3. UsersService のモック定義 (getSession が profile() を呼ぶ)
+  const mockUsersService = {
+    profile: jest.fn(),
   };
 
   beforeEach(async () => {
@@ -33,6 +40,7 @@ describe('AuthService', () => {
         AuthService,
         { provide: PrismaService, useValue: mockPrismaService },
         { provide: JwtService, useValue: mockJwtService },
+        { provide: UsersService, useValue: mockUsersService },
       ],
     }).compile();
 
@@ -200,6 +208,71 @@ describe('AuthService', () => {
         UnauthorizedException,
       );
       expect(jwtService.signAsync).not.toHaveBeenCalled();
+    });
+  });
+
+  // ==========================================
+  // 3. getSession（セッション検証）のテスト
+  //
+  // 無効なトークンでも例外を投げず、常に valid の真偽で結果を返すこと
+  // (401を返してしまうとdevtoolsのコンソールに自動でログが出てしまうため)
+  // ==========================================
+  describe('getSession', () => {
+    it('【正常系】有効なトークンなら valid:true とユーザー情報を返すこと', async () => {
+      const futureExp = Math.floor(Date.now() / 1000) + 3600;
+      mockJwtService.verify.mockReturnValue({ sub: 'user-1', exp: futureExp });
+      mockUsersService.profile.mockResolvedValue({
+        id: 'user-1',
+        username: 'userA',
+      });
+
+      const result = await service.getSession('Bearer valid.token.here');
+
+      expect(mockJwtService.verify).toHaveBeenCalledWith('valid.token.here');
+      expect(mockUsersService.profile).toHaveBeenCalledWith('user-1');
+      expect(result).toEqual({
+        valid: true,
+        expiresAt: new Date(futureExp * 1000).toISOString(),
+        user: { id: 'user-1', username: 'userA' },
+      });
+    });
+
+    it('【異常系】Authorizationヘッダが無ければ valid:false を返すこと(例外を投げない)', async () => {
+      const result = await service.getSession(undefined);
+
+      expect(result).toEqual({ valid: false });
+      expect(mockJwtService.verify).not.toHaveBeenCalled();
+    });
+
+    it('【異常系】Bearer形式でなければ valid:false を返すこと', async () => {
+      const result = await service.getSession('Basic abc123');
+
+      expect(result).toEqual({ valid: false });
+      expect(mockJwtService.verify).not.toHaveBeenCalled();
+    });
+
+    it('【異常系】期限切れ・署名不正など verify が例外を投げても valid:false を返すこと', async () => {
+      mockJwtService.verify.mockImplementation(() => {
+        throw new Error('jwt expired');
+      });
+
+      const result = await service.getSession('Bearer expired.token.here');
+
+      expect(result).toEqual({ valid: false });
+      expect(mockUsersService.profile).not.toHaveBeenCalled();
+    });
+
+    it('【異常系】トークンは有効でもユーザーが既に存在しなければ valid:false を返すこと', async () => {
+      const futureExp = Math.floor(Date.now() / 1000) + 3600;
+      mockJwtService.verify.mockReturnValue({
+        sub: 'deleted-user',
+        exp: futureExp,
+      });
+      mockUsersService.profile.mockRejectedValue(new Error('not found'));
+
+      const result = await service.getSession('Bearer valid.token.here');
+
+      expect(result).toEqual({ valid: false });
     });
   });
 });

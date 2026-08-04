@@ -1,6 +1,8 @@
 import {
   Body,
   Controller,
+  Get,
+  Headers,
   Post,
   HttpCode,
   HttpStatus,
@@ -23,6 +25,7 @@ import {
   SignUpConflictResponseDto,
 } from './dto/signup.dto';
 import { SignInRequestDto, SignInResponseDto } from './dto/signin.dto';
+import { SessionResponseDto } from './dto/session.dto';
 import { JwtAuthGuard } from './jwt-auth.guard';
 
 @Controller('auth')
@@ -48,6 +51,20 @@ export class AuthController {
   @ApiUnauthorizedResponse({ description: '認証失敗時' })
   signIn(@Body() dto: SignInRequestDto) {
     return this.authService.signIn(dto);
+  }
+
+  @Get('session')
+  @HttpCode(HttpStatus.OK)
+  @ApiBearerAuth()
+  @ApiOperation({
+    summary:
+      'アクセストークンの有効性を確認 (無効な場合も401を返さず valid:false で応答)',
+  })
+  @ApiOkResponse({ description: '検証結果', type: SessionResponseDto })
+  getSession(
+    @Headers('authorization') authorization?: string,
+  ): Promise<SessionResponseDto> {
+    return this.authService.getSession(authorization);
   }
 
   @Post('logout')
