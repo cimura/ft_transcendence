@@ -5,25 +5,20 @@ import { useAuthStore } from '../stores/authStore'
 import { useRoomStore } from '../stores/roomStore'
 import { useLobbySocket } from '../hooks/useLobbySocket'
 import { getRooms, createRoom, joinRoom, getRoom } from '../api/rooms'
+import { logApiError } from '../api/errors'
 import { RoomList } from '../components/lobby/RoomList'
 import { CreateRoomModal } from '../components/lobby/CreateRoomModal'
 import type { CreateRoomDto } from '../types'
 
 export function LobbyPage() {
   const navigate = useNavigate()
-  const { currentUser, fetchCurrentUser } = useAuthStore()
+  const { currentUser } = useAuthStore()
   const { rooms, setRooms, upsertRoom, removeRoom, setCurrentRoom } =
     useRoomStore()
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [isCreating, setIsCreating] = useState(false)
 
   useLobbySocket()
-
-  useEffect(() => {
-    if (!currentUser) {
-      fetchCurrentUser()
-    }
-  }, [currentUser, fetchCurrentUser])
 
   useEffect(() => {
     let cancelled = false
@@ -33,7 +28,7 @@ export function LobbyPage() {
         if (!cancelled) setRooms(initialRooms)
       })
       .catch((error) => {
-        console.error('Failed to load rooms:', error)
+        logApiError('Failed to load rooms:', error)
       })
 
     return () => {
@@ -58,22 +53,15 @@ export function LobbyPage() {
       setIsModalOpen(false)
       navigate(`/room/${room.id}`)
     } catch (error) {
-      console.error('Failed to create room:', error)
+      logApiError('Failed to create room:', error)
     } finally {
       setIsCreating(false)
     }
   }
 
   const handleJoinRoom = async (roomId: string) => {
-    let user = currentUser
-    if (!user) {
-      await fetchCurrentUser()
-      user = useAuthStore.getState().currentUser
-    }
-    if (!user) {
-      console.error('Current user is not loaded')
-      return
-    }
+    const user = currentUser
+    if (!user) return
 
     try {
       const joinedRoom = await joinRoom(roomId)
@@ -87,7 +75,7 @@ export function LobbyPage() {
         // 満員/開始済みなどで参加できなかった部屋は一覧から除去する
         if (status === 403 || status === 404) {
           removeRoom(roomId)
-          console.error('Failed to join room:', error)
+          logApiError('Failed to join room:', error)
           return
         }
 
@@ -115,7 +103,7 @@ export function LobbyPage() {
             ) {
               removeRoom(roomId)
             }
-            console.error(
+            logApiError(
               'Failed to refresh room after join conflict:',
               refreshError
             )
@@ -124,7 +112,7 @@ export function LobbyPage() {
         }
       }
 
-      console.error('Failed to join room:', error)
+      logApiError('Failed to join room:', error)
     }
   }
 

@@ -1,4 +1,5 @@
 import axios from 'axios'
+import { isSessionExpiredError } from './session'
 
 type ApiErrorResponse = {
   code?: string
@@ -17,6 +18,11 @@ const apiErrorMessages: Record<string, string> = {
 }
 
 export const getApiErrorMessage = (error: unknown, fallback: string) => {
+  // 認証切れは強制サインアウトで無言遷移させるため、フォームにエラー文言を出さない
+  if (isSessionExpiredError(error)) {
+    return ''
+  }
+
   if (!axios.isAxiosError(error)) {
     return fallback
   }
@@ -45,4 +51,14 @@ export const getApiErrorMessage = (error: unknown, fallback: string) => {
   }
 
   return fallback
+}
+
+/**
+ * console.error の代わりにこちらを使う。認証切れ(SessionExpiredError)は
+ * 強制サインアウトによる正常な遷移なので、コンソールには何も出さない。
+ */
+export const logApiError = (context: string, error: unknown) => {
+  if (isSessionExpiredError(error)) return
+
+  console.error(context, error)
 }

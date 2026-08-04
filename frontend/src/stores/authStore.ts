@@ -1,13 +1,23 @@
 import { create } from 'zustand'
-import axios from 'axios'
 import type { User } from '../types/user'
 import * as authApi from '../api/auth'
 import { getApiErrorMessage } from '../api/errors'
+import { isSessionExpiredError, setSessionExpiredHandler } from '../api/session'
 import { getStoredAccessToken, storeAccessToken } from '../utils/accessToken'
+
+/**
+ * - checking: 起動時（または新規サインイン直後）、トークンの有効性をバックエンドに確認している間
+ * - authenticated: ログイン済み(トークン有効)
+ * - unauthenticated: 未ログイン、またはトークンが無効と判明した
+ */
+export type AuthStatus = 'checking' | 'authenticated' | 'unauthenticated'
 
 interface AuthState {
   currentUser: User | null
   accessToken: string | null
+  authStatus: AuthStatus
+  /** アクセストークンの有効期限 (epoch ms)。バックエンドの GET /auth/session が返す値。 */
+  sessionExpiresAt: number | null
   loading: boolean
   error: string | null
 
@@ -19,16 +29,20 @@ interface AuthState {
 
   fetchCurrentUser: () => Promise<void>
   logout: () => Promise<void>
+  /** トークンが無効だと判明したときに呼ぶ。メッセージは出さず静かにサインアウトする。 */
+  forceSignOut: () => void
+  /** トークンの有効性を GET /auth/session でバックエンドに確認する。 */
+  verifySession: () => Promise<void>
 }
 
-/**
- * Auth store
- * Manages current user authentication state
- */
+const initialAccessToken = getStoredAccessToken()
+
 export const useAuthStore = create<AuthState>((set) => ({
   // Initial state
   currentUser: null,
-  accessToken: getStoredAccessToken(),
+  accessToken: initialAccessToken,
+  authStatus: initialAccessToken ? 'checking' : 'unauthenticated',
+  sessionExpiresAt: null,
   loading: false,
   error: null,
 
@@ -36,10 +50,75 @@ export const useAuthStore = create<AuthState>((set) => ({
   setCurrentUser: (user) => set({ currentUser: user }),
   setAccessToken: (token) => {
     storeAccessToken(token)
-    set({ accessToken: token })
+    // サインイン/サインアップ直後も、トークンをそのまま信頼せず
+    // 'checking' を経由させる。これによりゲート(App.tsx)側で
+    // verifySession() が走り、currentUser / sessionExpiresAt が
+    // 埋まってから画面が描画される。
+    set({
+      accessToken: token,
+      authStatus: token ? 'checking' : 'unauthenticated',
+    })
   },
   setLoading: (loading) => set({ loading }),
   setError: (error) => set({ error }),
+
+  forceSignOut: () => {
+    storeAccessToken(null)
+    set({
+      currentUser: null,
+      accessToken: null,
+      authStatus: 'unauthenticated',
+      sessionExpiresAt: null,
+      error: null,
+      loading: false,
+    })
+  },
+
+  verifySession: async () => {
+    const token = getStoredAccessToken()
+    if (!token) {
+      set({
+        currentUser: null,
+        accessToken: null,
+        authStatus: 'unauthenticated',
+        sessionExpiresAt: null,
+      })
+      return
+    }
+
+    try {
+      const result = await authApi.getSession()
+
+      if (!result.valid) {
+        storeAccessToken(null)
+        set({
+          currentUser: null,
+          accessToken: null,
+          authStatus: 'unauthenticated',
+          sessionExpiresAt: null,
+        })
+        return
+      }
+
+      set({
+        currentUser: result.user,
+        sessionExpiresAt: result.expiresAt,
+        authStatus: 'authenticated',
+      })
+    } catch (error) {
+      // interceptor が先に forceSignOut 済みのケース。何もせず終える(無言遷移)。
+      if (isSessionExpiredError(error)) return
+
+      // ネットワーク障害など、トークンの正当性とは無関係な失敗ではサインアウトさせない
+      set({
+        authStatus: 'authenticated',
+        error: getApiErrorMessage(
+          error,
+          'アカウント情報の取得に失敗しました。'
+        ),
+      })
+    }
+  },
 
   fetchCurrentUser: async () => {
     try {
@@ -47,15 +126,8 @@ export const useAuthStore = create<AuthState>((set) => ({
       const user = await authApi.getCurrentUser()
       set({ currentUser: user, loading: false })
     } catch (error) {
-      if (axios.isAxiosError(error) && error.response?.status === 401) {
-        storeAccessToken(null)
-        set({
-          currentUser: null,
-          accessToken: null,
-          error:
-            'セッションの有効期限が切れました。もう一度ログインしてください。',
-          loading: false,
-        })
+      if (isSessionExpiredError(error)) {
+        set({ loading: false })
         return
       }
 
@@ -76,13 +148,21 @@ export const useAuthStore = create<AuthState>((set) => ({
       set({ loading: true, error: null })
       await authApi.logout()
     } catch (error) {
-      logoutError = error
-      set({
-        error: getApiErrorMessage(error, 'ログアウトに失敗しました。'),
-      })
+      if (!isSessionExpiredError(error)) {
+        logoutError = error
+        set({
+          error: getApiErrorMessage(error, 'ログアウトに失敗しました。'),
+        })
+      }
     } finally {
       storeAccessToken(null)
-      set({ currentUser: null, accessToken: null, loading: false })
+      set({
+        currentUser: null,
+        accessToken: null,
+        authStatus: 'unauthenticated',
+        sessionExpiresAt: null,
+        loading: false,
+      })
     }
 
     if (logoutError) {
@@ -90,3 +170,5 @@ export const useAuthStore = create<AuthState>((set) => ({
     }
   },
 }))
+
+setSessionExpiredHandler(() => useAuthStore.getState().forceSignOut())

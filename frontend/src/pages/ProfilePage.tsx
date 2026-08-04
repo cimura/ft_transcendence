@@ -15,12 +15,7 @@ export const ProfilePage = () => {
   const { userId } = useParams<{ userId: string }>()
   const navigate = useNavigate()
   const location = useLocation()
-  const {
-    currentUser,
-    fetchCurrentUser,
-    setCurrentUser,
-    error: authError,
-  } = useAuthStore()
+  const { currentUser, setCurrentUser, error: authError } = useAuthStore()
   const currentUserId = currentUser?.id
   const {
     profile: fetchedProfile,
@@ -37,13 +32,6 @@ export const ProfilePage = () => {
     typeof location.state.from === 'string'
       ? location.state.from
       : '/home'
-
-  // 現在のユーザー情報を取得
-  useEffect(() => {
-    if (!currentUser) {
-      fetchCurrentUser()
-    }
-  }, [currentUser, fetchCurrentUser])
 
   // プロフィール情報にisCurrentUserフラグを追加
   useEffect(() => {

@@ -92,16 +92,28 @@ export const signInApi = async (credentials: LoginCredentials) => {
   }
 }
 
-interface CurrentUserResponse {
-  user: {
-    id: string
-    email: string
-    username: string
-    avatarUrl: string | null
-    createdAt: string
-    updatedAt: string
-  }
+interface UserResponse {
+  id: string
+  email: string
+  username: string
+  avatarUrl: string | null
+  createdAt: string
+  updatedAt: string
 }
+
+interface CurrentUserResponse {
+  user: UserResponse
+}
+
+const mapToUser = (user: UserResponse): User => ({
+  id: user.id,
+  email: user.email,
+  username: user.username,
+  avatarUrl: user.avatarUrl ?? undefined,
+  isGuest: false,
+  createdAt: new Date(user.createdAt),
+  updatedAt: new Date(user.updatedAt),
+})
 
 /**
  * Get current logged-in user
@@ -109,16 +121,36 @@ interface CurrentUserResponse {
  */
 export const getCurrentUser = async (): Promise<User> => {
   const response = await api.get<CurrentUserResponse>('/users/profile')
-  const user = response.data.user
+  return mapToUser(response.data.user)
+}
+
+export type SessionResult =
+  | { valid: false }
+  | { valid: true; user: User; expiresAt: number }
+
+interface SessionResponse {
+  valid: boolean
+  expiresAt?: string
+  user?: UserResponse
+}
+
+/**
+ * アクセストークンが有効かどうかをバックエンドに確認する。
+ * トークンが無効・期限切れ・未送信のいずれでも `GET /auth/session` は
+ * 401 ではなく常に 200 を返すため、devtoolsのコンソールにエラーは出ない。
+ */
+export const getSession = async (): Promise<SessionResult> => {
+  const response = await api.get<SessionResponse>('/auth/session')
+  const { valid, expiresAt, user } = response.data
+
+  if (!valid || !expiresAt || !user) {
+    return { valid: false }
+  }
 
   return {
-    id: user.id,
-    email: user.email,
-    username: user.username,
-    avatarUrl: user.avatarUrl ?? undefined,
-    isGuest: false,
-    createdAt: new Date(user.createdAt),
-    updatedAt: new Date(user.updatedAt),
+    valid: true,
+    user: mapToUser(user),
+    expiresAt: new Date(expiresAt).getTime(),
   }
 }
 

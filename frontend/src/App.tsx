@@ -1,4 +1,4 @@
-import { useEffect } from 'react'
+import { useEffect, useRef } from 'react'
 import SignIn from './components/SignIn'
 import Signup from './components/SignUp'
 import {
@@ -68,8 +68,40 @@ function AppRoutes() {
 function AuthenticatedRoutes() {
   const navigate = useNavigate()
   const location = useLocation()
-  const isLoggedIn = useAuthStore((state) => Boolean(state.accessToken))
+  const authStatus = useAuthStore((state) => state.authStatus)
+  const sessionExpiresAt = useAuthStore((state) => state.sessionExpiresAt)
+  const verifySession = useAuthStore((state) => state.verifySession)
+  const forceSignOut = useAuthStore((state) => state.forceSignOut)
+  const isLoggedIn = authStatus === 'authenticated'
+  const isVerifyingRef = useRef(false)
   useRealtimeSocket()
+
+  // 起動直後、および新規サインイン/サインアップ直後(setAccessTokenがauthStatusを
+  // 'checking' に戻す)に、保存済みトークンが本当に有効かをバックエンドへ確認する。
+  // GET /auth/session は常に200を返すため、無効なトークンでもコンソールにログは出ない。
+  useEffect(() => {
+    if (authStatus === 'checking' && !isVerifyingRef.current) {
+      isVerifyingRef.current = true
+      void verifySession().finally(() => {
+        isVerifyingRef.current = false
+      })
+    }
+  }, [authStatus, verifySession])
+
+  // ログイン中にアクセストークンの有効期限が切れたら、通信を発生させずに
+  // 静かにサインアウトさせる(期限はバックエンドが返した値をそのまま使う)。
+  useEffect(() => {
+    if (!isLoggedIn || !sessionExpiresAt) return
+
+    const remainingMs = sessionExpiresAt - Date.now()
+    if (remainingMs <= 0) {
+      forceSignOut()
+      return
+    }
+
+    const timer = window.setTimeout(forceSignOut, remainingMs)
+    return () => window.clearTimeout(timer)
+  }, [isLoggedIn, sessionExpiresAt, forceSignOut])
 
   useEffect(() => {
     if (
@@ -92,6 +124,11 @@ function AuthenticatedRoutes() {
 
   const handleLogoutSuccess = () => {
     navigate('/signin', { replace: true })
+  }
+
+  // トークン検証中は何も描画しない(背景動画のみが見える状態)。
+  if (authStatus === 'checking') {
+    return null
   }
 
   if (!isLoggedIn) {

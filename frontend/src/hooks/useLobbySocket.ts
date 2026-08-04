@@ -17,13 +17,14 @@ const ROOMS_NAMESPACE = `${BACKEND_URL.replace(/\/$/, '')}/rooms`
  */
 export function useLobbySocket() {
   const accessToken = useAuthStore((state) => state.accessToken)
+  const authStatus = useAuthStore((state) => state.authStatus)
   const socketRef = useRef<Socket<
     RoomServerToClientEvents,
     RoomClientToServerEvents
   > | null>(null)
 
   useEffect(() => {
-    if (!accessToken) return
+    if (!accessToken || authStatus !== 'authenticated') return
 
     const { setRooms, upsertRoom, removeRoom } = useRoomStore.getState()
 
@@ -35,10 +36,6 @@ export function useLobbySocket() {
 
     socket.on('connect', () => {
       socket.emit('lobby:join')
-    })
-
-    socket.on('connect_error', (error: Error) => {
-      console.error('[LobbySocket] connection error:', error)
     })
 
     socket.on('lobby:rooms', (rooms: RoomSnapshot[]) => {
@@ -66,5 +63,5 @@ export function useLobbySocket() {
       socket.disconnect()
       socketRef.current = null
     }
-  }, [accessToken])
+  }, [accessToken, authStatus])
 }

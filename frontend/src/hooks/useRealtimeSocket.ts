@@ -13,9 +13,10 @@ const REALTIME_NAMESPACE = `${BACKEND_URL.replace(/\/$/, '')}/realtime`
 
 export function useRealtimeSocket() {
   const accessToken = useAuthStore((state) => state.accessToken)
+  const authStatus = useAuthStore((state) => state.authStatus)
 
   useEffect(() => {
-    if (!accessToken) return
+    if (!accessToken || authStatus !== 'authenticated') return
 
     const socket: Socket<
       RealtimeServerToClientEvents,
@@ -47,9 +48,6 @@ export function useRealtimeSocket() {
     socket.on('connect', handleConnect)
     socket.on('notification:new', handleNewNotification)
     socket.on('presence:updated', handlePresenceUpdated)
-    socket.on('connect_error', (error: Error) => {
-      console.error('[RealtimeSocket] connection error:', error)
-    })
 
     socket.connect()
 
@@ -59,5 +57,5 @@ export function useRealtimeSocket() {
       socket.off('presence:updated', handlePresenceUpdated)
       socket.disconnect()
     }
-  }, [accessToken])
+  }, [accessToken, authStatus])
 }
