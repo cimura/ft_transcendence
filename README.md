@@ -1,179 +1,256 @@
-# ft_transcendence
+_This project has been created as part of the 42 curriculum by sshimura, ryomori, ttakino, rseki, yutakagi._
 
-## Development setup
+# ft_transcendence - Galactic Bomber
 
-### Requirements
+## Description
+
+**Galactic Bomber** is a real-time multiplayer Bomberman-style web game built
+as the final project of the 42 curriculum. Players can create or join game
+rooms, play live matches from separate devices, manage their profiles and
+friends, invite friends to games, and track their progress through match
+history, rankings, and achievements.
+
+The application uses a server-authoritative game loop: clients send player
+input, while the server owns the game state and broadcasts synchronized updates
+to connected players. The interface follows an 8-bit galactic visual theme and
+supports both keyboard and touch controls.
+
+Key features include:
+
+- Secure email-and-password authentication.
+- Real-time lobby, room, invitation, chat, notification, and gameplay updates.
+- Two-to-four-player Bomberman matches with reconnect and retirement handling.
+- Profile editing, avatar upload, friend requests, and presence indicators.
+- Match history, rankings, game statistics, and persistent achievements.
+- HTTPS deployment with Docker Compose.
+
+## Team Information
+
+All team members contributed to development in addition to their primary
+responsibilities.
+
+| Member                                         | Primary role                  | Responsibilities                                                                                                    |
+| ---------------------------------------------- | ----------------------------- | ------------------------------------------------------------------------------------------------------------------- |
+| [@sshimura](https://github.com/cimura) (Shimu) | Product Owner and Developer   | Defined the product vision, prioritized the backlog, validated completed work, and coordinated feature integration. |
+| [@ryomori](https://github.com/ryomori0113)     | Project Manager and Developer | Organized planning and regular meetings, tracked progress and blockers, and coordinated project communication.      |
+| [@ttakino](https://github.com/taka2162)        | Technical Lead and Developer  | Defined the technical architecture, made stack decisions, maintained code quality, and reviewed critical changes.   |
+| [@rseki](https://github.com/rt6500)            | Developer                     | Implemented and tested user-facing account, profile, social, and statistics functionality.                          |
+| [@yutakagi](https://github.com/LaLaSero)       | Developer                     | Implemented and stabilized real-time room, chat, and game-state behavior.                                           |
+
+## Project Management
+
+The team held regular meetings twice a week to review progress, discuss
+blockers, refine priorities, and split work into reviewable tasks. GitHub Issues
+were used as the backlog and task-tracking system; each issue described the
+scope, priority, acceptance conditions, and dependencies where applicable.
+
+Discord was the day-to-day communication channel for quick questions,
+coordination, code-review discussion, and meeting follow-up. Work was developed
+in branches, reviewed by teammates, and integrated through GitHub pull requests.
+
+## Technical Stack
+
+| Area                          | Technologies                                                | Why we chose them                                                                                   |
+| ----------------------------- | ----------------------------------------------------------- | --------------------------------------------------------------------------------------------------- |
+| Frontend                      | React 19, TypeScript, Vite, React Router                    | Component-based UI, type safety, fast local development, and client-side routing.                   |
+| Styling and 3D rendering      | Tailwind CSS, Three.js, React Three Fiber, React Three Drei | Reusable visual primitives and an expressive 3D renderer for the game scene.                        |
+| Client state and HTTP         | Zustand, Axios                                              | Lightweight state stores and a consistent API client.                                               |
+| Backend                       | Node.js, NestJS, Express adapter                            | A modular, testable server architecture with validation, dependency injection, and REST support.    |
+| Real-time communication       | Socket.IO                                                   | Authenticated bidirectional events for lobby, rooms, chat, notifications, presence, and game state. |
+| Database                      | PostgreSQL 16, Prisma ORM                                   | Relational integrity for users and match data, plus type-safe database access and migrations.       |
+| Authentication and validation | JWT, Passport, bcrypt, class-validator                      | Password hashing, authenticated API access, and validated client input.                             |
+| File uploads                  | Multer, Docker volume                                       | Validated avatar uploads stored persistently outside the application container.                     |
+| Deployment                    | Docker Compose, nginx, self-signed TLS certificate          | One-command local deployment and HTTPS as the public entry point.                                   |
+| Quality                       | Jest, ESLint, Prettier, GitHub Actions                      | Automated tests, static checks, formatting checks, and CI for frontend and backend changes.         |
+
+## Database Schema
+
+PostgreSQL is managed through Prisma migrations. The following description is
+the current logical schema; a separate ER diagram is intentionally omitted.
+
+| Table / model      | Key fields                                                                                                          | Relationships                                                                                                                                   |
+| ------------------ | ------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------- |
+| `User`             | `id` UUID string, unique `email`, unique `username`, `passwordHash`, optional `avatarUrl`, timestamps               | Sends and receives `Friendship` records, participates in matches through `MatchParticipant`, and owns `UserAchievement` records.                |
+| `Friendship`       | `id` UUID string, `requesterId`, `receiverId`, unique `pairKey`, `status` enum (`PENDING`, `ACCEPTED`), timestamps  | Many friendship requests belong to two `User` records: requester and receiver. The requester/receiver pair is unique.                           |
+| `UploadedImage`    | `id` UUID string, original and stored filenames, MIME type, byte size, URL, creation timestamp                      | Stores upload metadata. A user's `avatarUrl` refers to the stored URL; this is deliberately a URL reference rather than a database foreign key. |
+| `Match`            | `id` UUID string, `gameType`, `finishedAt`, `createdAt`                                                             | Has one or more `MatchParticipant` records.                                                                                                     |
+| `MatchParticipant` | `id` UUID string, `matchId`, `userId`, `result` enum (`WIN`, `LOSS`, `DRAW`), optional `kills`, `score`, and `rank` | Join model between `Match` and `User`; each user can appear only once in a match.                                                               |
+| `UserAchievement`  | composite key `userId` and `achievementId`, `unlockedAt`                                                            | Belongs to a `User`. Achievement definitions are maintained in application code, so `achievementId` is not a foreign key to a separate table.   |
+
+## Features List
+
+| Feature                | Functionality                                                                                                                                | Contributors                   |
+| ---------------------- | -------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------ |
+| Authentication         | Sign up and sign in with email and password; bcrypt hashing and JWT-protected requests.                                                      | @ttakino, @rseki, @sshimura    |
+| Profiles and avatars   | View and edit profiles, select a default avatar, upload validated avatar images, and manage account details.                                 | @rseki, @ryomori               |
+| Friends and presence   | Search users, send and manage friend requests, remove friends, and display online, in-game, or offline presence.                             | @rseki, @sshimura              |
+| Lobby and invitations  | Create, browse, join, leave, and manage rooms; invite eligible friends to a room.                                                            | @ttakino, @sshimura, @rseki    |
+| Real-time Bomberman    | Run synchronized two-to-four-player matches with server-owned state, disconnect/reconnect handling, retirement, and touch or keyboard input. | @ttakino, @yutakagi, @sshimura |
+| Room chat              | Send and receive messages within a game room through Socket.IO event handlers.                                                               | @yutakagi, @ttakino            |
+| Notifications          | Receive and view in-application notifications for friend requests and game invitations.                                                      | @sshimura, @ttakino            |
+| Scores and progression | Persist match results, show history and rankings, calculate statistics, and unlock Galactic Guide achievements.                              | @rseki, @ttakino               |
+| Design system          | Deliver the galactic pixel-art visual language across the home, lobby, room, profile, friend, and settings screens.                          | @ryomori, @rseki               |
+| Delivery and quality   | Provide Docker-based HTTPS deployment, formatting and lint checks, automated backend tests, and GitHub Actions workflows.                    | @ttakino, @rseki, @sshimura    |
+
+## Modules
+
+The selected modules total **16 points**. A module is claimed only through the
+functionality described below and demonstrated in the running application.
+
+| Category                   | Module                                      | Type  | Points | Implementation and contributors                                                                                                                                                    |
+| -------------------------- | ------------------------------------------- | ----- | -----: | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Web                        | Frameworks for frontend and backend         | Major |      2 | React frontend and NestJS backend provide the project structure, routing, validation, and API layers. Contributors: all team members.                                              |
+| Web                        | Real-time features                          | Major |      2 | Socket.IO broadcasts authenticated lobby, room, presence, notification, and game updates, with connection and reconnection handling. Contributors: @ttakino, @yutakagi, @sshimura. |
+| Web                        | User interaction                            | Major |      2 | Users can access profiles, manage friends, and exchange messages in game rooms. Contributors: @rseki, @yutakagi, @ttakino.                                                         |
+| Gaming and user experience | Complete web-based game                     | Major |      2 | A live Bomberman-style game with clear elimination and ranking outcomes is rendered in the browser from server-owned state. Contributors: @ttakino, @yutakagi, @sshimura.          |
+| Gaming and user experience | Remote players                              | Major |      2 | Players on separate devices can join the same room, receive synchronized state, and recover from temporary disconnections. Contributors: @ttakino, @yutakagi.                      |
+| Gaming and user experience | Multiplayer game                            | Major |      2 | Ensure smooth, fair gameplay and accurate state synchronization for 2-4 players. Contributors: @sshimura, @ttakino, @ryomori.                                                      |
+| User management            | Standard user management and authentication | Major |      2 | Users can authenticate, edit profiles, upload or select avatars, add friends, view profiles, and see presence state. Contributors: @rseki, @ttakino.                               |
+| Web                        | Notification system                         | Minor |      1 | The application delivers and displays real-time in-app friend-request and game-invitation notifications. Contributors: @sshimura, @ttakino.                                        |
+| User management            | Game statistics and match history           | Minor |      1 | Match results are persisted and exposed through personal history, rankings, statistics, and achievement progression. Contributors: @rseki, @ttakino.                               |
+|                            | **Total**                                   |       | **16** |                                                                                                                                                                                    |
+
+## Instructions
+
+### Prerequisites
 
 - Docker
 - Docker Compose
-- Docker Buildx 0.17 or later
 
-You can check your versions with:
+Check the installed versions with:
 
 ```bash
 docker --version
 docker compose version
-docker buildx version
 ```
 
-### Environment variables setup
-The application relies on environment variables to securely manage sensitive configurations, such as authentication keys, without hardcoding them into the source code. 
+### Configure environment variables
 
-You can easily set up the default environment variables by copying the provided example file. Run the following command in your project root:
+Create your local environment file from the provided example:
 
 ```bash
 cp .env.example .env
 ```
 
-**Variables Description**:
-| KEY               | DESCRIPTION                                                                               |
-| :--              | :--                                                                                      |
-| JWT_SECRET        | A secure, random cryptographic string used to sign and verify JSON Web Tokens.            |
-| JWT_EXPIRES_IN    | The validity duration of the issued token (e.g., `1d` for one day, `60s` for 60 seconds). |
-| DATABASE_URL      | PostgreSQL connection URL used by Prisma.                                                 |
-| POSTGRES_USER     | The user of PostgreSQL.                                                                   |
-| POSTGRES_PASSWORD | The password of PostgreSQL.                                                               |
-| POSTGRES_DB       | The name of PostgreSQL.                                                                   |
-| SOCKET_IO_CORS_ORIGIN | Comma-separated origins allowed to connect to the Socket.IO namespaces.               |
-| VITE_USE_POLLING  | Set to `true` to make the Vite dev server poll for file changes. Only needed when hot reload does not react to edits (e.g. the repository lives on a Windows/macOS filesystem mounted into Docker). Polling consumes CPU continuously, so keep it `false` otherwise. |
+| Variable                | Purpose                                                                 |
+| ----------------------- | ----------------------------------------------------------------------- |
+| `JWT_SECRET`            | Secret used to sign and verify JSON Web Tokens.                         |
+| `JWT_EXPIRES_IN`        | JWT lifetime, for example `1d` or `60s`.                                |
+| `DATABASE_URL`          | PostgreSQL connection URL used by Prisma.                               |
+| `POSTGRES_USER`         | PostgreSQL user name.                                                   |
+| `POSTGRES_PASSWORD`     | PostgreSQL password.                                                    |
+| `POSTGRES_DB`           | PostgreSQL database name.                                               |
+| `SOCKET_IO_CORS_ORIGIN` | Comma-separated origins allowed to connect to the Socket.IO namespaces. |
 
-## Services
-`make` (no argument, or any plain target such as `make build`) starts the **production** stack, defined in `docker/docker-compose.prod.yml`. It has three services:
+Never commit `.env`; it contains local secrets. Before deploying, replace the
+placeholder `JWT_SECRET` with a real secret; nothing checks this automatically.
 
-- nginx: HTTPS reverse proxy that also serves the frontend's built static files directly (no separate frontend container)
-- backend: NestJS backend server, running the compiled build (no hot reload)
-- postgres: PostgreSQL database used through Prisma
+### Build and start
 
-Nginx is the public entry point for the application. Prisma migrations are applied automatically when the backend container starts, so no manual migration step is needed here.
+`docker/docker-compose.prod.yml` builds self-contained production images:
+nginx serves the frontend's static `vite build` output directly (no separate
+frontend container) and acts as the HTTPS reverse proxy, while the backend runs
+the compiled `nest build` output with `node` directly (no devDependencies in
+the final image). The Swagger UI is disabled in production, since it would
+otherwise expose the full API schema publicly.
 
-For day-to-day development with hot reload, use the `dev-*` targets instead (see [Development mode](#development-mode) below), which run `docker/docker-compose.yml` and add a fourth `frontend` service (a Vite dev server).
-
-The backend uses NestJS. NestJS uses Express as its default HTTP platform adapter, so the current backend stack is Node.js + NestJS + Express adapter.
-
-The database stack is PostgreSQL + Prisma ORM.
-
-## Start the containers
-
-```bash
-make
-```
-
-or
+Start the application for the first time, or rebuild images after dependency or
+Dockerfile changes:
 
 ```bash
 make build
 ```
 
-The first startup may take some time because Docker needs to build images and install dependencies. This is the production stack — see [Production build](#production-build) for how it differs from development, and [Development mode](#development-mode) if you want hot reload instead.
-
-## Access URLs
-
-### Frontend through Nginx
-
-```text
-https://localhost:8443
-```
-
-### Backend through Nginx
-
-```text
-https://localhost:8443/api/
-```
-
-### Legal pages
-
-- [Privacy Policy](https://localhost:8443/legal/privacy-policy)
-- [Terms of Service](https://localhost:8443/legal/terms-of-service)
-
-Because the local HTTPS certificate is self-signed, the browser may show a security warning.
-
-### How to test with curl
+For later starts, use:
 
 ```bash
-curl -kI https://localhost:8443
-curl -k https://localhost:8443/api/
+make
 ```
 
-## Production build
+The first startup may take a little longer while Docker builds the images.
+Prisma migrations are applied automatically each time the backend container
+starts, so no manual migration step is needed.
 
-`docker/docker-compose.prod.yml` (the target of the plain `make` commands above) builds self-contained production images:
+### Access the application
 
-- The frontend is compiled with `vite build` and the static `dist/` output is copied into the `nginx` image (`docker/nginx/Dockerfile.prod`), which also serves as the SPA (client-side routing fallback to `index.html`). There is no separate frontend container.
-- `docker/backend/Dockerfile.prod` compiles the backend with `nest build` and runs the compiled `dist/main.js` with `node` directly (no `nest --watch`, no devDependencies in the final image).
-- Prisma migrations are applied automatically on backend startup (`prisma migrate deploy`), so there is no dedicated migrate target for production.
-- Swagger UI (`/api`) is disabled in production (`NODE_ENV=production`), since it would otherwise expose the full API schema publicly.
+- Application: <https://localhost:8443>
+- API: <https://localhost:8443/api/>
+- Privacy Policy: <https://localhost:8443/legal/privacy-policy>
+- Terms of Service: <https://localhost:8443/legal/terms-of-service>
 
-### Before deploying
+nginx is the public HTTPS entry point. The local certificate is self-signed, so
+your browser will show a security warning that must be accepted for local use.
+For a real deployment behind a public domain, replace it with a real
+certificate (for example, mount it instead of generating it at build time in
+`docker/nginx/Dockerfile.prod`).
 
-Set real values in `.env` before deploying, especially `JWT_SECRET` — nothing checks this automatically, so make sure it isn't left as the `.env.example` placeholder. If you deploy behind a real domain, replace the self-signed certificate generated in `docker/nginx/Dockerfile.prod` with a real one (e.g. mount it instead of generating it at build time).
-
-## Development mode
-
-For hot reload during development, use the `dev-*` Makefile targets instead, which run `docker/docker-compose.yml` (bind-mounts the source tree, runs `vite` dev server and `nest start --watch`):
+You can verify the HTTPS endpoints from a terminal:
 
 ```bash
-make dev-build
+curl -kfsS -o /dev/null https://localhost:8443
+curl -kfsS https://localhost:8443/api/
 ```
 
-Development listens on the same port (8443) as production, so only one of the two stacks can run at a time — stop whichever is running first (`make down` or `make dev-down`).
-
-Other targets: `make dev-up`, `make dev-logs`, `make dev-down`, `make dev-clean` / `make dev-fclean` (also remove volumes), `make dev-rebuild`, `make dev-rebuild-clean`.
-
-After the dev containers are running, apply Prisma migrations to the local database:
+### Useful commands
 
 ```bash
-make dev-migrate
+make logs       # Follow container logs
+make down       # Stop containers
+make rebuild    # Rebuild and recreate containers
 ```
 
-This is needed after the first startup, after recreating the database volume, or after pulling new Prisma migrations from Git.
-
-### Prisma
-
-The generated Prisma Client is not committed to Git.
-In development it is generated automatically when the backend container starts:
+To check Prisma migration status:
 
 ```bash
-npm run start:dev
+docker compose -f docker/docker-compose.prod.yml exec -w /app/backend backend npm run prisma:migrate:status
 ```
 
-If needed, generate it manually:
+## Individual Contributions
 
-```bash
-docker compose -f docker/docker-compose.yml exec -w /app/backend backend npm run prisma:generate
-```
+### @sshimura - Product Owner and Developer
 
-To check the migration status:
+- Maintained product direction, prioritization, integration, and feature validation.
+- Implemented notification delivery and presentation, game invitations, socket namespace separation, and related room behavior.
+- Contributed to authentication integration, security configuration, CI fixes, and review follow-up.
 
-```bash
-docker compose -f docker/docker-compose.yml exec -w /app/backend backend npm run prisma:migrate:status
-```
+### @ryomori - Project Manager and Developer
 
-To apply development migrations manually:
+- Coordinated planning, progress tracking, meetings, and team communication.
+- Designed and implemented key visual screens and flows for the home, lobby, waiting room, settings, and friend interfaces.
+- Helped keep the pixel-art galactic UI consistent across user-facing features.
 
-```bash
-make dev-migrate
-```
+### @ttakino - Technical Lead and Developer
 
-or
+- Defined the React/NestJS/Prisma/Socket.IO architecture and maintained shared real-time contracts.
+- Implemented and stabilized the server-authoritative game loop, rooms, connection recovery, countdown, rankings, and game rendering integration.
+- Led technical refactoring, test improvements, build and CI maintenance, and critical code review.
 
-```bash
-docker compose -f docker/docker-compose.yml exec -w /app/backend backend npm run prisma:migrate:dev
-```
+### @rseki - Developer
 
-## Code formatting
+- Implemented profile retrieval and editing, avatar upload and validation, friend management, and responsive profile/settings UI.
+- Implemented match-result persistence, rankings, user statistics, achievements, and Galactic Guide progression.
+- Added legal pages, tests, API connections, Docker fixes, and user-facing error handling.
 
-Backend code is formatted with Prettier.
+### @yutakagi - Developer
 
-To check formatting:
+- Implemented room-chat Socket.IO handlers, chat history delivery, and serialized chat event processing.
+- Contributed to countdown state handling and real-time room/game behavior fixes.
+- Supported integration and review work around game state and room lifecycle behavior.
 
-```bash
-docker compose -f docker/docker-compose.yml exec backend npm run format:check
-```
+## Resources
 
-To apply formatting:
+- [React documentation](https://react.dev/)
+- [NestJS documentation](https://docs.nestjs.com/)
+- [Socket.IO documentation](https://socket.io/docs/v4/)
+- [Prisma documentation](https://www.prisma.io/docs/)
+- [PostgreSQL documentation](https://www.postgresql.org/docs/)
+- [Docker Compose documentation](https://docs.docker.com/compose/)
+- [Three.js documentation](https://threejs.org/docs/)
 
-```bash
-docker compose -f docker/docker-compose.yml exec backend npm run format
-```
+### AI usage
 
-The backend has its own .prettierignore file because Prettier is executed inside the backend container. Generated Prisma files under src/generated/ are excluded from formatting.
+AI was used to prepare initial drafts of the Privacy Policy and Terms of Service
+pages, and to organize the README requirements and documentation structure. The
+team reviewed, corrected, and took responsibility for the final legal text,
+technical descriptions, and implementation decisions. AI-generated output was
+not accepted without human review.
