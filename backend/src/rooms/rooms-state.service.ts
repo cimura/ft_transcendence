@@ -22,24 +22,10 @@ export class RoomsStateService {
   }
 
   // 参加中のルームをユーザーIDから逆引きする(ロビー再入室時の自動復帰用)。
-  // 複数ヒットする場合は playing を優先し、次に最終更新が新しいものを返す。
-  findRoomByParticipant(userId: string): Room | undefined {
-    let best: Room | undefined;
-    for (const room of this.rooms.values()) {
-      if (!room.participants[userId]) continue;
-      if (!best) {
-        best = room;
-        continue;
-      }
-      const bestIsPlaying = best.status === 'playing';
-      const roomIsPlaying = room.status === 'playing';
-      if (roomIsPlaying && !bestIsPlaying) {
-        best = room;
-      } else if (roomIsPlaying === bestIsPlaying && room.updatedAt > best.updatedAt) {
-        best = room;
-      }
-    }
-    return best;
+  // ユーザーは複数ルームに参加し得るため、優先順位付けは呼び出し側(復帰可否を
+  // 判定できる RoomsService)に委ね、ここでは候補を全て返す。
+  findRoomsByParticipant(userId: string): Room[] {
+    return this.getAllRooms().filter((room) => room.participants[userId]);
   }
 
   addRoom(room: Room): void {

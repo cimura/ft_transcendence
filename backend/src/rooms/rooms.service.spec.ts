@@ -4,7 +4,9 @@ import { PrismaService } from '../prisma.service';
 import { bombermanGame } from '../games/games.constants';
 import { RoomsService } from './rooms.service';
 import { RoomsStateService } from './rooms-state.service';
+import { DISCONNECT_TIMEOUT_MS } from '@ft_transcendence/shared/game-constants';
 import type { Room, RoomParticipant } from '../common/types/room.type';
+import type { GameSession } from '../common/types/game.type';
 import {
   ROOM_CREATED_EVENT,
   ROOM_UPDATED_EVENT,
@@ -38,6 +40,44 @@ const buildParticipant = (
   isReady: true,
   joinedAt: new Date(),
   ...overrides,
+});
+
+// 猶予時間の境界を跨いだことを明確にするためのテスト用マージン
+const GRACE_PERIOD_BUFFER_MS = 1_000;
+
+// 対戦中に playerId が切断した状態のセッション。
+// disconnectedSince は「切断してからの経過ミリ秒」。
+const buildDisconnectedSession = (
+  roomId: string,
+  playerId: string,
+  disconnectedSince: number,
+): GameSession => ({
+  roomId,
+  phase: 'playing',
+  map: [],
+  players: {
+    [playerId]: {
+      id: playerId,
+      username: 'Host',
+      position: { x: 0, z: 0 },
+      direction: 'down',
+      alive: true,
+      color: '#fff',
+      visorColor: '#000',
+      isDisconnected: true,
+    },
+  },
+  bombs: {},
+  serverTick: 0,
+  playerInputs: {},
+  bombPassingPlayers: {},
+  startPositionSlots: [],
+  stats: {},
+  playerConnections: {
+    [playerId]: { lastActiveTime: Date.now() - disconnectedSince },
+  },
+  disconnectedPlayers: 1,
+  disconnectedAt: Date.now() - disconnectedSince,
 });
 
 describe('RoomsService', () => {
@@ -463,34 +503,11 @@ describe('RoomsService', () => {
     it('returns inGame:true for a playing room within the disconnect grace period', () => {
       setupRoom({
         status: 'playing',
-        gameSession: {
-          roomId: 'room-1',
-          phase: 'playing',
-          map: [],
-          players: {
-            [user.id]: {
-              id: user.id,
-              username: 'Host',
-              position: { x: 0, z: 0 },
-              direction: 'down',
-              alive: true,
-              color: '#fff',
-              visorColor: '#000',
-              isDisconnected: true,
-            },
-          },
-          bombs: {},
-          serverTick: 0,
-          playerInputs: {},
-          bombPassingPlayers: {},
-          startPositionSlots: [],
-          stats: {},
-          playerConnections: {
-            [user.id]: { lastActiveTime: Date.now() },
-          },
-          disconnectedPlayers: 1,
-          disconnectedAt: Date.now(),
-        },
+        gameSession: buildDisconnectedSession(
+          'room-1',
+          user.id,
+          DISCONNECT_TIMEOUT_MS - GRACE_PERIOD_BUFFER_MS,
+        ),
       });
 
       const result = service.findRejoinableRoom(user.id);
@@ -501,56 +518,56 @@ describe('RoomsService', () => {
     it('returns null once the disconnect grace period has elapsed', () => {
       setupRoom({
         status: 'playing',
-        gameSession: {
-          roomId: 'room-1',
-          phase: 'playing',
-          map: [],
-          players: {
-            [user.id]: {
-              id: user.id,
-              username: 'Host',
-              position: { x: 0, z: 0 },
-              direction: 'down',
-              alive: true,
-              color: '#fff',
-              visorColor: '#000',
-              isDisconnected: true,
-            },
-          },
-          bombs: {},
-          serverTick: 0,
-          playerInputs: {},
-          bombPassingPlayers: {},
-          startPositionSlots: [],
-          stats: {},
-          playerConnections: {
-            [user.id]: { lastActiveTime: Date.now() - 31_000 },
-          },
-          disconnectedPlayers: 1,
-          disconnectedAt: Date.now() - 31_000,
-        },
+        gameSession: buildDisconnectedSession(
+          'room-1',
+          user.id,
+          DISCONNECT_TIMEOUT_MS + GRACE_PERIOD_BUFFER_MS,
+        ),
       });
 
       expect(service.findRejoinableRoom(user.id)).toBeNull();
     });
 
+    it('prefers the playing room when both a playing and a waiting room are rejoinable', () => {
+      setupRoom({ id: 'room-waiting', status: 'waiting' });
+      setupRoom({
+        id: 'room-playing',
+        status: 'playing',
+        gameSession: buildDisconnectedSession(
+          'room-playing',
+          user.id,
+          DISCONNECT_TIMEOUT_MS - GRACE_PERIOD_BUFFER_MS,
+        ),
+      });
+
+      const result = service.findRejoinableRoom(user.id);
+      expect(result?.room.id).toBe('room-playing');
+      expect(result?.inGame).toBe(true);
+    });
+
+    it('falls back to a rejoinable waiting room when the playing room is past its grace period', () => {
+      setupRoom({ id: 'room-waiting', status: 'waiting' });
+      setupRoom({
+        id: 'room-playing',
+        status: 'playing',
+        gameSession: buildDisconnectedSession(
+          'room-playing',
+          user.id,
+          DISCONNECT_TIMEOUT_MS + GRACE_PERIOD_BUFFER_MS,
+        ),
+      });
+
+      const result = service.findRejoinableRoom(user.id);
+      expect(result?.room.id).toBe('room-waiting');
+      expect(result?.inGame).toBe(false);
+    });
+
     it('returns null once the game session has ended', () => {
       setupRoom({
-        status: 'finished',
+        status: 'playing',
         gameSession: {
-          roomId: 'room-1',
+          ...buildDisconnectedSession('room-1', user.id, 0),
           phase: 'ended',
-          map: [],
-          players: {},
-          bombs: {},
-          serverTick: 0,
-          playerInputs: {},
-          bombPassingPlayers: {},
-          startPositionSlots: [],
-          stats: {},
-          playerConnections: {},
-          disconnectedPlayers: 0,
-          disconnectedAt: 0,
         },
       });
 
