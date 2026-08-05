@@ -119,13 +119,13 @@ export function LobbyPage() {
 
       <header className="bg-black/50 backdrop-blur-md border-b border-cyan-500/30 relative z-10 shadow-[0_4px_30px_rgba(0,255,255,0.1)]">
         <div className="mx-auto max-w-6xl px-4 py-4 sm:px-6">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-6">
-              <div className="w-12 h-12 rounded-full border-2 border-cyan-400 flex items-center justify-center shadow-[0_0_15px_rgba(0,255,255,0.4)]">
+          <div className="flex flex-wrap items-center justify-between gap-y-3">
+            <div className="flex items-center gap-3 sm:gap-6">
+              <div className="w-10 h-10 sm:w-12 sm:h-12 shrink-0 rounded-full border-2 border-cyan-400 flex items-center justify-center shadow-[0_0_15px_rgba(0,255,255,0.4)]">
                 <span className="animate-ping w-4 h-4 bg-cyan-400 rounded-full"></span>
               </div>
               <div>
-                <h1 className="text-2xl font-bold tracking-widest text-transparent bg-clip-text bg-gradient-to-r from-cyan-300 to-blue-500 drop-shadow-[0_0_8px_rgba(0,255,255,0.3)]">
+                <h1 className="text-xl sm:text-2xl font-bold tracking-widest text-transparent bg-clip-text bg-gradient-to-r from-cyan-300 to-blue-500 drop-shadow-[0_0_8px_rgba(0,255,255,0.3)]">
                   LOBBY
                 </h1>
                 <p className="mt-1 text-xs font-mono text-cyan-500 tracking-[0.2em]">
@@ -134,16 +134,16 @@ export function LobbyPage() {
                 </p>
               </div>
             </div>
-            <div className="flex items-center gap-3">
+            <div className="flex items-center gap-2 sm:gap-3">
               <button
                 onClick={() => navigate('/home')}
-                className="rounded-full border border-cyan-700/60 bg-black/30 px-5 py-2 text-xs font-bold tracking-widest text-cyan-300 hover:border-cyan-400 hover:text-white transition-colors"
+                className="rounded-full border border-cyan-700/60 bg-black/30 px-3 sm:px-5 py-2 text-xs font-bold tracking-widest text-cyan-300 hover:border-cyan-400 hover:text-white transition-colors whitespace-nowrap"
               >
                 ← HOME
               </button>
               <button
                 onClick={() => setIsModalOpen(true)}
-                className="rounded-full border border-cyan-400/60 bg-cyan-600/40 px-6 py-2 text-xs font-bold tracking-widest text-white shadow-[0_0_15px_rgba(0,255,255,0.3)] hover:bg-cyan-500/60 hover:shadow-[0_0_25px_rgba(0,255,255,0.5)] transition-all"
+                className="rounded-full border border-cyan-400/60 bg-cyan-600/40 px-3 sm:px-6 py-2 text-xs font-bold tracking-widest text-white shadow-[0_0_15px_rgba(0,255,255,0.3)] hover:bg-cyan-500/60 hover:shadow-[0_0_25px_rgba(0,255,255,0.5)] transition-all whitespace-nowrap"
               >
                 + CREATE ROOM
               </button>
