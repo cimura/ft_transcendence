@@ -60,6 +60,7 @@ describe('RoomsGateway', () => {
             register: jest.fn(),
             unregister: jest.fn().mockReturnValue(0),
             scheduleIfInactive: jest.fn(),
+            hasActiveSocketInRoom: jest.fn().mockReturnValue(false),
           },
         },
         {
@@ -84,6 +85,7 @@ describe('RoomsGateway', () => {
             findOne: jest.fn(),
             canSubscribe: jest.fn().mockReturnValue(true),
             evictIfWaiting: jest.fn(),
+            findRejoinableRoom: jest.fn().mockReturnValue(null),
           },
         },
       ],
@@ -482,6 +484,54 @@ describe('RoomsGateway', () => {
       expect(client.emit).toHaveBeenCalledWith('lobby:rooms', [
         mockRoomSnapshot,
       ]);
+    });
+
+    it('復帰可能なルームがあり、他タブが生存していなければ room:rejoin を送る', async () => {
+      const client = createMockSocket();
+      client.data.user = { id: 'user-1' };
+      roomsService.findRejoinableRoom.mockReturnValue({
+        room: mockRoomSnapshot,
+        inGame: false,
+      });
+      socketPresenceService.hasActiveSocketInRoom.mockReturnValue(false);
+
+      await gateway.handleLobbyJoin(client);
+
+      expect(roomsService.findRejoinableRoom).toHaveBeenCalledWith('user-1');
+      expect(client.emit).toHaveBeenCalledWith('room:rejoin', {
+        room: mockRoomSnapshot,
+        inGame: false,
+      });
+    });
+
+    it('別タブでそのルームのソケットが生存していれば room:rejoin を送らない', async () => {
+      const client = createMockSocket();
+      client.data.user = { id: 'user-1' };
+      roomsService.findRejoinableRoom.mockReturnValue({
+        room: mockRoomSnapshot,
+        inGame: false,
+      });
+      socketPresenceService.hasActiveSocketInRoom.mockReturnValue(true);
+
+      await gateway.handleLobbyJoin(client);
+
+      expect(client.emit).not.toHaveBeenCalledWith(
+        'room:rejoin',
+        expect.anything(),
+      );
+    });
+
+    it('復帰可能なルームが無ければ room:rejoin を送らない', async () => {
+      const client = createMockSocket();
+      client.data.user = { id: 'user-1' };
+      roomsService.findRejoinableRoom.mockReturnValue(null);
+
+      await gateway.handleLobbyJoin(client);
+
+      expect(client.emit).not.toHaveBeenCalledWith(
+        'room:rejoin',
+        expect.anything(),
+      );
     });
   });
 

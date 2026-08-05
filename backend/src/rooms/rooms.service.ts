@@ -14,7 +14,11 @@ import { BOMBERMAN_GAME_ID } from '../games/games.constants';
 import { CreateRoomDto } from './dto/create-room.dto';
 import type { QueryRoomStatus } from './dto/query-rooms.dto';
 import type { Room, RoomParticipant } from '../common/types/room.type';
-import type { RoomSnapshot } from '@ft_transcendence/shared/rooms-events.types';
+import { canEnterRoom } from '../common/logic/room-entry.logic';
+import type {
+  RoomSnapshot,
+  RoomRejoinPayload,
+} from '@ft_transcendence/shared/rooms-events.types';
 import {
   ROOM_CREATED_EVENT,
   ROOM_UPDATED_EVENT,
@@ -260,6 +264,20 @@ export class RoomsService {
       return;
     }
     this.leave(roomId, userId);
+  }
+
+  // 切断からの猶予時間内にロビーへ戻ってきたユーザーが復帰できるルームを探す。
+  // 参加中のルームが無い/既に猶予切れ/終了済みなら null(自動復帰は行わない)。
+  findRejoinableRoom(userId: string): RoomRejoinPayload | null {
+    const room = this.roomsState.findRoomByParticipant(userId);
+    if (!room) return null;
+    if (room.status === 'finished') return null;
+    if (!canEnterRoom(room, userId)) return null;
+
+    return {
+      room: this.toRoomSnapshot(room),
+      inGame: room.status === 'playing',
+    };
   }
 
   // --- Private Helpers ---

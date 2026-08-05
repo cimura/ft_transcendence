@@ -21,6 +21,27 @@ export class RoomsStateService {
     return this.rooms.get(roomId);
   }
 
+  // 参加中のルームをユーザーIDから逆引きする(ロビー再入室時の自動復帰用)。
+  // 複数ヒットする場合は playing を優先し、次に最終更新が新しいものを返す。
+  findRoomByParticipant(userId: string): Room | undefined {
+    let best: Room | undefined;
+    for (const room of this.rooms.values()) {
+      if (!room.participants[userId]) continue;
+      if (!best) {
+        best = room;
+        continue;
+      }
+      const bestIsPlaying = best.status === 'playing';
+      const roomIsPlaying = room.status === 'playing';
+      if (roomIsPlaying && !bestIsPlaying) {
+        best = room;
+      } else if (roomIsPlaying === bestIsPlaying && room.updatedAt > best.updatedAt) {
+        best = room;
+      }
+    }
+    return best;
+  }
+
   addRoom(room: Room): void {
     this.rooms.set(room.id, room);
   }

@@ -434,4 +434,127 @@ describe('RoomsService', () => {
       expect(eventEmitter.emit).not.toHaveBeenCalled();
     });
   });
+
+  describe('findRejoinableRoom', () => {
+    it('returns null when the user has no active room', () => {
+      setupRoom();
+      expect(service.findRejoinableRoom(guest.id)).toBeNull();
+    });
+
+    it('returns inGame:false for a waiting room the user still belongs to', () => {
+      setupRoom({
+        participants: {
+          [user.id]: buildParticipant(),
+          [guest.id]: buildParticipant({ userId: guest.id, isHost: false }),
+        },
+      });
+
+      const result = service.findRejoinableRoom(guest.id);
+      expect(result).not.toBeNull();
+      expect(result?.inGame).toBe(false);
+      expect(result?.room.id).toBe('room-1');
+    });
+
+    it('returns null once the room has finished', () => {
+      setupRoom({ status: 'finished' });
+      expect(service.findRejoinableRoom(user.id)).toBeNull();
+    });
+
+    it('returns inGame:true for a playing room within the disconnect grace period', () => {
+      setupRoom({
+        status: 'playing',
+        gameSession: {
+          roomId: 'room-1',
+          phase: 'playing',
+          map: [],
+          players: {
+            [user.id]: {
+              id: user.id,
+              username: 'Host',
+              position: { x: 0, z: 0 },
+              direction: 'down',
+              alive: true,
+              color: '#fff',
+              visorColor: '#000',
+              isDisconnected: true,
+            },
+          },
+          bombs: {},
+          serverTick: 0,
+          playerInputs: {},
+          bombPassingPlayers: {},
+          startPositionSlots: [],
+          stats: {},
+          playerConnections: {
+            [user.id]: { lastActiveTime: Date.now() },
+          },
+          disconnectedPlayers: 1,
+          disconnectedAt: Date.now(),
+        },
+      });
+
+      const result = service.findRejoinableRoom(user.id);
+      expect(result).not.toBeNull();
+      expect(result?.inGame).toBe(true);
+    });
+
+    it('returns null once the disconnect grace period has elapsed', () => {
+      setupRoom({
+        status: 'playing',
+        gameSession: {
+          roomId: 'room-1',
+          phase: 'playing',
+          map: [],
+          players: {
+            [user.id]: {
+              id: user.id,
+              username: 'Host',
+              position: { x: 0, z: 0 },
+              direction: 'down',
+              alive: true,
+              color: '#fff',
+              visorColor: '#000',
+              isDisconnected: true,
+            },
+          },
+          bombs: {},
+          serverTick: 0,
+          playerInputs: {},
+          bombPassingPlayers: {},
+          startPositionSlots: [],
+          stats: {},
+          playerConnections: {
+            [user.id]: { lastActiveTime: Date.now() - 31_000 },
+          },
+          disconnectedPlayers: 1,
+          disconnectedAt: Date.now() - 31_000,
+        },
+      });
+
+      expect(service.findRejoinableRoom(user.id)).toBeNull();
+    });
+
+    it('returns null once the game session has ended', () => {
+      setupRoom({
+        status: 'finished',
+        gameSession: {
+          roomId: 'room-1',
+          phase: 'ended',
+          map: [],
+          players: {},
+          bombs: {},
+          serverTick: 0,
+          playerInputs: {},
+          bombPassingPlayers: {},
+          startPositionSlots: [],
+          stats: {},
+          playerConnections: {},
+          disconnectedPlayers: 0,
+          disconnectedAt: 0,
+        },
+      });
+
+      expect(service.findRejoinableRoom(user.id)).toBeNull();
+    });
+  });
 });
