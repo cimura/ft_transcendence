@@ -228,11 +228,11 @@ below and demonstrated in the running application.
 Docker is the only requirement; Node.js, PostgreSQL, and nginx all run inside
 containers and do not need to be installed on the host.
 
-| Tool           | Minimum version | Notes                                                                                                                                                 |
-| -------------- | --------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| Docker Engine  | 20.10           | Needed for the `postgres` service's `healthcheck` and the `backend` service's `depends_on: condition: service_healthy` in `docker/docker-compose.yml`. |
-| Docker Compose | v2              | Must be the Compose V2 plugin invoked as `docker compose`, not the legacy `docker-compose` binary; the `depends_on.condition` syntax requires Compose V2. |
-| GNU Make       | 3.81            | Optional. Every `make` target below is a thin wrapper around a `docker compose` command.                                                                |
+| Tool           | Minimum version | Notes                                                                                                                                                    |
+| -------------- | --------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Docker Engine  | 20.10           | Runs the containers and images defined in `docker/docker-compose.yml`.                                                                                   |
+| Docker Compose | v2              | Must be the Compose V2 plugin invoked as `docker compose`, not the legacy `docker-compose` binary. Required for the `depends_on: condition: service_healthy` syntax the `backend` service uses to wait on the `postgres` service's `healthcheck`. |
+| GNU Make       | 3.81            | Optional. Every `make` target below is a thin wrapper around a `docker compose` command.                                                                    |
 
 We developed and verified the project on Docker Engine 29.5.3 with Docker
 Compose 5.1.4. Check your installed versions with:
