@@ -30,7 +30,8 @@ export function useLobbySocket() {
   useEffect(() => {
     if (!accessToken || authStatus !== 'authenticated') return
 
-    const { setRooms, upsertRoom, removeRoom, setCurrentRoom } = useRoomStore.getState()
+    const { setRooms, upsertRoom, removeRoom, setCurrentRoom } =
+      useRoomStore.getState()
     // 1回のマウントにつき復帰は一度だけ発火させる(再接続時に同じイベントが
     // 再度届いても、既に遷移先を確定させた後なら無視する)。
     let hasRejoined = false
