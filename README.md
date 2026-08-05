@@ -68,7 +68,9 @@ in branches, reviewed by teammates, and integrated through GitHub pull requests.
 ## Database Schema
 
 PostgreSQL is managed through Prisma migrations. The schema is defined in
-`backend/prisma/schema.prisma` and applied automatically on backend startup.
+`backend/prisma/schema.prisma`. On container start, the backend image runs
+`npm run prisma:deploy` to apply pending migrations before `npm run start:dev`
+starts the server (see `docker/backend/Dockerfile`).
 
 ```mermaid
 erDiagram
@@ -76,7 +78,7 @@ erDiagram
     User ||--o{ Friendship : "receives (receiverId)"
     User ||--o{ MatchParticipant : "plays as"
     User ||--o{ UserAchievement : "unlocks"
-    Match ||--|{ MatchParticipant : "is recorded by"
+    Match ||--o{ MatchParticipant : "is recorded by"
 
     User {
         String id PK "uuid"
@@ -135,8 +137,8 @@ erDiagram
 | Table / model      | Key fields and data types                                                                                                                                                                                  | Relationships and constraints                                                                                                                                                      |
 | ------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `User`             | `id` `String` (UUID, PK), `email` `String` (unique), `username` `String` (unique), `passwordHash` `String`, `avatarUrl` `String?`, `createdAt`/`updatedAt` `DateTime`                                      | Sends and receives `Friendship` records, participates in matches through `MatchParticipant`, and owns `UserAchievement` records.                                                   |
-| `Friendship`       | `id` `String` (UUID, PK), `requesterId`/`receiverId` `String` (FK to `User`), `pairKey` `String` (unique), `status` `FriendRequestStatus` enum (`PENDING`, `ACCEPTED`), `createdAt`/`updatedAt` `DateTime` | Two relations to `User` (requester and receiver). `pairKey` and the `[requesterId, receiverId]` pair are both unique, which prevents duplicate or mirrored friend requests.        |
-| `Match`            | `id` `String` (UUID, PK), `gameType` `String`, `finishedAt` `DateTime`, `createdAt` `DateTime`                                                                                                             | Has one or more `MatchParticipant` records.                                                                                                                                        |
+| `Friendship`       | `id` `String` (UUID, PK), `requesterId`/`receiverId` `String` (FK to `User`), `pairKey` `String` (unique), `status` `FriendRequestStatus` enum (`PENDING`, `ACCEPTED`), `createdAt`/`updatedAt` `DateTime` | Two relations to `User` (requester and receiver). `FriendsService` normalizes `pairKey` by sorting the two user IDs before writing, so the `pairKey` unique constraint rejects both `A→B` and `B→A`; the raw `[requesterId, receiverId]` unique constraint alone would not catch a mirrored request. |
+| `Match`            | `id` `String` (UUID, PK), `gameType` `String`, `finishedAt` `DateTime`, `createdAt` `DateTime`                                                                                                             | Has zero or more `MatchParticipant` records; the schema does not enforce a minimum, but `ScoresService` only creates a `Match` together with its participants.                     |
 | `MatchParticipant` | `id` `String` (UUID, PK), `matchId`/`userId` `String` (FK), `result` `MatchResult` enum (`WIN`, `LOSS`, `DRAW`), `kills` `Int?`, `score` `Int?`, `rank` `Int?`                                             | Join model between `Match` and `User`. `[matchId, userId]` is unique, so a user appears at most once per match. Indexed on `userId` and `matchId` for history and ranking queries. |
 | `UserAchievement`  | composite PK `[userId, achievementId]`, `userId` `String` (FK, `onDelete: Cascade`), `achievementId` `String`, `unlockedAt` `DateTime`                                                                     | Belongs to a `User`. Achievement definitions live in application code (`backend/src/scores/achievements/`), so `achievementId` is intentionally not a foreign key to a table.      |
 | `UploadedImage`    | `id` `String` (UUID, PK), `originalName`/`filename`/`mimeType`/`url` `String`, `size` `Int`, `createdAt` `DateTime`                                                                                        | Stores upload metadata only. A user's `avatarUrl` refers to the stored URL; this is deliberately a URL reference rather than a database foreign key.                               |
@@ -226,14 +228,14 @@ below and demonstrated in the running application.
 Docker is the only requirement; Node.js, PostgreSQL, and nginx all run inside
 containers and do not need to be installed on the host.
 
-| Tool           | Minimum version | Notes                                                                                              |
-| -------------- | --------------- | -------------------------------------------------------------------------------------------------- |
-| Docker Engine  | 20.10           | Needed for BuildKit multi-stage builds and container healthchecks.                                 |
-| Docker Compose | v2              | Must be the Compose V2 plugin invoked as `docker compose`, not the legacy `docker-compose` binary. |
-| GNU Make       | 3.81            | Optional. Every `make` target below is a thin wrapper around a `docker compose` command.           |
+| Tool           | Minimum version | Notes                                                                                                                                                 |
+| -------------- | --------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Docker Engine  | 20.10           | Needed for the `postgres` service's `healthcheck` and the `backend` service's `depends_on: condition: service_healthy` in `docker/docker-compose.yml`. |
+| Docker Compose | v2              | Must be the Compose V2 plugin invoked as `docker compose`, not the legacy `docker-compose` binary; the `depends_on.condition` syntax requires Compose V2. |
+| GNU Make       | 3.81            | Optional. Every `make` target below is a thin wrapper around a `docker compose` command.                                                                |
 
 We developed and verified the project on Docker Engine 29.5.3 with Docker
-Compose v5.1.4. Check your installed versions with:
+Compose 5.1.4. Check your installed versions with:
 
 ```bash
 docker --version
