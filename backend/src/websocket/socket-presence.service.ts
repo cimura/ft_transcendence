@@ -65,6 +65,12 @@ export class SocketPresenceService {
     return sockets.size;
   }
 
+  // 指定した namespace:roomId で、そのユーザーの生存中ソケットがあるか
+  // (ロビー再訪時の自動復帰ポップアップを、既に別タブで開いている場合は抑制するため)
+  hasActiveSocketInRoom(input: PresenceKeyInput): boolean {
+    return (this.activeSockets.get(this.key(input))?.size ?? 0) > 0;
+  }
+
   getStatus(userId: string): PresenceStatus {
     if (this.hasActiveSocket('game', userId)) return 'in_game';
     if (this.hasActiveSocket('realtime', userId)) return 'online';

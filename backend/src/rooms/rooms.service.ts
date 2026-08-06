@@ -14,7 +14,11 @@ import { BOMBERMAN_GAME_ID } from '../games/games.constants';
 import { CreateRoomDto } from './dto/create-room.dto';
 import type { QueryRoomStatus } from './dto/query-rooms.dto';
 import type { Room, RoomParticipant } from '../common/types/room.type';
-import type { RoomSnapshot } from '@ft_transcendence/shared/rooms-events.types';
+import { canEnterRoom } from '../common/logic/room-entry.logic';
+import type {
+  RoomSnapshot,
+  RoomRejoinPayload,
+} from '@ft_transcendence/shared/rooms-events.types';
 import {
   ROOM_CREATED_EVENT,
   ROOM_UPDATED_EVENT,
@@ -260,6 +264,34 @@ export class RoomsService {
       return;
     }
     this.leave(roomId, userId);
+  }
+
+  // 切断からの猶予時間内にロビーへ戻ってきたユーザーが復帰できるルームを探す。
+  // 復帰できる候補が無い(参加中のルームが無い/既に猶予切れ/終了済み)なら null。
+  findRejoinableRoom(userId: string): RoomRejoinPayload | null {
+    // 猶予切れの playing ルームに阻まれて参加可能な waiting ルームを取りこぼさないよう、
+    // 優先順位を付ける前に復帰可能なものだけへ絞り込む。
+    const candidates = this.roomsState
+      .findRoomsByParticipant(userId)
+      .filter(
+        (room) => room.status !== 'finished' && canEnterRoom(room, userId),
+      );
+    if (candidates.length === 0) return null;
+
+    // 対戦中のルームを最優先し、同条件なら最終更新が新しいものを選ぶ
+    const room = candidates.reduce((best, current) => {
+      const bestIsPlaying = best.status === 'playing';
+      const currentIsPlaying = current.status === 'playing';
+      if (currentIsPlaying !== bestIsPlaying) {
+        return currentIsPlaying ? current : best;
+      }
+      return current.updatedAt > best.updatedAt ? current : best;
+    });
+
+    return {
+      room: this.toRoomSnapshot(room),
+      inGame: room.status === 'playing',
+    };
   }
 
   // --- Private Helpers ---
