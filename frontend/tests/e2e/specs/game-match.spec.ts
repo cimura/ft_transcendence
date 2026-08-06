@@ -12,13 +12,6 @@ import {
 // 設置後その場から動かなければ必ず自爆するので、決定的に勝敗を作れる。
 const BOMB_EXPLOSION_TIME_MS = 3_000
 
-// カウントダウンの長さ(shared/game-constants.ts の GAME_COUNTDOWN_SEC)。
-// 「生存 2」は game:init 受信直後(まだ countdown フェーズ)から表示されるため、
-// これだけでは playing フェーズに入った確証にならない。useGameInput.ts の
-// handleCombinedInput は gamePhase !== 'playing' の間キー入力を黙って捨てるので、
-// countdown 中に押すと bomb:place ごと消え、"YOU WIN" が永遠に出ずタイムアウトする。
-const GAME_COUNTDOWN_MS = 5_000
-
 test.describe('2人対戦', () => {
   test('対戦を開始し、実際に操作でき、勝敗が確定する', async ({ browser }) => {
     // 2人分のサインアップ・入室・カウントダウン・終局確認をフルスイート実行時の負荷下でも
@@ -51,8 +44,12 @@ test.describe('2人対戦', () => {
     await expect(hostPage.getByText('生存 2')).toBeVisible({ timeout: 15_000 })
 
     // カウントダウンが終わり実際に playing フェーズへ入るまで待つ。ここで待たずに
-    // キー入力すると countdown 中の入力として黙って捨てられる(上のコメント参照)。
-    await hostPage.waitForTimeout(GAME_COUNTDOWN_MS + 1_000)
+    // キー入力すると countdown 中の入力として黙って捨てられる(useGameInput.ts の
+    // handleCombinedInput は gamePhase !== 'playing' の間キー入力を捨てる)。
+    // GameCountdownOverlay は "GO!" を出してから消えるので、その消滅を
+    // playing フェーズに入った合図として使う(固定 timeout に頼らない)。
+    await expect(hostPage.getByText('GO!')).toBeVisible({ timeout: 15_000 })
+    await expect(hostPage.getByText('GO!')).toBeHidden({ timeout: 3_000 })
 
     // ホストは設置後その場から動かさず、必ず自爆させて試合を決定的に終局させる。
     // (guest 側の retire に頼ると、host が自分の爆弾で先に死んだ場合に

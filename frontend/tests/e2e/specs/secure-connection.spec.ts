@@ -15,11 +15,13 @@ test.describe('通信の安全性', () => {
     })
 
     await loginAsNewUser(page, request, 'httpsuser')
+    const wsPromise = page.waitForEvent('websocket', { timeout: 10_000 })
     await page.goto('/home')
     expect(page.url()).toMatch(/^https:\/\//)
 
     // Socket.IO の接続が確立されるのを待ち、そのハンドシェイクも含めて確認する
-    await page.waitForTimeout(1500)
+    const ws = await wsPromise
+    expect(ws.url()).toMatch(/^wss:\/\//)
 
     expect(
       insecureRequests,

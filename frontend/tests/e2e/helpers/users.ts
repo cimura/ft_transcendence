@@ -11,9 +11,12 @@ export interface TestUser {
  * 再実行の衝突を「名前を毎回一意にする」ことだけで避ける方針にしている。
  * ランキング等のアサーションも、この一意性を前提に「自分の行を探す」形にすること。
  */
+const MAX_USERNAME_LENGTH = 50
+
 export function makeTestUser(label = 'user'): TestUser {
   const id = randomUUID().replace(/-/g, '').slice(0, 10)
-  const username = `${label}_${id}`.slice(0, 50)
+  const suffix = `_${id}`
+  const username = `${label.slice(0, MAX_USERNAME_LENGTH - suffix.length)}${suffix}`
   return {
     username,
     email: `${username}@example.com`,

@@ -143,7 +143,7 @@ export function LobbyPage() {
                 </p>
               </div>
             </div>
-            <div className="flex items-center gap-2 sm:gap-3">
+            <div className="ml-auto flex items-center gap-2 sm:gap-3">
               <button
                 onClick={() => navigate('/home')}
                 className="rounded-full border border-cyan-700/60 bg-black/30 px-3 sm:px-5 py-2 text-xs font-bold tracking-widest text-cyan-300 hover:border-cyan-400 hover:text-white transition-colors whitespace-nowrap"

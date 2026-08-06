@@ -6,7 +6,7 @@
 
 ## ディレクトリ構成
 
-```
+```text
 frontend/tests/e2e/
 ├── global-setup.ts   起動中のスタックが dev/prod どちらかを検査する
 ├── helpers/          サインアップ・ルーム操作・コンソール監視などの共通処理
@@ -19,7 +19,8 @@ frontend/tests/e2e/
 |---|---|
 | `auth.spec.ts` | サインアップ/サインイン/ログアウト、保護ルートのリダイレクト、パスワード変更 |
 | `form-validation.spec.ts` | 各フォームのクライアント側バリデーションとエラー表示 |
-| `xss.spec.ts` | チャット・ルーム名に入れた HTML/スクリプトがエスケープされる |
+| `xss.spec.ts` | 各フォームに入れた HTML/スクリプトが実行されずエスケープされる |
+| `sql-injection.spec.ts` | 各フォームに入れた SQL がクエリではなく文字列として扱われる |
 | `legal-pages.spec.ts` | プライバシーポリシー/利用規約への導線と内容 |
 | `responsive.spec.ts` | desktop/tablet/mobile の各幅で横スクロールが発生しない |
 | `console-clean.spec.ts` | 主要な画面遷移でコンソールにエラー・警告が出ない |
@@ -33,6 +34,25 @@ frontend/tests/e2e/
 | `game-multiplayer.spec.ts` | 4人対戦の開始と全画面の同期 |
 | `game-reconnect.spec.ts` | 対戦中に切断しても再接続で試合に復帰できる |
 | `match-history.spec.ts` | 試合結果が統計・戦闘履歴・ランキングに反映される |
+
+### インジェクション系テストの対象フォーム
+
+`xss.spec.ts` と `sql-injection.spec.ts` は、ユーザー入力を受け取る次のフォームを
+それぞれ同じ観点で攻撃する。ペイロードは `helpers/payloads.ts` に集約している。
+
+- SignUp / SignIn 画面
+- Room 内 Chat
+- プロフィール編集モーダル(ユーザー名)
+- 設定 > アカウント情報変更(メールアドレス・ユーザー名)
+- Room 作成モーダル(ルーム名)
+
+XSS 側は「描画結果」ではなく副作用でスクリプトの実行を検知する。`helpers/payloads.ts` の
+`attachXssProbe()` が、インラインハンドラが立てるフラグ・`alert()` の dialog・
+ペイロードが要素として組み立てられていないかの 3 点を見る。
+
+SQL インジェクション側は、認証を突破できないこと・入力が文字列として保存され
+そのまま表示されることに加え、`DROP TABLE` 系を流し込んだ後もサインアップ／
+サインイン／ロビーが動作することまで確認する。
 
 ## 前提
 

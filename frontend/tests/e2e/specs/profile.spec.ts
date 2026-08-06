@@ -6,6 +6,10 @@ import { signUpViaUi } from '../helpers/auth'
 const TINY_PNG_BASE64 =
   'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII='
 
+const MAX_USERNAME_LENGTH = 50
+const MAX_AVATAR_SIZE_BYTES = 5 * 1024 * 1024
+const OVERSIZED_AVATAR_SIZE_BYTES = MAX_AVATAR_SIZE_BYTES + 1024 * 1024
+
 test.describe('プロフィール編集', () => {
   test('ユーザー名変更が反映される', async ({ page }) => {
     const user = makeTestUser('editname')
@@ -16,7 +20,7 @@ test.describe('プロフィール編集', () => {
     await expect(page).toHaveURL(/\/profile\/.+/)
 
     await page.getByRole('button', { name: 'データ更新' }).click()
-    const newUsername = `${user.username}_v2`.slice(0, 50)
+    const newUsername = `${user.username}_v2`.slice(0, MAX_USERNAME_LENGTH)
     const usernameInput = page.locator('input[type="text"]').first()
     await usernameInput.fill(newUsername)
     await page.getByRole('button', { name: 'SAVE DATA' }).click()
@@ -96,7 +100,7 @@ test.describe('プロフィール編集', () => {
     await fileInput.setInputFiles({
       name: 'too-big.png',
       mimeType: 'image/png',
-      buffer: Buffer.alloc(6 * 1024 * 1024, 1),
+      buffer: Buffer.alloc(OVERSIZED_AVATAR_SIZE_BYTES, 1),
     })
     await expect(
       page.getByText('ファイルサイズは5MB以下にしてください')

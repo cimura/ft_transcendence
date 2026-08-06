@@ -15,18 +15,52 @@ test.describe('コンソール出力', () => {
   }) => {
     const guard = attachConsoleGuard(page)
 
-    const publicRoutes = [
-      '/signin',
-      '/signup',
-      '/legal/privacy-policy',
-      '/legal/terms-of-service',
-      '/privacy-policy', // /legal/privacy-policy へのリダイレクト
-      '/terms-of-service', // /legal/terms-of-service へのリダイレクト
+    const publicRoutes: { path: string; ready: () => Promise<unknown> }[] = [
+      {
+        path: '/signin',
+        ready: () =>
+          expect(
+            page.getByRole('button', { name: 'Enter System' })
+          ).toBeVisible(),
+      },
+      {
+        path: '/signup',
+        ready: () =>
+          expect(
+            page.getByRole('button', { name: 'Initialize Account' })
+          ).toBeVisible(),
+      },
+      {
+        path: '/legal/privacy-policy',
+        ready: () =>
+          expect(
+            page.getByRole('heading', { name: 'プライバシーポリシー' })
+          ).toBeVisible(),
+      },
+      {
+        path: '/legal/terms-of-service',
+        ready: () =>
+          expect(page.getByRole('heading', { name: '利用規約' })).toBeVisible(),
+      },
+      {
+        // /legal/privacy-policy へのリダイレクト
+        path: '/privacy-policy',
+        ready: () =>
+          expect(
+            page.getByRole('heading', { name: 'プライバシーポリシー' })
+          ).toBeVisible(),
+      },
+      {
+        // /legal/terms-of-service へのリダイレクト
+        path: '/terms-of-service',
+        ready: () =>
+          expect(page.getByRole('heading', { name: '利用規約' })).toBeVisible(),
+      },
     ]
 
     for (const route of publicRoutes) {
-      await page.goto(route)
-      await page.waitForLoadState('networkidle')
+      await page.goto(route.path)
+      await route.ready()
     }
 
     guard.assertNoConsoleIssues('public routes')
@@ -36,34 +70,84 @@ test.describe('コンソール出力', () => {
     page,
     request,
   }) => {
-    await loginAsNewUser(page, request, 'consoleuser')
+    const user = await loginAsNewUser(page, request, 'consoleuser')
     const guard = attachConsoleGuard(page)
 
     await page.goto('/home')
-    await page.waitForLoadState('networkidle')
+    await expect(page.getByText('対戦開始')).toBeVisible()
 
-    const routesNeedingNoParam = [
-      '/home',
-      '/lobby',
-      '/friends',
-      '/friends/list',
-      '/friends/search',
-      '/rankings',
-      '/notifications',
-      '/settings',
-      '/settings/account',
+    const routesNeedingNoParam: {
+      path: string
+      ready: () => Promise<unknown>
+    }[] = [
+      {
+        path: '/home',
+        ready: () => expect(page.getByText('対戦開始')).toBeVisible(),
+      },
+      {
+        path: '/lobby',
+        ready: () =>
+          expect(
+            page.getByRole('button', { name: '+ CREATE ROOM' })
+          ).toBeVisible(),
+      },
+      {
+        path: '/friends',
+        ready: () =>
+          expect(page.getByRole('heading', { name: 'フレンド' })).toBeVisible(),
+      },
+      {
+        path: '/friends/list',
+        ready: () =>
+          expect(
+            page.getByRole('heading', { name: 'フレンド一覧' })
+          ).toBeVisible(),
+      },
+      {
+        path: '/friends/search',
+        ready: () =>
+          expect(page.getByPlaceholder('ユーザー名で検索...')).toBeVisible(),
+      },
+      {
+        path: '/rankings',
+        ready: () =>
+          expect(
+            page.getByRole('heading', { name: 'ランキング' })
+          ).toBeVisible(),
+      },
+      {
+        path: '/notifications',
+        ready: () =>
+          expect(page.getByRole('heading', { name: '通知' })).toBeVisible(),
+      },
+      {
+        path: '/settings',
+        ready: () =>
+          expect(
+            page.getByRole('button', { name: 'アカウント管理' })
+          ).toBeVisible(),
+      },
+      {
+        path: '/settings/account',
+        ready: () =>
+          expect(
+            page.getByRole('button', { name: 'アカウント情報変更' })
+          ).toBeVisible(),
+      },
     ]
 
     for (const route of routesNeedingNoParam) {
-      await page.goto(route)
-      await page.waitForLoadState('networkidle')
+      await page.goto(route.path)
+      await route.ready()
     }
 
     // 自分のプロフィールページ(ホームの「マイプロフィール」経由で userId を得る)
     await page.goto('/home')
     await page.getByText('マイプロフィール').click()
     await expect(page).toHaveURL(/\/profile\/.+/)
-    await page.waitForLoadState('networkidle')
+    await expect(
+      page.getByRole('heading', { name: user.user.username })
+    ).toBeVisible()
 
     guard.assertNoConsoleIssues('authenticated routes')
   })

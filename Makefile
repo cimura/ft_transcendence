@@ -68,7 +68,7 @@ dev-migrate:
 	docker compose -f $(COMPOSE_DEV_FILE) exec -w /app/backend backend npm run prisma:migrate:dev
 
 dev-deps:
-	docker run --rm -v "$(CURDIR)":/app -w /app node:24-alpine \
+	docker run --rm -v "$(CURDIR)":/app -w /app --user "$$(id -u):$$(id -g)" node:24-alpine \
 		npm ci --workspace=frontend --workspace=shared
 
 .PHONY: all up build down clean fclean re rebuild rebuild-clean logs \

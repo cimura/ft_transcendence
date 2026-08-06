@@ -69,8 +69,10 @@ in branches, reviewed by teammates, and integrated through GitHub pull requests.
 
 PostgreSQL is managed through Prisma migrations. The schema is defined in
 `backend/prisma/schema.prisma`. On container start, the backend image runs
-`npm run prisma:deploy` to apply pending migrations before `npm run start:dev`
-starts the server (see `docker/backend/Dockerfile`).
+`npm run prisma:deploy` to apply pending migrations before starting the
+server: `npm run start:dev` in development (`docker/backend/Dockerfile`), or
+the compiled output via `node dist/main.js` in production
+(`docker/backend/Dockerfile.prod`).
 
 ```mermaid
 erDiagram
@@ -232,7 +234,7 @@ containers and do not need to be installed on the host.
 | -------------- | --------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | Docker Engine  | 20.10           | Runs the containers and images defined in `docker/docker-compose.yml`.                                                                                   |
 | Docker Compose | v2              | Must be the Compose V2 plugin invoked as `docker compose`, not the legacy `docker-compose` binary. Required for the `depends_on: condition: service_healthy` syntax the `backend` service uses to wait on the `postgres` service's `healthcheck`. |
-| GNU Make       | 3.81            | Optional. Every `make` target below is a thin wrapper around a `docker compose` command.                                                                    |
+| GNU Make       | 3.81            | Optional. Every `make` target below is a thin wrapper around a `docker compose` command; run that command directly (see the `Makefile`) if `make` isn't available. |
 
 We developed and verified the project on Docker Engine 29.5.3 with Docker
 Compose 5.1.4. Check your installed versions with:
