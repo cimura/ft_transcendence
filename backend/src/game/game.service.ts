@@ -5,11 +5,9 @@ import {
   Direction,
   ServerToClientEvents,
 } from '@ft_transcendence/shared/game-events.types';
-import {
-  GAME_COUNTDOWN_SEC,
-  DISCONNECT_TIMEOUT_MS,
-} from '@ft_transcendence/shared/game-constants';
+import { GAME_COUNTDOWN_SEC } from '@ft_transcendence/shared/game-constants';
 import { GameSession } from '../common/types/game.type';
+import { canEnterRoom } from '../common/logic/room-entry.logic';
 import { RoomsStateService } from '../rooms/rooms-state.service';
 import { advanceGameTick } from './logic/core/loop.logic';
 import {
@@ -237,35 +235,7 @@ export class GameService {
   private checkRoomEntryPermission(roomId: string, playerId: string): boolean {
     const roomState = this.roomsState.getRoom(roomId);
     if (!roomState) return false;
-
-    // ルームの参加者として登録されているか確認
-    if (!roomState.participants[playerId]) return false;
-
-    const session = roomState.gameSession;
-    if (!session) return true; // まだセッションが作られていない(waiting)なら参加可能
-
-    if (session.phase === 'ended') return false;
-
-    const player = session.players[playerId];
-    if (session.phase === 'waiting') return true;
-
-    // countdown/playing: セッション開始時にいなかった人は入れない
-    if (!player) return false;
-
-    // 接続中プレイヤーの追加ソケット (StrictMode の二重接続や別タブ) は許可する。
-    // ソケットの多重ログイン防止はしない — 誰がどのソケットを持つかは
-    // SocketPresenceService の責務であり、ここでは関知しない。
-    if (!player.isDisconnected) return true;
-
-    // 切断中は猶予時間内の再接続のみ許可する
-    const connection = session.playerConnections[playerId];
-    if (!connection) return false;
-
-    const isTimedOut =
-      Date.now() - connection.lastActiveTime >= DISCONNECT_TIMEOUT_MS;
-    if (isTimedOut) return false;
-
-    return true;
+    return canEnterRoom(roomState, playerId);
   }
 
   private getOrCreateSession(roomId: string): GameSession {

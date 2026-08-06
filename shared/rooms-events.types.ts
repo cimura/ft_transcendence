@@ -60,11 +60,19 @@ export interface RoomClientToServerEvents {
   ) => void;
 }
 
+// 切断からの猶予時間内にロビーへ戻ってきたユーザーに、元いたルームへの
+// 復帰先を知らせるための payload。inGame は遷移先の判断にのみ使う。
+export type RoomRejoinPayload = {
+  room: RoomSnapshot;
+  inGame: boolean;
+};
+
 export interface RoomServerToClientEvents {
   "room:created": (room: RoomSnapshot) => void;
   "room:updated": (room: RoomSnapshot) => void;
   "room:deleted": (data: RoomDeletedPayload) => void;
   "room:error": (data: { message: string }) => void;
+  "room:rejoin": (data: RoomRejoinPayload) => void;
   "lobby:rooms": (rooms: RoomSnapshot[]) => void;
   "chat:message": (data: ChatMessagePayload) => void;
   "chat:history": (data: ChatHistoryPayload) => void;
