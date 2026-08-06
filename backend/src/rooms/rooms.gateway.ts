@@ -152,6 +152,8 @@ export class RoomsGateway implements OnGatewayConnection, OnGatewayDisconnect {
     await client.join(LOBBY_ROOM);
     const rooms = this.roomsLobbyService.getLobbyRooms();
     client.emit('lobby:rooms', rooms);
+
+    this.emitRejoinIfInactive(client);
   }
 
   @SubscribeMessage('chat:join')
@@ -353,6 +355,31 @@ export class RoomsGateway implements OnGatewayConnection, OnGatewayDisconnect {
 
   private getUserId(client: RoomsSocket): string | undefined {
     return client.data.user?.id;
+  }
+
+  // 切断の猶予時間内にロビーへ戻ってきたユーザーに、元いたルームへの復帰を促す。
+  // 別タブでそのルームのソケットがまだ生きている場合は「切断からの復帰」ではないため何もしない。
+  private emitRejoinIfInactive(client: RoomsSocket) {
+    const userId = this.getUserId(client);
+    if (!userId) return;
+
+    const rejoin = this.roomsService.findRejoinableRoom(userId);
+    if (!rejoin) return;
+
+    const alive =
+      this.socketPresenceService.hasActiveSocketInRoom({
+        namespace: 'rooms',
+        roomId: rejoin.room.id,
+        userId,
+      }) ||
+      this.socketPresenceService.hasActiveSocketInRoom({
+        namespace: 'game',
+        roomId: rejoin.room.id,
+        userId,
+      });
+    if (alive) return;
+
+    client.emit('room:rejoin', rejoin);
   }
 
   private toChatMessagePayload(message: RoomMessage): ChatMessagePayload {

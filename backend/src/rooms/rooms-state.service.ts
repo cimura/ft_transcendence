@@ -21,6 +21,13 @@ export class RoomsStateService {
     return this.rooms.get(roomId);
   }
 
+  // 参加中のルームをユーザーIDから逆引きする(ロビー再入室時の自動復帰用)。
+  // ユーザーは複数ルームに参加し得るため、優先順位付けは呼び出し側(復帰可否を
+  // 判定できる RoomsService)に委ね、ここでは候補を全て返す。
+  findRoomsByParticipant(userId: string): Room[] {
+    return this.getAllRooms().filter((room) => room.participants[userId]);
+  }
+
   addRoom(room: Room): void {
     this.rooms.set(room.id, room);
   }
