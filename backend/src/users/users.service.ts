@@ -15,7 +15,10 @@ import { Prisma } from '../generated/prisma/client';
 import * as bcrypt from 'bcrypt';
 import { FriendRequestStatus } from '../generated/prisma/enums';
 import { UploadsService } from '../uploads/uploads.service';
-import { UPLOAD_URL_PREFIX } from '../uploads/uploads.constants';
+import {
+  ORPHANED_IMAGE_LOG_PREFIX,
+  UPLOAD_URL_PREFIX,
+} from '../uploads/uploads.constants';
 
 @Injectable()
 export class UsersService {
@@ -359,8 +362,10 @@ export class UsersService {
         await this.uploadsService.deleteImage(image);
       }
     } catch (error: unknown) {
-      this.logger.warn(
-        `Failed to delete avatar ${avatarUrl}: ${this.formatCleanupError(error)}`,
+      // findImageByUrl 自体が失敗したケース（DB エラーなど）。
+      // deleteImage 内部の失敗は例外を投げず自前でログを出すため、ここには来ない。
+      this.logger.error(
+        `${ORPHANED_IMAGE_LOG_PREFIX} Failed to delete avatar ${avatarUrl}: ${this.formatCleanupError(error)}`,
       );
     }
   }

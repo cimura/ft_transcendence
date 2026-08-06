@@ -2,6 +2,7 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { Prisma } from '../generated/prisma/client';
 import { PrismaService } from '../prisma.service';
 import { UploadsService } from '../uploads/uploads.service';
+import { ORPHANED_IMAGE_LOG_PREFIX } from '../uploads/uploads.constants';
 import { UsersService } from './users.service';
 
 describe('UsersService', () => {
@@ -290,12 +291,15 @@ describe('UsersService', () => {
       expect(uploadsService.deleteImage).not.toHaveBeenCalled();
     });
 
-    it('still reports success when avatar cleanup fails', async () => {
+    it('reports success but logs an orphaned avatar when cleanup fails', async () => {
       const avatarImage = {
         id: 'image-id',
         filename: 'avatar.png',
         url: '/uploads/images/avatar.png',
       };
+      const loggerErrorSpy = jest
+        .spyOn(service['logger'], 'error')
+        .mockImplementation(() => undefined);
 
       prisma.user.delete.mockResolvedValue({ avatarUrl: avatarImage.url });
       uploadsService.findImageByUrl.mockRejectedValue(new Error('DB error'));
@@ -305,6 +309,9 @@ describe('UsersService', () => {
       });
 
       expect(uploadsService.deleteImage).not.toHaveBeenCalled();
+      expect(loggerErrorSpy).toHaveBeenCalledWith(
+        `${ORPHANED_IMAGE_LOG_PREFIX} Failed to delete avatar ${avatarImage.url}: DB error`,
+      );
     });
 
     it('does not delete the avatar when the account no longer exists (P2025)', async () => {
