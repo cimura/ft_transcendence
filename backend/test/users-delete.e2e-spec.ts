@@ -193,7 +193,10 @@ describe('DELETE /users/me (E2E)', () => {
     const uploaderToken = await signup('uploader@example.com', 'uploader');
     const { filePath } = await uploadAvatar(uploaderToken);
 
-    const defaultAvatarToken = await signup('default@example.com', 'defaultuser');
+    const defaultAvatarToken = await signup(
+      'default@example.com',
+      'defaultuser',
+    );
     await request(app.getHttpServer())
       .patch('/users/me/avatar')
       .set('Authorization', `Bearer ${defaultAvatarToken}`)
