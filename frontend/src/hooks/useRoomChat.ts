@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { Socket } from 'socket.io-client'
 import type { ChatConnectionStatus, ChatMessage } from '../types/chat'
-import { createSocket } from '../utils/socket'
+import { createSocket, releaseSocket } from '../utils/socket'
 import type {
   RoomClientToServerEvents,
   RoomServerToClientEvents,
@@ -106,7 +106,7 @@ export function useRoomChat(roomId: string, accessToken: string | null) {
       socket.off('chat:message')
       socket.off('chat:history')
       socket.off('chat:error')
-      socket.disconnect()
+      releaseSocket(socket)
       socketRef.current = null
     }
   }, [accessToken, appendMessage, roomId])

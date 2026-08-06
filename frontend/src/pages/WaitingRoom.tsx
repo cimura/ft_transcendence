@@ -15,6 +15,7 @@ import {
   startRoom,
 } from '../api/rooms'
 import { useRoomSocket } from '../hooks/useRoomSocket'
+import { useBrowserBackGuard } from '../hooks/useBrowserBackGuard'
 import axios from 'axios'
 import { getApiErrorMessage, logApiError } from '../api/errors'
 import { useFriends } from '../hooks/friends/useFriends'
@@ -34,8 +35,6 @@ export function WaitingRoom() {
   // 明示的な退出中は、currentRoom が空になったことをトリガーに再joinしないようにするフラグ
   // (ホストが部屋を削除した等の外部要因による currentRoom クリアとは区別する必要がある)
   const isLeavingRef = useRef(false)
-  const hasBackGuardRef = useRef(false)
-  const hasCompletedLeaveRef = useRef(false)
 
   useEffect(() => {
     if (!roomId) {
@@ -134,53 +133,19 @@ export function WaitingRoom() {
   // Keep the room mounted for the first browser Back event. Without this guard,
   // React Router may unmount the page before its popstate handler can leave the
   // room, which also makes behavior depend on how the host/guest arrived here.
-  useEffect(() => {
-    if (!hasBackGuardRef.current && !isLeavingRef.current) {
-      window.history.pushState(
-        { ...window.history.state, roomExitGuard: roomId },
-        '',
-        window.location.href
-      )
-      hasBackGuardRef.current = true
-    }
-
-    const handleBrowserBack = async () => {
-      if (hasCompletedLeaveRef.current) {
-        hasBackGuardRef.current = false
-        navigate('/lobby', { replace: true })
-        setCurrentRoom(null)
-        return
-      }
-
-      // Back has just consumed the guard entry. Restore it immediately so a
-      // repeated Back cannot leave the page while the API request is pending.
-      window.history.pushState(
-        { ...window.history.state, roomExitGuard: roomId },
-        '',
-        window.location.href
-      )
-      hasBackGuardRef.current = true
-
-      const didLeave = await handleLeaveRoom()
-      if (didLeave) {
-        hasCompletedLeaveRef.current = true
-        window.history.back()
-      }
-    }
-
-    window.addEventListener('popstate', handleBrowserBack)
-    return () => window.removeEventListener('popstate', handleBrowserBack)
-  }, [handleLeaveRoom, navigate, roomId, setCurrentRoom])
+  const { pushGuard } = useBrowserBackGuard({
+    stateKey: 'roomExitGuard',
+    guardValue: roomId ?? '',
+    enabled: Boolean(roomId),
+    onBack: handleLeaveRoom,
+    onExit: () => {
+      navigate('/lobby', { replace: true })
+      setCurrentRoom(null)
+    },
+  })
 
   const handleEmergencyExit = () => {
-    if (!hasBackGuardRef.current) {
-      window.history.pushState(
-        { ...window.history.state, roomExitGuard: roomId },
-        '',
-        window.location.href
-      )
-      hasBackGuardRef.current = true
-    }
+    pushGuard()
     window.history.back()
   }
 
@@ -212,7 +177,7 @@ export function WaitingRoom() {
       const room = await startRoom(currentRoom.id)
       upsertRoom(room)
       setCurrentRoom(room)
-      navigate(`/game/${room.id}`)
+      navigate(`/game/${room.id}`, { replace: true })
     } catch (error) {
       logApiError('Failed to start game:', error)
     }

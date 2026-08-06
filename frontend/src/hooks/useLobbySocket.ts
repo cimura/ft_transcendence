@@ -2,7 +2,7 @@ import { useEffect, useRef } from 'react'
 import { Socket } from 'socket.io-client'
 import { useRoomStore } from '../stores/roomStore'
 import { useAuthStore } from '../stores/authStore'
-import { createSocket } from '../utils/socket'
+import { createSocket, releaseSocket } from '../utils/socket'
 import type {
   RoomClientToServerEvents,
   RoomServerToClientEvents,
@@ -58,7 +58,7 @@ export function useLobbySocket() {
     socket.connect()
 
     return () => {
-      socket.disconnect()
+      releaseSocket(socket)
       socketRef.current = null
     }
   }, [accessToken, authStatus])

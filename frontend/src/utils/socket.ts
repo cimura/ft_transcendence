@@ -10,6 +10,43 @@ const ORIGIN = (
   import.meta.env.VITE_BACKEND_URL || window.location.origin
 ).replace(/\/$/, '')
 
+// Socket<L, E> が構造的に満たす最小形。ジェネリクスを保ったまま
+// レジストリに詰めるために any を避けてこの形に絞る。
+type ManagedSocket = Pick<Socket<EventsMap, EventsMap>, 'connect' | 'disconnect'>
+
+const liveSockets = new Set<ManagedSocket>()
+let pageLifecycleBound = false
+
+/**
+ * bfcache (Back/Forward Cache) 対策。
+ *
+ * WebSocket を開いたままページが bfcache に入ると、ブラウザが安全のため
+ * 強制的に切断し、コンソールに "Page entered Back-Forward Cache" エラーが
+ * 出る。pagehide (bfcache 投入 / ドキュメント破棄の直前に発火) で先回りして
+ * 明示的に切断すればこのエラーは出ない。
+ *
+ * ここでは room:leave / game:leave のようなドメインイベントは送らない。
+ * pagehide はリロードでも発火するため、そこで明示的な退出扱いにすると
+ * リロード時に部屋/ゲームから追い出されてしまう。リロードは一時切断として
+ * バックエンドの猶予期間 (ROOMS_DISCONNECT_GRACE_MS 等) に委ねる設計を維持する。
+ *
+ * pageshow(persisted) は bfcache から復帰した合図。React は再マウントされない
+ * ため、生存中のソケットを手動で繋ぎ直す。
+ */
+function bindPageLifecycleListeners() {
+  if (pageLifecycleBound) return
+  pageLifecycleBound = true
+
+  window.addEventListener('pagehide', () => {
+    liveSockets.forEach((socket) => socket.disconnect())
+  })
+
+  window.addEventListener('pageshow', (event: PageTransitionEvent) => {
+    if (!event.persisted) return
+    liveSockets.forEach((socket) => socket.connect())
+  })
+}
+
 /**
  * namespace ごとに独立した接続(Manager)を作る。
  *
@@ -31,9 +68,25 @@ export function createSocket<
   accessToken: string,
   opts: Partial<ManagerOptions & SocketOptions> = {}
 ): Socket<ListenEvents, EmitEvents> {
-  return io(`${ORIGIN}${namespace}`, {
+  bindPageLifecycleListeners()
+
+  const socket = io(`${ORIGIN}${namespace}`, {
     forceNew: true,
     auth: { token: `Bearer ${accessToken}` },
     ...opts,
   })
+  liveSockets.add(socket)
+  return socket
+}
+
+/**
+ * フックの cleanup から呼ぶ。生存ソケットレジストリから外してから切断する。
+ *
+ * アンマウント済みのソケットをレジストリに残したままにすると、bfcache 復帰時に
+ * 既に破棄されたページのソケットまで connect() で蘇らせてしまうため、
+ * disconnect() 単体ではなく必ずこちらを使うこと。
+ */
+export function releaseSocket(socket: ManagedSocket): void {
+  liveSockets.delete(socket)
+  socket.disconnect()
 }
