@@ -18,8 +18,14 @@ export function GameRoomPage() {
   const { roomId } = useParams<{ roomId: string }>()
   const navigate = useNavigate()
   const { currentRoom, rooms, setCurrentRoom } = useRoomStore()
-  const [notFound, setNotFound] = useState(false)
+  const [notFoundRoomId, setNotFoundRoomId] = useState<string | undefined>(
+    undefined
+  )
   const validRoomId = isRoomId(roomId) ? roomId : undefined
+  // notFoundRoomId をルームID自体で持つことで、別の有効なルームへ遷移した際に
+  // (validRoomId が変わるだけで)自動的にエラー状態がリセットされる。
+  const notFound =
+    notFoundRoomId !== undefined && notFoundRoomId === validRoomId
 
   useEffect(() => {
     if (!validRoomId) return
@@ -46,16 +52,18 @@ export function GameRoomPage() {
       try {
         const fetchedRoom = await getRoom(validRoomId)
         if (cancelled) return
+        setNotFoundRoomId(undefined)
         setCurrentRoom(fetchedRoom)
         if (fetchedRoom.status === 'waiting') {
           navigate(`/room/${fetchedRoom.id}`, { replace: true })
         }
       } catch (error) {
-        if (!isRoomUnavailableError(error)) {
+        if (cancelled) return
+        if (isRoomUnavailableError(error)) {
+          setNotFoundRoomId(validRoomId)
+        } else {
           logApiError('Failed to load game room:', error)
-        }
-        if (!cancelled) {
-          setNotFound(true)
+          navigate('/home', { replace: true })
         }
       }
     }
@@ -87,7 +95,7 @@ export function GameRoomPage() {
     return <RoomNotFound />
   }
 
-  if (!currentRoom) {
+  if (!currentRoom || currentRoom.id !== validRoomId) {
     return null
   }
 
