@@ -1,14 +1,13 @@
 COMPOSE_FILE = docker/docker-compose.prod.yml
 COMPOSE_DEV_FILE = docker/docker-compose.yml
 
-# === ビルドと起動(本番用: 単一コマンドでの起動が要件のためこちらをメインにする) ===
+# === ビルドと起動 ===
 
 all: up
 
 .env:
 	cp .env.example .env
 
-# compose を構築するターゲットは .env がないと失敗する(down/logs 系は不要)
 up build rebuild rebuild-clean dev-up dev-build dev-rebuild dev-rebuild-clean dev-migrate: .env
 
 up:
@@ -19,8 +18,6 @@ build:
 
 down:
 	docker compose -f $(COMPOSE_FILE) down
-
-# === クリーンアップ ===
 
 clean:
 	docker compose -f $(COMPOSE_FILE) down -v
@@ -39,7 +36,7 @@ rebuild-clean:
 logs:
 	docker compose -f $(COMPOSE_FILE) logs -f
 
-# === 開発用(ホットリロード付き。本番用とポート8443を共有するため同時起動不可) ===
+# === 開発用 ===
 
 dev-up:
 	docker compose -f $(COMPOSE_DEV_FILE) up -d
@@ -70,5 +67,9 @@ dev-logs:
 dev-migrate:
 	docker compose -f $(COMPOSE_DEV_FILE) exec -w /app/backend backend npm run prisma:migrate:dev
 
+dev-deps:
+	docker run --rm -v "$(CURDIR)":/app -w /app node:24-alpine \
+		npm ci --workspace=frontend --workspace=shared
+
 .PHONY: all up build down clean fclean re rebuild rebuild-clean logs \
-	dev-up dev-build dev-down dev-clean dev-fclean dev-re dev-rebuild dev-rebuild-clean dev-logs dev-migrate
+	dev-up dev-build dev-down dev-clean dev-fclean dev-re dev-rebuild dev-rebuild-clean dev-logs dev-migrate dev-deps
