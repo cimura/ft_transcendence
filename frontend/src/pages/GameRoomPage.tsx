@@ -9,28 +9,29 @@ import { useGameSocket } from '../hooks/useGameSocket'
 import type { PlayerSnapshot } from '@ft_transcendence/shared/game-events.types'
 import type { RoomSnapshot } from '@ft_transcendence/shared/rooms-events.types'
 import { getRoom } from '../api/rooms'
-import { logApiError } from '../api/errors'
+import { isRoomUnavailableError, logApiError } from '../api/errors'
+import { isRoomId } from '../utils/roomId'
+import { RoomNotFound } from '../components/common/RoomNotFound'
 import BackgroundVideo from '../components/common/BackgroundVideo'
 
 export function GameRoomPage() {
   const { roomId } = useParams<{ roomId: string }>()
   const navigate = useNavigate()
   const { currentRoom, rooms, setCurrentRoom } = useRoomStore()
+  const [notFound, setNotFound] = useState(false)
+  const validRoomId = isRoomId(roomId) ? roomId : undefined
 
   useEffect(() => {
-    if (!roomId) {
-      navigate('/home', { replace: true })
-      return
-    }
+    if (!validRoomId) return
 
-    if (currentRoom?.id === roomId) {
+    if (currentRoom?.id === validRoomId) {
       if (currentRoom.status === 'waiting') {
         navigate(`/room/${currentRoom.id}`, { replace: true })
       }
       return
     }
 
-    const room = rooms.find((item) => item.id === roomId)
+    const room = rooms.find((item) => item.id === validRoomId)
     if (room) {
       setCurrentRoom(room)
       if (room.status === 'waiting') {
@@ -43,16 +44,18 @@ export function GameRoomPage() {
 
     const loadRoom = async () => {
       try {
-        const fetchedRoom = await getRoom(roomId)
+        const fetchedRoom = await getRoom(validRoomId)
         if (cancelled) return
         setCurrentRoom(fetchedRoom)
         if (fetchedRoom.status === 'waiting') {
           navigate(`/room/${fetchedRoom.id}`, { replace: true })
         }
       } catch (error) {
-        logApiError('Failed to load game room:', error)
+        if (!isRoomUnavailableError(error)) {
+          logApiError('Failed to load game room:', error)
+        }
         if (!cancelled) {
-          navigate('/home', { replace: true })
+          setNotFound(true)
         }
       }
     }
@@ -64,7 +67,7 @@ export function GameRoomPage() {
     }
   }, [
     navigate,
-    roomId,
+    validRoomId,
     rooms,
     setCurrentRoom,
     currentRoom?.id,
@@ -79,6 +82,10 @@ export function GameRoomPage() {
       document.body.style.overflow = previousOverflow
     }
   }, [])
+
+  if (!validRoomId || notFound) {
+    return <RoomNotFound />
+  }
 
   if (!currentRoom) {
     return null
