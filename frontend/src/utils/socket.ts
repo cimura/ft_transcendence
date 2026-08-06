@@ -12,7 +12,10 @@ const ORIGIN = (
 
 // Socket<L, E> が構造的に満たす最小形。ジェネリクスを保ったまま
 // レジストリに詰めるために any を避けてこの形に絞る。
-type ManagedSocket = Pick<Socket<EventsMap, EventsMap>, 'connect' | 'disconnect'>
+type ManagedSocket = Pick<
+  Socket<EventsMap, EventsMap>,
+  'connect' | 'disconnect'
+>
 
 const liveSockets = new Set<ManagedSocket>()
 let pageLifecycleBound = false
