@@ -248,16 +248,17 @@ describe('UsersService', () => {
         url: '/uploads/images/avatar.png',
       };
 
-      prisma.user.findUnique.mockResolvedValue({ avatarUrl: avatarImage.url });
-      prisma.user.delete.mockResolvedValue({ id: 'user-id' });
+      prisma.user.delete.mockResolvedValue({ avatarUrl: avatarImage.url });
       uploadsService.findImageByUrl.mockResolvedValue(avatarImage);
 
       await expect(service.deleteMe('user-id')).resolves.toEqual({
         message: 'Your account has been permanently deleted.',
       });
 
+      expect(prisma.user.findUnique).not.toHaveBeenCalled();
       expect(prisma.user.delete).toHaveBeenCalledWith({
         where: { id: 'user-id' },
+        select: { avatarUrl: true },
       });
       expect(uploadsService.findImageByUrl).toHaveBeenCalledWith(
         avatarImage.url,
@@ -266,10 +267,9 @@ describe('UsersService', () => {
     });
 
     it('does not attempt to delete a default (unmanaged) avatar', async () => {
-      prisma.user.findUnique.mockResolvedValue({
+      prisma.user.delete.mockResolvedValue({
         avatarUrl: '/avatars/default-1.svg',
       });
-      prisma.user.delete.mockResolvedValue({ id: 'user-id' });
 
       await expect(service.deleteMe('user-id')).resolves.toEqual({
         message: 'Your account has been permanently deleted.',
@@ -280,8 +280,7 @@ describe('UsersService', () => {
     });
 
     it('does not attempt to delete an avatar when the user has none', async () => {
-      prisma.user.findUnique.mockResolvedValue({ avatarUrl: null });
-      prisma.user.delete.mockResolvedValue({ id: 'user-id' });
+      prisma.user.delete.mockResolvedValue({ avatarUrl: null });
 
       await expect(service.deleteMe('user-id')).resolves.toEqual({
         message: 'Your account has been permanently deleted.',
@@ -298,8 +297,7 @@ describe('UsersService', () => {
         url: '/uploads/images/avatar.png',
       };
 
-      prisma.user.findUnique.mockResolvedValue({ avatarUrl: avatarImage.url });
-      prisma.user.delete.mockResolvedValue({ id: 'user-id' });
+      prisma.user.delete.mockResolvedValue({ avatarUrl: avatarImage.url });
       uploadsService.findImageByUrl.mockRejectedValue(new Error('DB error'));
 
       await expect(service.deleteMe('user-id')).resolves.toEqual({
@@ -310,9 +308,6 @@ describe('UsersService', () => {
     });
 
     it('does not delete the avatar when the account no longer exists (P2025)', async () => {
-      prisma.user.findUnique.mockResolvedValue({
-        avatarUrl: '/uploads/images/avatar.png',
-      });
       prisma.user.delete.mockRejectedValue(
         new Prisma.PrismaClientKnownRequestError('Record not found', {
           code: 'P2025',
@@ -333,9 +328,6 @@ describe('UsersService', () => {
     });
 
     it('reports a 500 with a structured error when a foreign key constraint blocks the delete (P2003)', async () => {
-      prisma.user.findUnique.mockResolvedValue({
-        avatarUrl: '/uploads/images/avatar.png',
-      });
       prisma.user.delete.mockRejectedValue(
         new Prisma.PrismaClientKnownRequestError(
           'Foreign key constraint failed',

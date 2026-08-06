@@ -278,16 +278,17 @@ export class UsersService {
   }
 
   async deleteMe(userId: string) {
-    // 実ファイルは DB のリレーションでは追跡できないため、削除前に退避しておく
-    const existingUser = await this.prisma.user.findUnique({
-      where: { id: userId },
-      select: { avatarUrl: true },
-    });
+    // 実ファイルは DB のリレーションでは追跡できないため、削除された行の値を控えておく
+    // (事前に findUnique で読むと、削除までの間にアバターが差し替わった場合に旧 URL を消してしまう)
+    let deletedAvatarUrl: string | null = null;
 
     try {
-      await this.prisma.user.delete({
+      const deletedUser = await this.prisma.user.delete({
         where: { id: userId },
+        select: { avatarUrl: true },
       });
+
+      deletedAvatarUrl = deletedUser.avatarUrl;
     } catch (error: unknown) {
       if (this.isRecordNotFoundError(error)) {
         throw new NotFoundException({
@@ -312,7 +313,7 @@ export class UsersService {
 
     // User 行の削除（フレンド関係・対戦参加・実績は onDelete: Cascade で連鎖削除済み）が
     // 成功した後にのみ、DB のリレーションでは表現できないアバター資産を片付ける
-    await this.deleteManagedAvatar(existingUser?.avatarUrl ?? null);
+    await this.deleteManagedAvatar(deletedAvatarUrl);
 
     return {
       message: 'Your account has been permanently deleted.',
