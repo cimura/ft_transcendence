@@ -239,4 +239,124 @@ describe('UsersService', () => {
     );
     expect(uploadsService.deleteImage).not.toHaveBeenCalled();
   });
+
+  describe('deleteMe', () => {
+    it('deletes a managed avatar after the account is deleted', async () => {
+      const avatarImage = {
+        id: 'image-id',
+        filename: 'avatar.png',
+        url: '/uploads/images/avatar.png',
+      };
+
+      prisma.user.findUnique.mockResolvedValue({ avatarUrl: avatarImage.url });
+      prisma.user.delete.mockResolvedValue({ id: 'user-id' });
+      uploadsService.findImageByUrl.mockResolvedValue(avatarImage);
+
+      await expect(service.deleteMe('user-id')).resolves.toEqual({
+        message: 'Your account has been permanently deleted.',
+      });
+
+      expect(prisma.user.delete).toHaveBeenCalledWith({
+        where: { id: 'user-id' },
+      });
+      expect(uploadsService.findImageByUrl).toHaveBeenCalledWith(
+        avatarImage.url,
+      );
+      expect(uploadsService.deleteImage).toHaveBeenCalledWith(avatarImage);
+    });
+
+    it('does not attempt to delete a default (unmanaged) avatar', async () => {
+      prisma.user.findUnique.mockResolvedValue({
+        avatarUrl: '/avatars/default-1.svg',
+      });
+      prisma.user.delete.mockResolvedValue({ id: 'user-id' });
+
+      await expect(service.deleteMe('user-id')).resolves.toEqual({
+        message: 'Your account has been permanently deleted.',
+      });
+
+      expect(uploadsService.findImageByUrl).not.toHaveBeenCalled();
+      expect(uploadsService.deleteImage).not.toHaveBeenCalled();
+    });
+
+    it('does not attempt to delete an avatar when the user has none', async () => {
+      prisma.user.findUnique.mockResolvedValue({ avatarUrl: null });
+      prisma.user.delete.mockResolvedValue({ id: 'user-id' });
+
+      await expect(service.deleteMe('user-id')).resolves.toEqual({
+        message: 'Your account has been permanently deleted.',
+      });
+
+      expect(uploadsService.findImageByUrl).not.toHaveBeenCalled();
+      expect(uploadsService.deleteImage).not.toHaveBeenCalled();
+    });
+
+    it('still reports success when avatar cleanup fails', async () => {
+      const avatarImage = {
+        id: 'image-id',
+        filename: 'avatar.png',
+        url: '/uploads/images/avatar.png',
+      };
+
+      prisma.user.findUnique.mockResolvedValue({ avatarUrl: avatarImage.url });
+      prisma.user.delete.mockResolvedValue({ id: 'user-id' });
+      uploadsService.findImageByUrl.mockRejectedValue(new Error('DB error'));
+
+      await expect(service.deleteMe('user-id')).resolves.toEqual({
+        message: 'Your account has been permanently deleted.',
+      });
+
+      expect(uploadsService.deleteImage).not.toHaveBeenCalled();
+    });
+
+    it('does not delete the avatar when the account no longer exists (P2025)', async () => {
+      prisma.user.findUnique.mockResolvedValue({
+        avatarUrl: '/uploads/images/avatar.png',
+      });
+      prisma.user.delete.mockRejectedValue(
+        new Prisma.PrismaClientKnownRequestError('Record not found', {
+          code: 'P2025',
+          clientVersion: 'test',
+        }),
+      );
+
+      await expect(service.deleteMe('user-id')).rejects.toMatchObject({
+        status: 404,
+        response: {
+          code: 'USER_NOT_FOUND',
+          message: 'User not found or already deleted',
+        },
+      });
+
+      expect(uploadsService.findImageByUrl).not.toHaveBeenCalled();
+      expect(uploadsService.deleteImage).not.toHaveBeenCalled();
+    });
+
+    it('reports a 500 with a structured error when a foreign key constraint blocks the delete (P2003)', async () => {
+      prisma.user.findUnique.mockResolvedValue({
+        avatarUrl: '/uploads/images/avatar.png',
+      });
+      prisma.user.delete.mockRejectedValue(
+        new Prisma.PrismaClientKnownRequestError(
+          'Foreign key constraint failed',
+          {
+            code: 'P2003',
+            clientVersion: 'test',
+            meta: { field_name: 'MatchParticipant_userId_fkey' },
+          },
+        ),
+      );
+
+      await expect(service.deleteMe('user-id')).rejects.toMatchObject({
+        status: 500,
+        response: {
+          code: 'ACCOUNT_DELETE_FAILED',
+          message: 'Failed to delete your account. Please try again later.',
+        },
+      });
+
+      expect(uploadsService.findImageByUrl).not.toHaveBeenCalled();
+      expect(uploadsService.deleteImage).not.toHaveBeenCalled();
+    });
+  });
 });
