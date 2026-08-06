@@ -521,7 +521,7 @@ export function WaitingRoom() {
 
           {/* 右側: チャットパネル */}
           <ChatPanel
-            roomId={roomId}
+            roomId={validRoomId}
             currentUser={currentUser}
             accessToken={accessToken}
           />
