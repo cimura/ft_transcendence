@@ -1,5 +1,6 @@
-import { IsNotEmpty, IsString, MaxLength } from 'class-validator';
+import { IsNotEmpty, IsString, MinLength } from 'class-validator';
 import { ApiProperty } from '@nestjs/swagger';
+import { MaxUtf8ByteLength } from '../../common/validators/max-utf8-byte-length.validator';
 
 export class SignInRequestDto {
   @ApiProperty({
@@ -15,7 +16,10 @@ export class SignInRequestDto {
   })
   @IsString()
   @IsNotEmpty({ message: 'Password is required.' })
-  @MaxLength(72, { message: 'Password must be 72 characters or fewer.' })
+  @MinLength(8, { message: 'Password must be at least 8 characters.' })
+  @MaxUtf8ByteLength(72, {
+    message: 'Password must be 72 UTF-8 bytes or fewer.',
+  })
   password: string;
 }
 

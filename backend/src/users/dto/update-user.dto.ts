@@ -4,9 +4,9 @@ import {
   IsString,
   IsOptional,
   MinLength,
-  MaxLength,
   Matches,
 } from 'class-validator';
+import { MaxUtf8ByteLength } from '../../common/validators/max-utf8-byte-length.validator';
 
 export class UpdateUserDto {
   @ApiProperty({
@@ -37,6 +37,9 @@ export class UpdateUserDto {
   })
   @IsOptional()
   @IsString()
+  @MaxUtf8ByteLength(72, {
+    message: '現在のパスワードは72 UTF-8バイト以内で入力してください',
+  })
   currentPassword?: string;
 
   @ApiProperty({
@@ -47,6 +50,8 @@ export class UpdateUserDto {
   @IsOptional()
   @IsString()
   @MinLength(8)
-  @MaxLength(72)
+  @MaxUtf8ByteLength(72, {
+    message: 'パスワードは72 UTF-8バイト以内で入力してください',
+  })
   password?: string;
 }

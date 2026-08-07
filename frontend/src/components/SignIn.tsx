@@ -3,6 +3,10 @@ import { signInApi, AuthApiError } from '../api/auth'
 import { useAuthStore } from '../stores/authStore'
 import type { LoginCredentials } from '../types/user'
 import { LegalLinks } from './legal/LegalLinks'
+import {
+  isPasswordWithinUtf8Limit,
+  MAX_PASSWORD_UTF8_BYTES,
+} from '../utils/password'
 
 interface SignInProps {
   onSignInSuccess: () => void
@@ -20,6 +24,18 @@ export default function SignIn({
   const handleSignIn = async (formData: FormData) => {
     const identifier = formData.get('identifier') as string
     const password = formData.get('password') as string
+
+    if (password.length < 8) {
+      setError('パスワードは8文字以上で入力してください。')
+      return
+    }
+
+    if (!isPasswordWithinUtf8Limit(password)) {
+      setError(
+        `パスワードは${MAX_PASSWORD_UTF8_BYTES} UTF-8バイト以内で入力してください。`
+      )
+      return
+    }
 
     const credentials: LoginCredentials = {
       identifier,
@@ -95,12 +111,6 @@ export default function SignIn({
               required
               minLength={8}
               maxLength={72}
-              onInput={(event) => {
-                event.currentTarget.value = event.currentTarget.value.slice(
-                  0,
-                  72
-                )
-              }}
               className="w-full px-4 py-2 bg-black/50 border border-cyan-800 rounded-md text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-transparent transition-all"
               placeholder="••••••••"
             />

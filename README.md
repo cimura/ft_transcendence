@@ -213,9 +213,6 @@ below and demonstrated in the running application.
   are easy to get wrong in raw SQL. Prisma gave us migrations we could review in
   pull requests and a generated client that made schema mistakes compile errors
   instead of runtime errors.
-- **Notification system.** Friend requests and game invitations are worthless if
-  the recipient has to refresh to discover them, so we deliver them over the
-  existing socket connection.
 - **Game statistics and match history.** Persisting results gives matches
   consequences and gave us a reason to build rankings and the Galactic Guide
   achievement progression.

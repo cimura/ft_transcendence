@@ -36,6 +36,10 @@ export function validate(config: Record<string, unknown>) {
     enableImplicitConversion: true,
   });
 
+  if (typeof validatedConfig.JWT_SECRET === 'string') {
+    validatedConfig.JWT_SECRET = validatedConfig.JWT_SECRET.trim();
+  }
+
   const errors = validateSync(validatedConfig, {
     skipMissingProperties: false,
   });
@@ -53,7 +57,10 @@ export function validate(config: Record<string, unknown>) {
       'changeme',
     ]);
 
-    if (secret.length < 32 || knownPlaceholders.has(secret.toLowerCase())) {
+    if (
+      secret.length < JWT_SECRET_MIN_LENGTH ||
+      knownPlaceholders.has(secret.toLowerCase())
+    ) {
       throw new Error(
         'JWT_SECRET must be at least 32 characters and must not be a known placeholder in production.',
       );
