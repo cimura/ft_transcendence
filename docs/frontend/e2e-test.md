@@ -32,7 +32,7 @@ frontend/tests/e2e/
 | `concurrent-users.spec.ts` | 4人が同時にログインして別々の画面を操作する |
 | `game-match.spec.ts` | 2人対戦の開始・操作・決着 |
 | `game-multiplayer.spec.ts` | 4人対戦の開始と全画面の同期 |
-| `game-reconnect.spec.ts` | 対戦中に切断しても再接続で試合に復帰できる |
+| `game-reconnect.spec.ts` | 対戦中に切断しても再接続で試合に復帰できる、タブを閉じても待機室/試合へ再参加できる(終了済みは復帰しない) |
 | `match-history.spec.ts` | 試合結果が統計・戦闘履歴・ランキングに反映される |
 
 ### インジェクション系テストの対象フォーム
