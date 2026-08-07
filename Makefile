@@ -5,11 +5,16 @@ COMPOSE_DEV_FILE = docker/docker-compose.yml
 
 all: up
 
-.env:
-	cp .env.example .env
+# .env は手動で作成する。自動コピーするとプレースホルダーのまま起動できてしまうため。
+check-env:
+	@test -f .env || { \
+		echo "Error: .env not found."; \
+		echo "Run 'cp .env.example .env' and fill in the required values (JWT_SECRET etc.)."; \
+		exit 1; \
+	}
 
 # compose を構築するターゲットは .env がないと失敗する(down/logs 系は不要)
-up build rebuild rebuild-clean dev-up dev-build dev-rebuild dev-rebuild-clean dev-migrate: .env
+up build rebuild rebuild-clean dev-up dev-build dev-rebuild dev-rebuild-clean dev-migrate: check-env
 
 up:
 	docker compose -f $(COMPOSE_FILE) up -d
@@ -70,5 +75,5 @@ dev-logs:
 dev-migrate:
 	docker compose -f $(COMPOSE_DEV_FILE) exec -w /app/backend backend npm run prisma:migrate:dev
 
-.PHONY: all up build down clean fclean re rebuild rebuild-clean logs \
+.PHONY: all check-env up build down clean fclean re rebuild rebuild-clean logs \
 	dev-up dev-build dev-down dev-clean dev-fclean dev-re dev-rebuild dev-rebuild-clean dev-logs dev-migrate
