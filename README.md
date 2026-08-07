@@ -274,7 +274,7 @@ characters, so the shipped `.env.example` cannot be used as-is.
 
 ### Build and start
 
-`docker/docker-compose.prod.yml` builds self-contained production images:
+`docker/docker-compose.yml` builds self-contained production images:
 nginx serves the frontend's static `vite build` output directly (no separate
 frontend container) and acts as the HTTPS reverse proxy, while the backend runs
 the compiled `nest build` output with `node` directly (no devDependencies in
@@ -334,7 +334,7 @@ make rebuild    # Rebuild and recreate containers
 To check Prisma migration status:
 
 ```bash
-docker compose -f docker/docker-compose.prod.yml exec -w /app/backend backend npm run prisma:migrate:status
+docker compose -f docker/docker-compose.yml exec -w /app/backend backend npm run prisma:migrate:status
 ```
 
 ## Individual Contributions

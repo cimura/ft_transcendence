@@ -1,5 +1,5 @@
-COMPOSE_FILE = docker/docker-compose.prod.yml
-COMPOSE_DEV_FILE = docker/docker-compose.yml
+COMPOSE_FILE = docker/docker-compose.yml
+COMPOSE_DEV_FILE = docker/docker-compose.dev.yml
 
 # === ビルドと起動 ===
 
