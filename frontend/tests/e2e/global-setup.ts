@@ -1,7 +1,7 @@
 import type { FullConfig } from '@playwright/test'
 import https from 'node:https'
 
-const STACK = process.env.E2E_STACK === 'dev' ? 'dev' : 'prod'
+const STACK = process.env.E2E_STACK === 'prod' ? 'prod' : 'dev'
 
 function fetchHtml(url: string): Promise<string> {
   return new Promise((resolve, reject) => {
@@ -37,8 +37,8 @@ export default async function globalSetup(config: FullConfig) {
   if (actualStack !== STACK) {
     const fix =
       STACK === 'prod'
-        ? '`make dev-down` で開発用スタックを止めてから、`make build`(または再度このコマンド)を実行してください。'
-        : '`make down` で本番スタックを止めてから、`E2E_STACK=dev npx playwright test` を実行してください。'
+        ? '`make dev-down` で開発用スタックを止めてから、`E2E_STACK=prod npx playwright test` を実行してください。'
+        : '`make down` で本番スタックを止めてから、`npx playwright test`(E2E_STACK は既定で dev)を実行してください。'
 
     throw new Error(
       `E2E_STACK=${STACK} を要求しましたが、${baseURL} は "${actualStack}" スタックの応答でした。\n${fix}`

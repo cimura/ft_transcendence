@@ -82,14 +82,14 @@ npx playwright install --with-deps chromium
 
 ## テストの実行
 
-Playwright は既定で **本番相当スタック**(`docker/docker-compose.prod.yml`)を自動起動する。
-開発用スタック(`docker-compose.yml`)は Vite の HMR クライアントなどが console に出るため、
-「console にエラー・警告が無いこと」の判定が本番と食い違ってしまう。
+Playwright は既定で **開発用スタック**(`docker/docker-compose.yml`)を自動起動する。
+本番相当スタック(`docker-compose.prod.yml`)でテストすると、本番環境にテスト用データが
+残ってしまうため。
 
-開発用スタックがポート 8443 で起動している場合は先に止めておく:
+本番相当スタックがポート 8443 で起動している場合は先に止めておく:
 
 ```bash
-make dev-down
+make down
 ```
 
 テスト実行:
@@ -99,16 +99,18 @@ cd frontend
 npm run test:e2e
 ```
 
-初回は `docker compose -f ../docker/docker-compose.prod.yml up -d --build` が自動で走るため、
+初回は `docker compose -f ../docker/docker-compose.yml up -d --build` が自動で走るため、
 イメージビルドに数分かかる。2回目以降は既に起動しているスタックを再利用する
-(`reuseExistingServer: true`)。フロントエンドのコードを変更した後は、再ビルドが走るように
-コンテナを一度落とすか `make build` で作り直してから実行すること。
+(`reuseExistingServer: true`)。
 
-開発用スタックに対して実行したい場合:
+本番相当スタックに対して実行したい場合:
 
 ```bash
-E2E_STACK=dev npm run test:e2e
+E2E_STACK=prod npm run test:e2e
 ```
+
+この場合、フロントエンドのコードを変更した後は、再ビルドが走るようにコンテナを
+一度落とすか `make build` で作り直してから実行すること。
 
 `global-setup.ts` が起動中のスタックの種類(dev/prod)を実際の応答から判定し、
 `E2E_STACK` の指定と食い違っていれば実行前にエラーで止まる。

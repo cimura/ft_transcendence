@@ -1,10 +1,9 @@
 import { defineConfig, devices } from '@playwright/test'
 
-// dev 用 compose(docker-compose.yml)は Vite の HMR クライアントや React DevTools の
-// 案内ログを console に出すため、「コンソールに警告・エラーが無いこと」の判定が本番と
-// 食い違う。既定は prod。`E2E_STACK=dev` を指定すれば dev 用に切り替えられる
+// 本番用 compose(docker-compose.prod.yml)でテストすると、本番環境にテスト用データが
+// 残ってしまう。既定は dev。`E2E_STACK=prod` を指定すれば本番用に切り替えられる
 // (両方とも 8443 を使うため同時起動は不可)。
-const STACK = process.env.E2E_STACK === 'dev' ? 'dev' : 'prod'
+const STACK = process.env.E2E_STACK === 'prod' ? 'prod' : 'dev'
 
 const COMPOSE_FILE =
   STACK === 'dev'
