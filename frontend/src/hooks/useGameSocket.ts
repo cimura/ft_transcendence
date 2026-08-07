@@ -29,6 +29,8 @@ export function useGameSocket(roomId: string) {
     })
     socketRef.current = socket
 
+    // connect ハンドラ内で送る。ここに置くことで、bfcache 復帰などによる
+    // 再接続のたびに再送され、再接続時も盤面が復元される。
     socket.on('connect', () => {
       socket.emit('game:join', { roomId })
     })

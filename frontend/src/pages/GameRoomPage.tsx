@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { GameCanvas } from '../components/game/GameCanvas'
 import { GameResultOverlay } from '../components/game/GameResultOverlay'
@@ -6,6 +6,7 @@ import { RetireConfirmDialog } from '../components/game/RetireConfirmDialog'
 import { useRoomStore } from '../stores/roomStore'
 import { useGameStore } from '../stores/gameStore'
 import { useGameSocket } from '../hooks/useGameSocket'
+import { useBrowserBackGuard } from '../hooks/useBrowserBackGuard'
 import type { PlayerSnapshot } from '@ft_transcendence/shared/game-events.types'
 import type { RoomSnapshot } from '@ft_transcendence/shared/rooms-events.types'
 import { getRoom } from '../api/rooms'
@@ -114,6 +115,7 @@ function GameRoomView({ room }: GameRoomViewProps) {
   const { socketRef, leaveGame } = useGameSocket(room.id)
 
   const [isRetireDialogOpen, setIsRetireDialogOpen] = useState(false)
+  const retireResolverRef = useRef<((canExit: boolean) => void) | null>(null)
 
   const livingPlayers = Object.values(gameState?.players ?? {}).filter(
     (player: PlayerSnapshot) => player.alive
@@ -124,23 +126,52 @@ function GameRoomView({ room }: GameRoomViewProps) {
   const isMeAlive =
     myPlayerId !== null && gameState.players[myPlayerId]?.alive === true
   const needsRetireConfirm = isInBattle && isMeAlive
+  // バックボタン(popstate)経由でも同じ判定を使うため、最新値を ref にも反映しておく。
+  const needsRetireConfirmRef = useRef(needsRetireConfirm)
+  useEffect(() => {
+    needsRetireConfirmRef.current = needsRetireConfirm
+  }, [needsRetireConfirm])
 
-  const handleBackToHome = () => {
-    if (needsRetireConfirm) {
+  // ヘッダーの「ホームへ戻る」ボタンとブラウザのバックボタン、両方の退出経路を
+  // この一本にまとめる。対戦中かつ生存中ならリタイア確認を挟み、確定したら
+  // 必ず game:leave を送ってから離脱する(unmount 任せだと猶予待ちのゴースト
+  // プレイヤーになってしまうため)。
+  const requestExit = useCallback(async () => {
+    if (needsRetireConfirmRef.current) {
       setIsRetireDialogOpen(true)
-      return
+      const confirmed = await new Promise<boolean>((resolve) => {
+        retireResolverRef.current = resolve
+      })
+      if (!confirmed) return false
     }
-    navigate('/home')
+    leaveGame()
+    return true
+  }, [leaveGame])
+
+  useBrowserBackGuard({
+    stateKey: 'gameExitGuard',
+    guardValue: room.id,
+    onBack: requestExit,
+    onExit: () => navigate('/home', { replace: true }),
+  })
+
+  // マウント時に積まれたガードエントリをそのまま消費する。ここで pushGuard() を
+  // 足すと、リタイア確認をキャンセルするたびに履歴が1件ずつ積み上がってしまう
+  // (back() で消費した分を handlePopState が積み直すため)。
+  const handleBackToHome = () => {
+    window.history.back()
   }
 
   const handleRetireConfirm = () => {
     setIsRetireDialogOpen(false)
-    leaveGame()
-    navigate('/home')
+    retireResolverRef.current?.(true)
+    retireResolverRef.current = null
   }
 
   const handleRetireCancel = () => {
     setIsRetireDialogOpen(false)
+    retireResolverRef.current?.(false)
+    retireResolverRef.current = null
   }
 
   return (

@@ -15,6 +15,7 @@ import {
   startRoom,
 } from '../api/rooms'
 import { useRoomSocket } from '../hooks/useRoomSocket'
+import { useBrowserBackGuard } from '../hooks/useBrowserBackGuard'
 import axios from 'axios'
 import {
   getApiErrorMessage,
@@ -49,8 +50,6 @@ export function WaitingRoom() {
   // 明示的な退出中は、currentRoom が空になったことをトリガーに再joinしないようにするフラグ
   // (ホストが部屋を削除した等の外部要因による currentRoom クリアとは区別する必要がある)
   const isLeavingRef = useRef(false)
-  const hasBackGuardRef = useRef(false)
-  const hasCompletedLeaveRef = useRef(false)
 
   useEffect(() => {
     if (!validRoomId) return
@@ -167,70 +166,25 @@ export function WaitingRoom() {
   // ID, notFound, still loading, or a stale room from a previous URL) — there's
   // nothing to leave yet, and the guard would otherwise trap the browser Back
   // button before the room is actually joined.
-  useEffect(() => {
-    if (
-      !validRoomId ||
-      notFound ||
-      isLoadingRoom ||
-      currentRoom?.id !== validRoomId
-    ) {
-      return
-    }
+  useBrowserBackGuard({
+    stateKey: 'roomExitGuard',
+    guardValue: validRoomId ?? '',
+    enabled:
+      Boolean(validRoomId) &&
+      !notFound &&
+      !isLoadingRoom &&
+      currentRoom?.id === validRoomId,
+    onBack: handleLeaveRoom,
+    onExit: () => {
+      navigate('/lobby', { replace: true })
+      setCurrentRoom(null)
+    },
+  })
 
-    if (!hasBackGuardRef.current && !isLeavingRef.current) {
-      window.history.pushState(
-        { ...window.history.state, roomExitGuard: validRoomId },
-        '',
-        window.location.href
-      )
-      hasBackGuardRef.current = true
-    }
-
-    const handleBrowserBack = async () => {
-      if (hasCompletedLeaveRef.current) {
-        hasBackGuardRef.current = false
-        navigate('/lobby', { replace: true })
-        setCurrentRoom(null)
-        return
-      }
-
-      // Back has just consumed the guard entry. Restore it immediately so a
-      // repeated Back cannot leave the page while the API request is pending.
-      window.history.pushState(
-        { ...window.history.state, roomExitGuard: validRoomId },
-        '',
-        window.location.href
-      )
-      hasBackGuardRef.current = true
-
-      const didLeave = await handleLeaveRoom()
-      if (didLeave) {
-        hasCompletedLeaveRef.current = true
-        window.history.back()
-      }
-    }
-
-    window.addEventListener('popstate', handleBrowserBack)
-    return () => window.removeEventListener('popstate', handleBrowserBack)
-  }, [
-    currentRoom?.id,
-    handleLeaveRoom,
-    isLoadingRoom,
-    navigate,
-    notFound,
-    validRoomId,
-    setCurrentRoom,
-  ])
-
+  // マウント時に積まれたガードエントリをそのまま消費する。ここで pushGuard() を
+  // 足すと、handleLeaveRoom が API エラーで false を返すたびに履歴が1件ずつ
+  // 積み上がってしまう(back() で消費した分を handlePopState が積み直すため)。
   const handleEmergencyExit = () => {
-    if (!hasBackGuardRef.current) {
-      window.history.pushState(
-        { ...window.history.state, roomExitGuard: roomId },
-        '',
-        window.location.href
-      )
-      hasBackGuardRef.current = true
-    }
     window.history.back()
   }
 
@@ -266,7 +220,7 @@ export function WaitingRoom() {
       const room = await startRoom(currentRoom.id)
       upsertRoom(room)
       setCurrentRoom(room)
-      navigate(`/game/${room.id}`)
+      navigate(`/game/${room.id}`, { replace: true })
     } catch (error) {
       logApiError('Failed to start game:', error)
     }
