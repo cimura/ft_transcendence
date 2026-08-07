@@ -1,10 +1,6 @@
 import { plainToInstance, type ClassConstructor } from 'class-transformer';
 import { validateSync } from 'class-validator';
-import {
-  BombPlaceDto,
-  GameJoinDto,
-  PlayerInputDto,
-} from './game-events.dto';
+import { BombPlaceDto, GameJoinDto, PlayerInputDto } from './game-events.dto';
 
 describe('game WebSocket DTOs', () => {
   it('accepts valid game payloads', () => {
