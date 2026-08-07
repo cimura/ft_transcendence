@@ -34,6 +34,7 @@ export function useBrowserBackGuard({
 }: BrowserBackGuardOptions) {
   const hasGuardRef = useRef(false)
   const hasExitedRef = useRef(false)
+  const isHandlingRef = useRef(false)
   const onBackRef = useRef(onBack)
   const onExitRef = useRef(onExit)
 
@@ -72,10 +73,23 @@ export function useBrowserBackGuard({
       // 連打で抜けられないよう、即座に積み直す。
       pushGuard()
 
-      const canExit = await onBackRef.current()
-      if (canExit) {
-        hasExitedRef.current = true
-        window.history.back()
+      // onBack の解決を待っている間に再度 Back が押されたときは、履歴の積み直し
+      // だけ行ってここで打ち切る。onBack を二重に呼ぶと、呼び出し側が確認ダイアログの
+      // ために保持している resolver が上書きされ、先行の Promise が永久に未解決の
+      // まま残ってしまう(GameRoomPage の retireResolverRef)。
+      // 積み直しより後で判定するのは、この popstate も履歴エントリを1つ消費して
+      // いるため。先に return すると連打のたびにガードが減って抜けられてしまう。
+      if (isHandlingRef.current) return
+      isHandlingRef.current = true
+
+      try {
+        const canExit = await onBackRef.current()
+        if (canExit) {
+          hasExitedRef.current = true
+          window.history.back()
+        }
+      } finally {
+        isHandlingRef.current = false
       }
     }
 
