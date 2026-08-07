@@ -68,8 +68,13 @@ dev-migrate:
 	docker compose -f $(COMPOSE_DEV_FILE) exec -w /app/backend backend npm run prisma:migrate:dev
 
 dev-deps:
-	docker run --rm -v "$(CURDIR)":/app -w /app --user "$$(id -u):$$(id -g)" node:24-alpine \
-		npm ci --workspace=frontend --workspace=shared
+	docker run --rm -v $(CURDIR):/app -w /app -e npm_config_cache=/app/.npm-cache \
+  node:24-alpine npm ci --workspace=frontend --workspace=shared
+
+dev-e2e:
+	docker run --rm --network host -v $(CURDIR):/app -w /app/frontend -e HOME=/tmp -e CI=1 \
+		mcr.microsoft.com/playwright:v1.62.1-noble \
+		npx playwright test
 
 .PHONY: all up build down clean fclean re rebuild rebuild-clean logs \
 	dev-up dev-build dev-down dev-clean dev-fclean dev-re dev-rebuild dev-rebuild-clean dev-logs dev-migrate dev-deps
