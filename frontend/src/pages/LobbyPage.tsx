@@ -18,7 +18,14 @@ export function LobbyPage() {
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [isCreating, setIsCreating] = useState(false)
 
-  useLobbySocket()
+  const { rejoinTarget } = useLobbySocket()
+
+  // 切断の猶予時間内にロビーへ戻ってきた場合、元いたルームへ強制的に復帰させる
+  useEffect(() => {
+    if (rejoinTarget) {
+      navigate(rejoinTarget, { replace: true })
+    }
+  }, [rejoinTarget, navigate])
 
   useEffect(() => {
     let cancelled = false
@@ -112,6 +119,8 @@ export function LobbyPage() {
       logApiError('Failed to join room:', error)
     }
   }
+
+  if (rejoinTarget) return null
 
   return (
     <div className="min-h-screen bg-transparent text-cyan-100 font-sans relative">

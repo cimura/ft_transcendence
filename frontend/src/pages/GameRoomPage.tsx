@@ -10,28 +10,35 @@ import { useBrowserBackGuard } from '../hooks/useBrowserBackGuard'
 import type { PlayerSnapshot } from '@ft_transcendence/shared/game-events.types'
 import type { RoomSnapshot } from '@ft_transcendence/shared/rooms-events.types'
 import { getRoom } from '../api/rooms'
-import { logApiError } from '../api/errors'
+import { isRoomUnavailableError, logApiError } from '../api/errors'
+import { isRoomId } from '../utils/roomId'
+import { RoomNotFound } from '../components/common/RoomNotFound'
 import BackgroundVideo from '../components/common/BackgroundVideo'
 
 export function GameRoomPage() {
   const { roomId } = useParams<{ roomId: string }>()
   const navigate = useNavigate()
   const { currentRoom, rooms, setCurrentRoom } = useRoomStore()
+  const [notFoundRoomId, setNotFoundRoomId] = useState<string | undefined>(
+    undefined
+  )
+  const validRoomId = isRoomId(roomId) ? roomId : undefined
+  // notFoundRoomId をルームID自体で持つことで、別の有効なルームへ遷移した際に
+  // (validRoomId が変わるだけで)自動的にエラー状態がリセットされる。
+  const notFound =
+    notFoundRoomId !== undefined && notFoundRoomId === validRoomId
 
   useEffect(() => {
-    if (!roomId) {
-      navigate('/home', { replace: true })
-      return
-    }
+    if (!validRoomId) return
 
-    if (currentRoom?.id === roomId) {
+    if (currentRoom?.id === validRoomId) {
       if (currentRoom.status === 'waiting') {
         navigate(`/room/${currentRoom.id}`, { replace: true })
       }
       return
     }
 
-    const room = rooms.find((item) => item.id === roomId)
+    const room = rooms.find((item) => item.id === validRoomId)
     if (room) {
       setCurrentRoom(room)
       if (room.status === 'waiting') {
@@ -44,15 +51,19 @@ export function GameRoomPage() {
 
     const loadRoom = async () => {
       try {
-        const fetchedRoom = await getRoom(roomId)
+        const fetchedRoom = await getRoom(validRoomId)
         if (cancelled) return
+        setNotFoundRoomId(undefined)
         setCurrentRoom(fetchedRoom)
         if (fetchedRoom.status === 'waiting') {
           navigate(`/room/${fetchedRoom.id}`, { replace: true })
         }
       } catch (error) {
-        logApiError('Failed to load game room:', error)
-        if (!cancelled) {
+        if (cancelled) return
+        if (isRoomUnavailableError(error)) {
+          setNotFoundRoomId(validRoomId)
+        } else {
+          logApiError('Failed to load game room:', error)
           navigate('/home', { replace: true })
         }
       }
@@ -65,7 +76,7 @@ export function GameRoomPage() {
     }
   }, [
     navigate,
-    roomId,
+    validRoomId,
     rooms,
     setCurrentRoom,
     currentRoom?.id,
@@ -81,7 +92,11 @@ export function GameRoomPage() {
     }
   }, [])
 
-  if (!currentRoom) {
+  if (!validRoomId || notFound) {
+    return <RoomNotFound />
+  }
+
+  if (!currentRoom || currentRoom.id !== validRoomId) {
     return null
   }
 

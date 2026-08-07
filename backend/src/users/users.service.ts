@@ -5,6 +5,7 @@ import {
   ConflictException,
   NotFoundException,
   BadRequestException,
+  InternalServerErrorException,
 } from '@nestjs/common';
 import { PrismaService } from '../prisma.service';
 import { UpdateUserDto } from './dto/update-user.dto';
@@ -14,7 +15,10 @@ import { Prisma } from '../generated/prisma/client';
 import * as bcrypt from 'bcrypt';
 import { FriendRequestStatus } from '../generated/prisma/enums';
 import { UploadsService } from '../uploads/uploads.service';
-import { UPLOAD_URL_PREFIX } from '../uploads/uploads.constants';
+import {
+  ORPHANED_IMAGE_LOG_PREFIX,
+  UPLOAD_URL_PREFIX,
+} from '../uploads/uploads.constants';
 
 @Injectable()
 export class UsersService {
@@ -277,25 +281,46 @@ export class UsersService {
   }
 
   async deleteMe(userId: string) {
+    // 実ファイルは DB のリレーションでは追跡できないため、削除された行の値を控えておく
+    // (事前に findUnique で読むと、削除までの間にアバターが差し替わった場合に旧 URL を消してしまう)
+    let deletedAvatarUrl: string | null = null;
+
     try {
-      // TODO: schema.prisma の User に "onDelete: Cascade" を設定する
-      // -> User と紐づいているデータ (チャット履歴やアバター画像など) が連鎖的に削除される
-      await this.prisma.user.delete({
+      const deletedUser = await this.prisma.user.delete({
         where: { id: userId },
+        select: { avatarUrl: true },
       });
-      return {
-        message: 'Your account has been permanently deleted.',
-      };
+
+      deletedAvatarUrl = deletedUser.avatarUrl;
     } catch (error: unknown) {
-      if (!this.isRecordNotFoundError(error)) {
-        throw error;
+      if (this.isRecordNotFoundError(error)) {
+        throw new NotFoundException({
+          code: 'USER_NOT_FOUND',
+          message: 'User not found or already deleted',
+        });
       }
 
-      throw new NotFoundException({
-        code: 'USER_NOT_FOUND',
-        message: 'User not found or already deleted',
-      });
+      if (this.isForeignKeyConstraintError(error)) {
+        this.logger.error(
+          `Failed to delete user ${userId} due to a foreign key constraint: ${JSON.stringify(error.meta)}`,
+        );
+
+        throw new InternalServerErrorException({
+          code: 'ACCOUNT_DELETE_FAILED',
+          message: 'Failed to delete your account. Please try again later.',
+        });
+      }
+
+      throw error;
     }
+
+    // User 行の削除（フレンド関係・対戦参加・実績は onDelete: Cascade で連鎖削除済み）が
+    // 成功した後にのみ、DB のリレーションでは表現できないアバター資産を片付ける
+    await this.deleteManagedAvatar(deletedAvatarUrl);
+
+    return {
+      message: 'Your account has been permanently deleted.',
+    };
   }
 
   private async getCurrentAvatarUrl(userId: string) {
@@ -318,24 +343,29 @@ export class UsersService {
     previousAvatarUrl: string | null,
     nextAvatarUrl: string,
   ) {
-    if (
-      !previousAvatarUrl ||
-      previousAvatarUrl === nextAvatarUrl ||
-      !previousAvatarUrl.startsWith(`${UPLOAD_URL_PREFIX}/`)
-    ) {
+    if (!previousAvatarUrl || previousAvatarUrl === nextAvatarUrl) {
+      return;
+    }
+
+    await this.deleteManagedAvatar(previousAvatarUrl);
+  }
+
+  private async deleteManagedAvatar(avatarUrl: string | null) {
+    if (!avatarUrl || !avatarUrl.startsWith(`${UPLOAD_URL_PREFIX}/`)) {
       return;
     }
 
     try {
-      const previousImage =
-        await this.uploadsService.findImageByUrl(previousAvatarUrl);
+      const image = await this.uploadsService.findImageByUrl(avatarUrl);
 
-      if (previousImage) {
-        await this.uploadsService.deleteImage(previousImage);
+      if (image) {
+        await this.uploadsService.deleteImage(image);
       }
     } catch (error: unknown) {
-      this.logger.warn(
-        `Failed to delete previous avatar ${previousAvatarUrl}: ${this.formatCleanupError(error)}`,
+      // findImageByUrl 自体が失敗したケース（DB エラーなど）。
+      // deleteImage 内部の失敗は例外を投げず自前でログを出すため、ここには来ない。
+      this.logger.error(
+        `${ORPHANED_IMAGE_LOG_PREFIX} Failed to delete avatar ${avatarUrl}: ${this.formatCleanupError(error)}`,
       );
     }
   }
@@ -370,6 +400,15 @@ export class UsersService {
     return (
       error instanceof Prisma.PrismaClientKnownRequestError &&
       error.code === 'P2025'
+    );
+  }
+
+  private isForeignKeyConstraintError(
+    error: unknown,
+  ): error is Prisma.PrismaClientKnownRequestError {
+    return (
+      error instanceof Prisma.PrismaClientKnownRequestError &&
+      error.code === 'P2003'
     );
   }
 

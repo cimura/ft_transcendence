@@ -26,6 +26,7 @@ import {
   ApiBadRequestResponse,
   ApiConflictResponse,
   ApiNotFoundResponse,
+  ApiInternalServerErrorResponse,
 } from '@nestjs/swagger';
 import { UsersService } from './users.service';
 import { UpdateUserDto } from './dto/update-user.dto';
@@ -175,12 +176,23 @@ export class UsersController {
 
   @Delete('me')
   @HttpCode(HttpStatus.OK) // 通常 DELETE では 204 だが、削除完了通知を返すため 200
-  @ApiOperation({ summary: 'ログイン中の自分のアカウントを削除（退会処理）' })
+  @ApiOperation({
+    summary: 'ログイン中の自分のアカウントを削除（退会処理）',
+    description:
+      'アカウントと合わせて、フレンド関係・対戦参加記録・実績は確実に削除されます（DB上のCascade削除）。' +
+      'アップロード済みのアバター画像はアカウント削除後にbest-effortで削除を試みますが、' +
+      '失敗してもアカウント削除自体は成功として扱われます。その場合、削除できなかった画像はサーバーに残り、' +
+      'サーバーログに記録されます（自動リトライは行われません）。',
+  })
   @ApiOkResponse({
-    description: 'アカウントの削除が正常に完了しました',
+    description:
+      'アカウントの削除が正常に完了しました（アバター画像の削除に失敗していてもこのレスポンスが返ります）',
   })
   @ApiNotFoundResponse({
     description: '削除対象のユーザーが見つかりません',
+  })
+  @ApiInternalServerErrorResponse({
+    description: 'アカウントの削除に失敗しました',
   })
   async deleteMe(@Request() req: UserRequest) {
     return this.usersService.deleteMe(req.user.userId);

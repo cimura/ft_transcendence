@@ -73,13 +73,55 @@ export function createSocket<
 ): Socket<ListenEvents, EmitEvents> {
   bindPageLifecycleListeners()
 
+  const shouldAutoConnect = opts.autoConnect ?? true
   const socket = io(`${ORIGIN}${namespace}`, {
     forceNew: true,
     auth: { token: `Bearer ${accessToken}` },
     ...opts,
+    autoConnect: false,
   })
+  ensureNetworkListeners()
   liveSockets.add(socket)
+  managedSockets.add(socket)
+  if (shouldAutoConnect) {
+    connectSocket(socket)
+  }
   return socket
+}
+
+const managedSockets = new Set<Socket>()
+const pausedSockets = new Set<Socket>()
+let networkListenersRegistered = false
+
+function ensureNetworkListeners() {
+  if (networkListenersRegistered) return
+  networkListenersRegistered = true
+
+  window.addEventListener('offline', () => {
+    for (const socket of managedSockets) {
+      if (!socket.active) continue
+      pausedSockets.add(socket)
+      socket.disconnect()
+    }
+  })
+
+  window.addEventListener('online', () => {
+    for (const socket of pausedSockets) {
+      if (managedSockets.has(socket)) {
+        socket.connect()
+      }
+    }
+    pausedSockets.clear()
+  })
+}
+
+/** オフライン中は接続を保留し、無駄な再試行を発生させない。 */
+export function connectSocket(socket: Socket) {
+  if (!navigator.onLine) {
+    pausedSockets.add(socket)
+    return
+  }
+  socket.connect()
 }
 
 /**
@@ -87,9 +129,11 @@ export function createSocket<
  *
  * アンマウント済みのソケットをレジストリに残したままにすると、bfcache 復帰時に
  * 既に破棄されたページのソケットまで connect() で蘇らせてしまうため、
- * disconnect() 単体ではなく必ずこちらを使うこと。
+ * disconnect() 単体ではなく必ずこちらを使うこと。オフライン復帰対象からも外す。
  */
-export function releaseSocket(socket: ManagedSocket): void {
+export function releaseSocket(socket: Socket): void {
   liveSockets.delete(socket)
+  managedSockets.delete(socket)
+  pausedSockets.delete(socket)
   socket.disconnect()
 }

@@ -50,7 +50,10 @@ export const MatchHistoryCard = ({ match }: MatchHistoryCardProps) => {
             </span>
           </div>
           <p className="text-white/60 text-sm mb-2">
-            vs {match.opponents.join(', ')}
+            vs{' '}
+            {match.opponents.length > 0
+              ? match.opponents.join(', ')
+              : '退会したプレイヤー'}
           </p>
           {match.kills !== undefined && (
             <div className="flex items-center gap-4 text-sm">
