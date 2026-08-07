@@ -166,7 +166,7 @@ export function WaitingRoom() {
   // ID, notFound, still loading, or a stale room from a previous URL) — there's
   // nothing to leave yet, and the guard would otherwise trap the browser Back
   // button before the room is actually joined.
-  const { pushGuard } = useBrowserBackGuard({
+  useBrowserBackGuard({
     stateKey: 'roomExitGuard',
     guardValue: validRoomId ?? '',
     enabled:
@@ -181,8 +181,10 @@ export function WaitingRoom() {
     },
   })
 
+  // マウント時に積まれたガードエントリをそのまま消費する。ここで pushGuard() を
+  // 足すと、handleLeaveRoom が API エラーで false を返すたびに履歴が1件ずつ
+  // 積み上がってしまう(back() で消費した分を handlePopState が積み直すため)。
   const handleEmergencyExit = () => {
-    pushGuard()
     window.history.back()
   }
 

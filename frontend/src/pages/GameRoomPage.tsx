@@ -148,15 +148,17 @@ function GameRoomView({ room }: GameRoomViewProps) {
     return true
   }, [leaveGame])
 
-  const { pushGuard } = useBrowserBackGuard({
+  useBrowserBackGuard({
     stateKey: 'gameExitGuard',
     guardValue: room.id,
     onBack: requestExit,
     onExit: () => navigate('/home', { replace: true }),
   })
 
+  // マウント時に積まれたガードエントリをそのまま消費する。ここで pushGuard() を
+  // 足すと、リタイア確認をキャンセルするたびに履歴が1件ずつ積み上がってしまう
+  // (back() で消費した分を handlePopState が積み直すため)。
   const handleBackToHome = () => {
-    pushGuard()
     window.history.back()
   }
 

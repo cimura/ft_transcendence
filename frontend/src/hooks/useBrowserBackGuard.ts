@@ -96,6 +96,4 @@ export function useBrowserBackGuard({
     window.addEventListener('popstate', handlePopState)
     return () => window.removeEventListener('popstate', handlePopState)
   }, [enabled, pushGuard])
-
-  return { pushGuard }
 }
