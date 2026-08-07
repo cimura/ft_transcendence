@@ -16,7 +16,14 @@ import {
 } from '../api/rooms'
 import { useRoomSocket } from '../hooks/useRoomSocket'
 import axios from 'axios'
-import { getApiErrorMessage, logApiError } from '../api/errors'
+import {
+  getApiErrorMessage,
+  isRoomUnavailableError,
+  logApiError,
+  ROOM_JOIN_CONFLICT_STATUS,
+} from '../api/errors'
+import { isRoomId } from '../utils/roomId'
+import { RoomNotFound } from '../components/common/RoomNotFound'
 import { useFriends } from '../hooks/friends/useFriends'
 import type { RoomSnapshot } from '@ft_transcendence/shared/rooms-events.types'
 
@@ -27,9 +34,17 @@ export function WaitingRoom() {
   const currentUser = useCurrentUser()
   const accessToken = useAuthStore((state) => state.accessToken)
   const [isLoadingRoom, setIsLoadingRoom] = useState(true)
+  const [notFoundRoomId, setNotFoundRoomId] = useState<string | undefined>(
+    undefined
+  )
   const currentUserId = currentUser.id
+  const validRoomId = isRoomId(roomId) ? roomId : undefined
+  // notFoundRoomId をルームID自体で持つことで、別の有効なルームへ遷移した際に
+  // (validRoomId が変わるだけで)自動的にエラー状態がリセットされる。
+  const notFound =
+    notFoundRoomId !== undefined && notFoundRoomId === validRoomId
 
-  const { leaveRoom: emitRoomLeave } = useRoomSocket(roomId)
+  const { leaveRoom: emitRoomLeave } = useRoomSocket(validRoomId)
 
   // 明示的な退出中は、currentRoom が空になったことをトリガーに再joinしないようにするフラグ
   // (ホストが部屋を削除した等の外部要因による currentRoom クリアとは区別する必要がある)
@@ -38,10 +53,7 @@ export function WaitingRoom() {
   const hasCompletedLeaveRef = useRef(false)
 
   useEffect(() => {
-    if (!roomId) {
-      navigate('/home', { replace: true })
-      return
-    }
+    if (!validRoomId) return
 
     let cancelled = false
 
@@ -57,29 +69,46 @@ export function WaitingRoom() {
         // be overwritten by an older lobby event while navigation is in
         // progress. Joining is idempotent on the backend, so always confirm
         // membership when the waiting-room route is entered.
-        const joinedRoom = await joinRoom(roomId)
+        const joinedRoom = await joinRoom(validRoomId)
         if (cancelled) return
+        setNotFoundRoomId(undefined)
         upsertRoom(joinedRoom)
         setCurrentRoom(joinedRoom)
       } catch (error) {
-        if (axios.isAxiosError(error) && error.response?.status === 409) {
+        if (
+          axios.isAxiosError(error) &&
+          error.response?.status === ROOM_JOIN_CONFLICT_STATUS
+        ) {
           try {
-            const room = await getRoom(roomId)
+            const room = await getRoom(validRoomId)
             if (cancelled) return
+            setNotFoundRoomId(undefined)
             upsertRoom(room)
             setCurrentRoom(room)
             if (room.status === 'playing') {
               navigate(`/game/${room.id}`, { replace: true })
             }
           } catch (refreshError) {
-            logApiError('Failed to refresh room:', refreshError)
-            if (!cancelled) navigate('/home', { replace: true })
+            if (!cancelled) {
+              if (isRoomUnavailableError(refreshError)) {
+                setNotFoundRoomId(validRoomId)
+              } else {
+                logApiError('Failed to refresh room:', refreshError)
+                navigate('/home', { replace: true })
+              }
+            }
           }
           return
         }
 
-        logApiError('Failed to join room:', error)
-        if (!cancelled) navigate('/home', { replace: true })
+        if (!cancelled) {
+          if (isRoomUnavailableError(error)) {
+            setNotFoundRoomId(validRoomId)
+          } else {
+            logApiError('Failed to join room:', error)
+            navigate('/home', { replace: true })
+          }
+        }
       } finally {
         if (!cancelled) {
           setIsLoadingRoom(false)
@@ -92,17 +121,17 @@ export function WaitingRoom() {
     return () => {
       cancelled = true
     }
-  }, [navigate, roomId, setCurrentRoom, upsertRoom])
+  }, [navigate, validRoomId, setCurrentRoom, upsertRoom])
 
   useEffect(() => {
     if (
       currentRoom &&
-      currentRoom.id === roomId &&
+      currentRoom.id === validRoomId &&
       currentRoom.status === 'playing'
     ) {
       navigate(`/game/${currentRoom.id}`, { replace: true })
     }
-  }, [currentRoom, navigate, roomId])
+  }, [currentRoom, navigate, validRoomId])
 
   const handleLeaveRoom = useCallback(async () => {
     if (isLeavingRef.current || !currentRoom) return false
@@ -134,10 +163,23 @@ export function WaitingRoom() {
   // Keep the room mounted for the first browser Back event. Without this guard,
   // React Router may unmount the page before its popstate handler can leave the
   // room, which also makes behavior depend on how the host/guest arrived here.
+  // Skip while the room hasn't finished loading into `currentRoom` yet (invalid
+  // ID, notFound, still loading, or a stale room from a previous URL) — there's
+  // nothing to leave yet, and the guard would otherwise trap the browser Back
+  // button before the room is actually joined.
   useEffect(() => {
+    if (
+      !validRoomId ||
+      notFound ||
+      isLoadingRoom ||
+      currentRoom?.id !== validRoomId
+    ) {
+      return
+    }
+
     if (!hasBackGuardRef.current && !isLeavingRef.current) {
       window.history.pushState(
-        { ...window.history.state, roomExitGuard: roomId },
+        { ...window.history.state, roomExitGuard: validRoomId },
         '',
         window.location.href
       )
@@ -155,7 +197,7 @@ export function WaitingRoom() {
       // Back has just consumed the guard entry. Restore it immediately so a
       // repeated Back cannot leave the page while the API request is pending.
       window.history.pushState(
-        { ...window.history.state, roomExitGuard: roomId },
+        { ...window.history.state, roomExitGuard: validRoomId },
         '',
         window.location.href
       )
@@ -170,7 +212,15 @@ export function WaitingRoom() {
 
     window.addEventListener('popstate', handleBrowserBack)
     return () => window.removeEventListener('popstate', handleBrowserBack)
-  }, [handleLeaveRoom, navigate, roomId, setCurrentRoom])
+  }, [
+    currentRoom?.id,
+    handleLeaveRoom,
+    isLoadingRoom,
+    navigate,
+    notFound,
+    validRoomId,
+    setCurrentRoom,
+  ])
 
   const handleEmergencyExit = () => {
     if (!hasBackGuardRef.current) {
@@ -184,7 +234,11 @@ export function WaitingRoom() {
     window.history.back()
   }
 
-  if (!currentRoom || !roomId || isLoadingRoom) {
+  if (!validRoomId || notFound) {
+    return <RoomNotFound />
+  }
+
+  if (!currentRoom || currentRoom.id !== validRoomId || isLoadingRoom) {
     return null
   }
 
@@ -503,7 +557,7 @@ export function WaitingRoom() {
 
           {/* 右側: チャットパネル */}
           <ChatPanel
-            roomId={roomId}
+            roomId={validRoomId}
             currentUser={currentUser}
             accessToken={accessToken}
           />
