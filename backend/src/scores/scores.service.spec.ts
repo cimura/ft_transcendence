@@ -48,8 +48,7 @@ describe('ScoresService', () => {
     prisma.$transaction.mockImplementation(
       async (
         operation:
-          | ((tx: typeof prisma) => Promise<unknown>)
-          | Promise<unknown>[],
+          ((tx: typeof prisma) => Promise<unknown>) | Promise<unknown>[],
       ) => {
         if (typeof operation === 'function') {
           return operation(prisma);

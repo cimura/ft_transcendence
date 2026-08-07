@@ -9,7 +9,7 @@ import {
   OnGatewayDisconnect,
   WsException,
 } from '@nestjs/websockets';
-import { Logger, UseFilters } from '@nestjs/common';
+import { Logger, UseFilters, UsePipes, ValidationPipe } from '@nestjs/common';
 import { Server } from 'socket.io';
 import { GameService } from './game.service';
 import { GameExceptionFilter } from './game-exception.filter';
@@ -23,12 +23,24 @@ import type {
   ServerToClientEvents,
 } from '@ft_transcendence/shared/game-events.types';
 import type { PresenceStatus } from '@ft_transcendence/shared/realtime-events.types';
+import {
+  BombPlaceDto,
+  GameJoinDto,
+  PlayerInputDto,
+} from './dto/game-events.dto';
 
 @WebSocketGateway({
   namespace: '/game',
   cors: { origin: getSocketCorsOrigins() },
 })
 @UseFilters(GameExceptionFilter)
+@UsePipes(
+  new ValidationPipe({
+    whitelist: true,
+    forbidNonWhitelisted: true,
+    transform: true,
+  }),
+)
 export class GameGateway
   implements OnGatewayInit, OnGatewayConnection, OnGatewayDisconnect
 {
@@ -61,7 +73,7 @@ export class GameGateway
 
   @SubscribeMessage('game:join')
   async handleJoin(
-    @MessageBody() data: Parameters<ClientToServerEvents['game:join']>[0],
+    @MessageBody() data: GameJoinDto,
     @ConnectedSocket()
     client: GameSocket,
   ) {
@@ -211,7 +223,7 @@ export class GameGateway
   @SubscribeMessage('player:input')
   handleInput(
     @MessageBody()
-    data: Parameters<ClientToServerEvents['player:input']>[0],
+    data: PlayerInputDto,
     @ConnectedSocket()
     client: GameSocket,
   ) {
@@ -228,7 +240,7 @@ export class GameGateway
 
   @SubscribeMessage('bomb:place')
   handleBombPlace(
-    @MessageBody() data: Parameters<ClientToServerEvents['bomb:place']>[0],
+    @MessageBody() data: BombPlaceDto,
     @ConnectedSocket()
     client: GameSocket,
   ) {

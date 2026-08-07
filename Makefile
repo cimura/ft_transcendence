@@ -1,14 +1,18 @@
-COMPOSE_FILE = docker/docker-compose.prod.yml
-COMPOSE_DEV_FILE = docker/docker-compose.yml
+COMPOSE_FILE = docker/docker-compose.yml
+COMPOSE_DEV_FILE = docker/docker-compose.dev.yml
 
 # === ビルドと起動 ===
 
 all: up
 
-.env:
-	cp .env.example .env
+check-env:
+	@test -f .env || { \
+		echo "Error: .env not found."; \
+		echo "Run 'cp .env.example .env' and fill in the required values (JWT_SECRET etc.)."; \
+		exit 1; \
+	}
 
-up build rebuild rebuild-clean dev-up dev-build dev-rebuild dev-rebuild-clean dev-migrate: .env
+up build rebuild rebuild-clean dev-up dev-build dev-rebuild dev-rebuild-clean dev-migrate: check-env
 
 up:
 	docker compose -f $(COMPOSE_FILE) up -d
@@ -22,8 +26,8 @@ down:
 clean:
 	docker compose -f $(COMPOSE_FILE) down -v
 
-fclean: clean
-	docker system prune -af --volumes
+fclean:
+	docker compose -f $(COMPOSE_FILE) down --rmi local -v --remove-orphans
 
 re: fclean build
 
@@ -50,8 +54,8 @@ dev-down:
 dev-clean:
 	docker compose -f $(COMPOSE_DEV_FILE) down -v
 
-dev-fclean: dev-clean
-	docker system prune -af --volumes
+dev-fclean:
+	docker compose -f $(COMPOSE_DEV_FILE) down --rmi local -v --remove-orphans
 
 dev-re: dev-fclean dev-build
 
@@ -76,5 +80,5 @@ dev-e2e:
 		mcr.microsoft.com/playwright:v1.62.1-noble \
 		npx playwright test
 
-.PHONY: all up build down clean fclean re rebuild rebuild-clean logs \
-	dev-up dev-build dev-down dev-clean dev-fclean dev-re dev-rebuild dev-rebuild-clean dev-logs dev-migrate dev-deps
+.PHONY: all check-env up build down clean fclean re rebuild rebuild-clean logs \
+	dev-up dev-build dev-down dev-clean dev-fclean dev-re dev-rebuild dev-rebuild-clean dev-logs dev-migrate dev-deps dev-e2e

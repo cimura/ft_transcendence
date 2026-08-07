@@ -12,10 +12,7 @@ import { getStoredAccessToken, storeAccessToken } from '../utils/accessToken'
  * - unauthenticated: 未ログイン、またはトークンが無効と判明した
  */
 export type AuthStatus =
-  | 'checking'
-  | 'authenticated'
-  | 'verification-failed'
-  | 'unauthenticated'
+  'checking' | 'authenticated' | 'verification-failed' | 'unauthenticated'
 
 interface AuthState {
   currentUser: User | null

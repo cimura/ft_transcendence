@@ -2,6 +2,10 @@ import { useState } from 'react'
 import { signUpApi, AuthApiError } from '../api/auth'
 import { useAuthStore } from '../stores/authStore'
 import { LegalLinks } from './legal/LegalLinks'
+import {
+  isPasswordWithinUtf8Limit,
+  MAX_PASSWORD_UTF8_BYTES,
+} from '../utils/password'
 
 interface SignupProps {
   onSignupSuccess: () => void
@@ -25,6 +29,18 @@ export default function Signup({
     const username = formData.get('username') as string
     const password = formData.get('password') as string
     const confirmPassword = formData.get('confirmPassword') as string
+
+    if (password.length < 8) {
+      setError('パスワードは8文字以上で入力してください。')
+      return
+    }
+
+    if (!isPasswordWithinUtf8Limit(password)) {
+      setError(
+        `パスワードは${MAX_PASSWORD_UTF8_BYTES} UTF-8バイト以内で入力してください。`
+      )
+      return
+    }
 
     if (password !== confirmPassword) {
       setError('パスワードが一致しません。')
@@ -80,7 +96,7 @@ export default function Signup({
     // 背景を透明にして文字色を白ベースに
     <div className="min-h-screen flex items-center justify-center relative text-white">
       {/* すりガラス風のカードデザイン */}
-      <div className="bg-black/40 backdrop-blur-md border border-cyan-500/30 p-8 rounded-xl shadow-[0_0_20px_rgba(0,255,255,0.15)] w-96 relative z-10">
+      <div className="bg-black/40 backdrop-blur-md border border-cyan-500/30 p-8 rounded-xl shadow-[0_0_20px_rgba(0,255,255,0.15)] w-full max-w-96 mx-4 relative z-10">
         <h1 className="text-3xl font-bold mb-6 text-center tracking-wider text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 to-blue-500">
           Sign Up
         </h1>
@@ -160,6 +176,7 @@ export default function Signup({
               name="password"
               required
               minLength={8}
+              maxLength={72}
               className="w-full px-4 py-2 bg-black/50 border border-cyan-800 rounded-md text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-transparent transition-all"
               placeholder="••••••••"
             />
@@ -179,6 +196,7 @@ export default function Signup({
               name="confirmPassword"
               required
               minLength={8}
+              maxLength={72}
               className="w-full px-4 py-2 bg-black/50 border border-cyan-800 rounded-md text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-transparent transition-all"
               placeholder="••••••••"
             />

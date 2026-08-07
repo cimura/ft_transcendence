@@ -136,14 +136,14 @@ erDiagram
     }
 ```
 
-| Table / model      | Key fields and data types                                                                                                                                                                                  | Relationships and constraints                                                                                                                                                      |
-| ------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `User`             | `id` `String` (UUID, PK), `email` `String` (unique), `username` `String` (unique), `passwordHash` `String`, `avatarUrl` `String?`, `createdAt`/`updatedAt` `DateTime`                                      | Sends and receives `Friendship` records, participates in matches through `MatchParticipant`, and owns `UserAchievement` records.                                                   |
+| Table / model      | Key fields and data types                                                                                                                                                                                  | Relationships and constraints                                                                                                                                                                                                                                                                        |
+| ------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `User`             | `id` `String` (UUID, PK), `email` `String` (unique), `username` `String` (unique), `passwordHash` `String`, `avatarUrl` `String?`, `createdAt`/`updatedAt` `DateTime`                                      | Sends and receives `Friendship` records, participates in matches through `MatchParticipant`, and owns `UserAchievement` records.                                                                                                                                                                     |
 | `Friendship`       | `id` `String` (UUID, PK), `requesterId`/`receiverId` `String` (FK to `User`), `pairKey` `String` (unique), `status` `FriendRequestStatus` enum (`PENDING`, `ACCEPTED`), `createdAt`/`updatedAt` `DateTime` | Two relations to `User` (requester and receiver). `FriendsService` normalizes `pairKey` by sorting the two user IDs before writing, so the `pairKey` unique constraint rejects both `A→B` and `B→A`; the raw `[requesterId, receiverId]` unique constraint alone would not catch a mirrored request. |
-| `Match`            | `id` `String` (UUID, PK), `gameType` `String`, `finishedAt` `DateTime`, `createdAt` `DateTime`                                                                                                             | Has zero or more `MatchParticipant` records; the schema does not enforce a minimum, but `ScoresService` only creates a `Match` together with its participants.                     |
-| `MatchParticipant` | `id` `String` (UUID, PK), `matchId`/`userId` `String` (FK), `result` `MatchResult` enum (`WIN`, `LOSS`, `DRAW`), `kills` `Int?`, `score` `Int?`, `rank` `Int?`                                             | Join model between `Match` and `User`. `[matchId, userId]` is unique, so a user appears at most once per match. Indexed on `userId` and `matchId` for history and ranking queries. |
-| `UserAchievement`  | composite PK `[userId, achievementId]`, `userId` `String` (FK, `onDelete: Cascade`), `achievementId` `String`, `unlockedAt` `DateTime`                                                                     | Belongs to a `User`. Achievement definitions live in application code (`backend/src/scores/achievements/`), so `achievementId` is intentionally not a foreign key to a table.      |
-| `UploadedImage`    | `id` `String` (UUID, PK), `originalName`/`filename`/`mimeType`/`url` `String`, `size` `Int`, `createdAt` `DateTime`                                                                                        | Stores upload metadata only. A user's `avatarUrl` refers to the stored URL; this is deliberately a URL reference rather than a database foreign key.                               |
+| `Match`            | `id` `String` (UUID, PK), `gameType` `String`, `finishedAt` `DateTime`, `createdAt` `DateTime`                                                                                                             | Has zero or more `MatchParticipant` records; the schema does not enforce a minimum, but `ScoresService` only creates a `Match` together with its participants.                                                                                                                                       |
+| `MatchParticipant` | `id` `String` (UUID, PK), `matchId`/`userId` `String` (FK), `result` `MatchResult` enum (`WIN`, `LOSS`, `DRAW`), `kills` `Int?`, `score` `Int?`, `rank` `Int?`                                             | Join model between `Match` and `User`. `[matchId, userId]` is unique, so a user appears at most once per match. Indexed on `userId` and `matchId` for history and ranking queries.                                                                                                                   |
+| `UserAchievement`  | composite PK `[userId, achievementId]`, `userId` `String` (FK, `onDelete: Cascade`), `achievementId` `String`, `unlockedAt` `DateTime`                                                                     | Belongs to a `User`. Achievement definitions live in application code (`backend/src/scores/achievements/`), so `achievementId` is intentionally not a foreign key to a table.                                                                                                                        |
+| `UploadedImage`    | `id` `String` (UUID, PK), `originalName`/`filename`/`mimeType`/`url` `String`, `size` `Int`, `createdAt` `DateTime`                                                                                        | Stores upload metadata only. A user's `avatarUrl` refers to the stored URL; this is deliberately a URL reference rather than a database foreign key.                                                                                                                                                 |
 
 ## Features List
 
@@ -163,7 +163,7 @@ erDiagram
 
 ## Modules
 
-The selected modules total **19 points** (8 Major x 2 + 3 Minor x 1), above the
+The selected modules total **18 points** (8 Major x 2 + 2 Minor x 1), above the
 14 points required. A module is claimed only through the functionality described
 below and demonstrated in the running application.
 
@@ -178,9 +178,8 @@ below and demonstrated in the running application.
 | Gaming and user experience | Advanced 3D graphics (Three.js)             | Major |      2 | The match is rendered as a real 3D scene with Three.js via React Three Fiber: Blender-authored glTF assets (field, destructible rocks, bomb), a procedurally generated UFO, dynamic lighting with shadow mapping, and a camera rig that reframes the board as the viewport changes. Contributors: @ryomori, @ttakino, @sshimura. |
 | User management            | Standard user management and authentication | Major |      2 | Users can authenticate, edit profiles, upload or select avatars, add friends, view profiles, and see presence state. Contributors: @rseki, @ttakino.                                                                                                                                                                             |
 | Web                        | Use an ORM for the database                 | Minor |      1 | Prisma is the single data-access layer: the schema is declared in `schema.prisma`, versioned migrations are applied automatically on backend startup, and a generated type-safe client is used for every query. Contributors: @rseki, @ttakino.                                                                                  |
-| Web                        | Notification system                         | Minor |      1 | The application delivers and displays real-time in-app friend-request and game-invitation notifications. Contributors: @sshimura, @ttakino.                                                                                                                                                                                      |
 | User management            | Game statistics and match history           | Minor |      1 | Match results are persisted and exposed through personal history, rankings, statistics, and achievement progression. Contributors: @rseki, @ttakino.                                                                                                                                                                             |
-|                            | **Total**                                   |       | **19** |                                                                                                                                                                                                                                                                                                                                  |
+|                            | **Total**                                   |       | **18** |                                                                                                                                                                                                                                                                                                                                  |
 
 ### Why we chose these modules
 
@@ -216,9 +215,6 @@ below and demonstrated in the running application.
   are easy to get wrong in raw SQL. Prisma gave us migrations we could review in
   pull requests and a generated client that made schema mistakes compile errors
   instead of runtime errors.
-- **Notification system.** Friend requests and game invitations are worthless if
-  the recipient has to refresh to discover them, so we deliver them over the
-  existing socket connection.
 - **Game statistics and match history.** Persisting results gives matches
   consequences and gave us a reason to build rankings and the Galactic Guide
   achievement progression.
@@ -230,9 +226,9 @@ below and demonstrated in the running application.
 Docker is the only requirement; Node.js, PostgreSQL, and nginx all run inside
 containers and do not need to be installed on the host.
 
-| Tool           | Minimum version | Notes                                                                                                                                                    |
-| -------------- | --------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Docker Engine  | 20.10           | Runs the containers and images defined in `docker/docker-compose.yml`.                                                                                   |
+| Tool           | Minimum version | Notes                                                                                                                                                                                                                                             |
+| -------------- | --------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Docker Engine  | 20.10           | Runs the containers and images defined in `docker/docker-compose.yml`.                                                                                                                                                                            |
 | Docker Compose | v2              | Must be the Compose V2 plugin invoked as `docker compose`, not the legacy `docker-compose` binary. Required for the `depends_on: condition: service_healthy` syntax the `backend` service uses to wait on the `postgres` service's `healthcheck`. |
 | GNU Make       | 3.81            | Optional. Every `make` target below is a thin wrapper around a `docker compose` command; run that command directly (see the `Makefile`) if `make` isn't available. |
 
@@ -255,22 +251,33 @@ Create your local environment file from the provided example:
 cp .env.example .env
 ```
 
-| Variable                | Purpose                                                                 |
-| ----------------------- | ----------------------------------------------------------------------- |
-| `JWT_SECRET`            | Secret used to sign and verify JSON Web Tokens.                         |
-| `JWT_EXPIRES_IN`        | JWT lifetime, for example `1d` or `60s`.                                |
-| `DATABASE_URL`          | PostgreSQL connection URL used by Prisma.                               |
-| `POSTGRES_USER`         | PostgreSQL user name.                                                   |
-| `POSTGRES_PASSWORD`     | PostgreSQL password.                                                    |
-| `POSTGRES_DB`           | PostgreSQL database name.                                               |
-| `SOCKET_IO_CORS_ORIGIN` | Comma-separated origins allowed to connect to the Socket.IO namespaces. |
+Generate a secret:
 
-Never commit `.env`; it contains local secrets. Before deploying, replace the
-placeholder `JWT_SECRET` with a real secret; nothing checks this automatically.
+```bash
+openssl rand -hex 32
+```
+
+Copy the generated value into `JWT_SECRET` in `.env`. The Makefile does not
+create or overwrite `.env`; build targets fail with an explanation when the file
+is missing.
+
+| Variable                | Purpose                                                                                       |
+| ----------------------- | --------------------------------------------------------------------------------------------- |
+| `JWT_SECRET`            | Secret used to sign and verify JWTs. Required, minimum 32 characters.                         |
+| `JWT_EXPIRES_IN`        | JWT lifetime, for example `1d` or `60s`.                                                       |
+| `DATABASE_URL`          | PostgreSQL connection URL used by Prisma.                                                      |
+| `POSTGRES_USER`         | PostgreSQL user name.                                                                          |
+| `POSTGRES_PASSWORD`     | PostgreSQL password.                                                                           |
+| `POSTGRES_DB`           | PostgreSQL database name.                                                                      |
+| `SOCKET_IO_CORS_ORIGIN` | Comma-separated origins allowed to connect to the Socket.IO namespaces.                        |
+
+Never commit `.env`; it contains local secrets. The backend validates
+`JWT_SECRET` on startup. Production refuses known placeholder values and secrets
+shorter than 32 characters, so the shipped `.env.example` cannot be used as-is.
 
 ### Build and start
 
-`docker/docker-compose.prod.yml` builds self-contained production images:
+`docker/docker-compose.yml` builds self-contained production images:
 nginx serves the frontend's static `vite build` output directly (no separate
 frontend container) and acts as the HTTPS reverse proxy, while the backend runs
 the compiled `nest build` output with `node` directly (no devDependencies in
@@ -330,7 +337,7 @@ make rebuild    # Rebuild and recreate containers
 To check Prisma migration status:
 
 ```bash
-docker compose -f docker/docker-compose.prod.yml exec -w /app/backend backend npm run prisma:migrate:status
+docker compose -f docker/docker-compose.yml exec -w /app/backend backend npm run prisma:migrate:status
 ```
 
 ## Individual Contributions

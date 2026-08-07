@@ -3,6 +3,11 @@ import { getApiErrorMessage } from '../../api/errors'
 import { updateMe } from '../../api/user'
 import { SettingsFormError } from './SettingsFormError'
 import { SettingsModal } from './SettingsModal'
+import {
+  getUtf8ByteLength,
+  isPasswordWithinUtf8Limit,
+  MAX_PASSWORD_UTF8_BYTES,
+} from '../../utils/password'
 
 interface PasswordChangeModalProps {
   onClose: () => void
@@ -25,6 +30,13 @@ export const PasswordChangeModal = ({
       return
     }
 
+    if (!isPasswordWithinUtf8Limit(currentPassword)) {
+      setError(
+        `現在のパスワードは${MAX_PASSWORD_UTF8_BYTES} UTF-8バイト以内で入力してください。`
+      )
+      return
+    }
+
     if (newPassword !== confirmPassword) {
       setError('新しいパスワードが一致しません。')
       return
@@ -32,6 +44,13 @@ export const PasswordChangeModal = ({
 
     if (newPassword.length < 8) {
       setError('新しいパスワードは8文字以上で入力してください。')
+      return
+    }
+
+    if (!isPasswordWithinUtf8Limit(newPassword)) {
+      setError(
+        `新しいパスワードは${MAX_PASSWORD_UTF8_BYTES} UTF-8バイト以内で入力してください。`
+      )
       return
     }
 
@@ -69,6 +88,7 @@ export const PasswordChangeModal = ({
             type="password"
             value={currentPassword}
             onChange={(e) => setCurrentPassword(e.target.value)}
+            maxLength={72}
             className="w-full rounded-md border border-white/10 bg-white/5 px-4 py-3 text-white outline-none ring-0 placeholder:text-white/30 focus:border-blue-500/60"
           />
         </label>
@@ -81,9 +101,13 @@ export const PasswordChangeModal = ({
             type="password"
             value={newPassword}
             onChange={(e) => setNewPassword(e.target.value)}
-            minLength={6}
+            minLength={8}
+            maxLength={72}
             className="w-full rounded-md border border-white/10 bg-white/5 px-4 py-3 text-white outline-none ring-0 placeholder:text-white/30 focus:border-blue-500/60"
           />
+          <span className="mt-1 block text-right text-xs text-white/40">
+            {getUtf8ByteLength(newPassword)}/{MAX_PASSWORD_UTF8_BYTES} bytes
+          </span>
         </label>
 
         <label className="block">
@@ -94,9 +118,13 @@ export const PasswordChangeModal = ({
             type="password"
             value={confirmPassword}
             onChange={(e) => setConfirmPassword(e.target.value)}
-            minLength={6}
+            minLength={8}
+            maxLength={72}
             className="w-full rounded-md border border-white/10 bg-white/5 px-4 py-3 text-white outline-none ring-0 placeholder:text-white/30 focus:border-blue-500/60"
           />
+          <span className="mt-1 block text-right text-xs text-white/40">
+            {getUtf8ByteLength(confirmPassword)}/{MAX_PASSWORD_UTF8_BYTES} bytes
+          </span>
         </label>
 
         <div className="flex gap-3 pt-2">

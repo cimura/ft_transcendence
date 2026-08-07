@@ -6,7 +6,7 @@ import type {
 import { useAuthStore } from '../stores/authStore'
 import { useNotificationStore } from '../stores/notificationStore'
 import { useFriendStore } from '../stores/friendStore'
-import { createSocket } from '../utils/socket'
+import { connectSocket, createSocket, releaseSocket } from '../utils/socket'
 
 export function useRealtimeSocket() {
   const accessToken = useAuthStore((state) => state.accessToken)
@@ -43,13 +43,13 @@ export function useRealtimeSocket() {
     socket.on('notification:new', handleNewNotification)
     socket.on('presence:updated', handlePresenceUpdated)
 
-    socket.connect()
+    connectSocket(socket)
 
     return () => {
       socket.off('connect', handleConnect)
       socket.off('notification:new', handleNewNotification)
       socket.off('presence:updated', handlePresenceUpdated)
-      socket.disconnect()
+      releaseSocket(socket)
     }
   }, [accessToken, authStatus])
 }
