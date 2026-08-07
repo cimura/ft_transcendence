@@ -1,11 +1,10 @@
 COMPOSE_FILE = docker/docker-compose.prod.yml
 COMPOSE_DEV_FILE = docker/docker-compose.yml
 
-# === ビルドと起動(本番用: 単一コマンドでの起動が要件のためこちらをメインにする) ===
+# === ビルドと起動 ===
 
 all: up
 
-# .env は手動で作成する。自動コピーするとプレースホルダーのまま起動できてしまうため。
 check-env:
 	@test -f .env || { \
 		echo "Error: .env not found."; \
@@ -13,7 +12,6 @@ check-env:
 		exit 1; \
 	}
 
-# compose を構築するターゲットは .env がないと失敗する(down/logs 系は不要)
 up build rebuild rebuild-clean dev-up dev-build dev-rebuild dev-rebuild-clean dev-migrate: check-env
 
 up:
@@ -25,13 +23,11 @@ build:
 down:
 	docker compose -f $(COMPOSE_FILE) down
 
-# === クリーンアップ ===
-
 clean:
 	docker compose -f $(COMPOSE_FILE) down -v
 
-fclean: clean
-	docker system prune -af --volumes
+fclean:
+	docker compose -f $(COMPOSE_FILE) down --rmi local -v --remove-orphans
 
 re: fclean build
 
@@ -44,7 +40,7 @@ rebuild-clean:
 logs:
 	docker compose -f $(COMPOSE_FILE) logs -f
 
-# === 開発用(ホットリロード付き。本番用とポート8443を共有するため同時起動不可) ===
+# === 開発用 ===
 
 dev-up:
 	docker compose -f $(COMPOSE_DEV_FILE) up -d
@@ -58,8 +54,8 @@ dev-down:
 dev-clean:
 	docker compose -f $(COMPOSE_DEV_FILE) down -v
 
-dev-fclean: dev-clean
-	docker system prune -af --volumes
+dev-fclean:
+	docker compose -f $(COMPOSE_DEV_FILE) down --rmi local -v --remove-orphans
 
 dev-re: dev-fclean dev-build
 
