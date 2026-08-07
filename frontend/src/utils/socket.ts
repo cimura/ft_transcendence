@@ -10,14 +10,6 @@ const ORIGIN = (
   import.meta.env.VITE_BACKEND_URL || window.location.origin
 ).replace(/\/$/, '')
 
-// Socket<L, E> が構造的に満たす最小形。ジェネリクスを保ったまま
-// レジストリに詰めるために any を避けてこの形に絞る。
-type ManagedSocket = Pick<
-  Socket<EventsMap, EventsMap>,
-  'connect' | 'disconnect'
->
-
-const liveSockets = new Set<ManagedSocket>()
 let pageLifecycleBound = false
 
 /**
@@ -34,19 +26,34 @@ let pageLifecycleBound = false
  * バックエンドの猶予期間 (ROOMS_DISCONNECT_GRACE_MS 等) に委ねる設計を維持する。
  *
  * pageshow(persisted) は bfcache から復帰した合図。React は再マウントされない
- * ため、生存中のソケットを手動で繋ぎ直す。
+ * ため、こちらで手動で繋ぎ直す。ただし復帰対象は pagehide 時点で実際に生きて
+ * いた (socket.active な) ソケットだけに限る。明示的に disconnect() 済みの
+ * ソケットや、まだ connectSocket() されていないソケットまで繋ぎ直すと、
+ * 呼び出し側が終了させたはずの接続を勝手に張り直すことになる
+ * (disconnect() は socket.io の自動再接続も止めるため、この経路は明確に意図に反する)。
  */
 function bindPageLifecycleListeners() {
   if (pageLifecycleBound) return
   pageLifecycleBound = true
 
   window.addEventListener('pagehide', () => {
-    liveSockets.forEach((socket) => socket.disconnect())
+    bfcacheSuspendedSockets.clear()
+    for (const socket of managedSockets) {
+      if (!socket.active) continue
+      bfcacheSuspendedSockets.add(socket)
+      socket.disconnect()
+    }
   })
 
   window.addEventListener('pageshow', (event: PageTransitionEvent) => {
     if (!event.persisted) return
-    liveSockets.forEach((socket) => socket.connect())
+    for (const socket of bfcacheSuspendedSockets) {
+      if (managedSockets.has(socket)) {
+        // オフライン中の復帰なら connectSocket 側で保留され、online で繋がる。
+        connectSocket(socket)
+      }
+    }
+    bfcacheSuspendedSockets.clear()
   })
 }
 
@@ -81,7 +88,6 @@ export function createSocket<
     autoConnect: false,
   })
   ensureNetworkListeners()
-  liveSockets.add(socket)
   managedSockets.add(socket)
   if (shouldAutoConnect) {
     connectSocket(socket)
@@ -91,6 +97,9 @@ export function createSocket<
 
 const managedSockets = new Set<Socket>()
 const pausedSockets = new Set<Socket>()
+// pagehide の時点で生きていたソケット。bfcache 復帰時に繋ぎ直す対象を
+// この記録に限定するために使う。
+const bfcacheSuspendedSockets = new Set<Socket>()
 let networkListenersRegistered = false
 
 function ensureNetworkListeners() {
@@ -132,8 +141,8 @@ export function connectSocket(socket: Socket) {
  * disconnect() 単体ではなく必ずこちらを使うこと。オフライン復帰対象からも外す。
  */
 export function releaseSocket(socket: Socket): void {
-  liveSockets.delete(socket)
   managedSockets.delete(socket)
   pausedSockets.delete(socket)
+  bfcacheSuspendedSockets.delete(socket)
   socket.disconnect()
 }
