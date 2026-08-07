@@ -40,6 +40,12 @@ import {
 import type { UserRequest } from './interfaces/user-request.interface';
 import { MAX_IMAGE_SIZE_BYTES } from '../uploads/uploads.constants';
 
+const AVATAR_UPLOAD_LIMITS = {
+  fileSize: MAX_IMAGE_SIZE_BYTES,
+  fields: 1,
+  fieldNestingDepth: 1,
+};
+
 @Controller('users')
 @ApiTags('users')
 @ApiUnauthorizedResponse({ description: '認証失敗時' })
@@ -146,9 +152,7 @@ export class UsersController {
   @UseInterceptors(
     FileInterceptor('file', {
       storage: memoryStorage(),
-      limits: {
-        fileSize: MAX_IMAGE_SIZE_BYTES,
-      },
+      limits: AVATAR_UPLOAD_LIMITS,
     }),
   )
   @ApiOperation({ summary: 'ログイン中のユーザーのアバター画像をアップロード' })

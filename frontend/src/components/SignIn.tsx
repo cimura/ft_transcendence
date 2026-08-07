@@ -49,7 +49,7 @@ export default function SignIn({
     // 背景の gray-100 を削除し、文字色を基本白に
     <div className="min-h-screen flex items-center justify-center relative text-white">
       {/* すりガラス風（グラスモーフィズム）のカードデザイン */}
-      <div className="bg-black/40 backdrop-blur-md border border-cyan-500/30 p-8 rounded-xl shadow-[0_0_20px_rgba(0,255,255,0.15)] w-96 relative z-10">
+      <div className="bg-black/40 backdrop-blur-md border border-cyan-500/30 p-8 rounded-xl shadow-[0_0_20px_rgba(0,255,255,0.15)] w-full max-w-96 mx-4 relative z-10">
         <h1 className="text-3xl font-bold mb-6 text-center tracking-wider text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 to-blue-500">
           SignIn
         </h1>
@@ -93,6 +93,14 @@ export default function SignIn({
               id="password"
               name="password"
               required
+              minLength={8}
+              maxLength={72}
+              onInput={(event) => {
+                event.currentTarget.value = event.currentTarget.value.slice(
+                  0,
+                  72
+                )
+              }}
               className="w-full px-4 py-2 bg-black/50 border border-cyan-800 rounded-md text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-transparent transition-all"
               placeholder="••••••••"
             />

@@ -161,7 +161,7 @@ erDiagram
 
 ## Modules
 
-The selected modules total **19 points** (8 Major x 2 + 3 Minor x 1), above the
+The selected modules total **18 points** (8 Major x 2 + 2 Minor x 1), above the
 14 points required. A module is claimed only through the functionality described
 below and demonstrated in the running application.
 
@@ -176,9 +176,8 @@ below and demonstrated in the running application.
 | Gaming and user experience | Advanced 3D graphics (Three.js)             | Major |      2 | The match is rendered as a real 3D scene with Three.js via React Three Fiber: Blender-authored glTF assets (field, destructible rocks, bomb), a procedurally generated UFO, dynamic lighting with shadow mapping, and a camera rig that reframes the board as the viewport changes. Contributors: @ryomori, @ttakino, @sshimura. |
 | User management            | Standard user management and authentication | Major |      2 | Users can authenticate, edit profiles, upload or select avatars, add friends, view profiles, and see presence state. Contributors: @rseki, @ttakino.                                                                                                                                                                             |
 | Web                        | Use an ORM for the database                 | Minor |      1 | Prisma is the single data-access layer: the schema is declared in `schema.prisma`, versioned migrations are applied automatically on backend startup, and a generated type-safe client is used for every query. Contributors: @rseki, @ttakino.                                                                                  |
-| Web                        | Notification system                         | Minor |      1 | The application delivers and displays real-time in-app friend-request and game-invitation notifications. Contributors: @sshimura, @ttakino.                                                                                                                                                                                      |
 | User management            | Game statistics and match history           | Minor |      1 | Match results are persisted and exposed through personal history, rankings, statistics, and achievement progression. Contributors: @rseki, @ttakino.                                                                                                                                                                             |
-|                            | **Total**                                   |       | **19** |                                                                                                                                                                                                                                                                                                                                  |
+|                            | **Total**                                   |       | **18** |                                                                                                                                                                                                                                                                                                                                  |
 
 ### Why we chose these modules
 
@@ -263,8 +262,9 @@ cp .env.example .env
 | `POSTGRES_DB`           | PostgreSQL database name.                                               |
 | `SOCKET_IO_CORS_ORIGIN` | Comma-separated origins allowed to connect to the Socket.IO namespaces. |
 
-Never commit `.env`; it contains local secrets. Before deploying, replace the
-placeholder `JWT_SECRET` with a real secret; nothing checks this automatically.
+Never commit `.env`; it contains local secrets. `make` generates a random
+`JWT_SECRET` when it creates `.env`. Production startup also rejects known
+placeholders and secrets shorter than 32 characters.
 
 ### Build and start
 

@@ -1,4 +1,4 @@
-import { IsNotEmpty, IsString } from 'class-validator';
+import { IsNotEmpty, IsString, MaxLength } from 'class-validator';
 import { ApiProperty } from '@nestjs/swagger';
 
 export class SignInRequestDto {
@@ -15,6 +15,7 @@ export class SignInRequestDto {
   })
   @IsString()
   @IsNotEmpty({ message: 'Password is required.' })
+  @MaxLength(72, { message: 'Password must be 72 characters or fewer.' })
   password: string;
 }
 

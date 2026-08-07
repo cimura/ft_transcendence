@@ -71,7 +71,13 @@ type RoomsSocket = Socket<
     credentials: true,
   },
 })
-@UsePipes(new ValidationPipe({ transform: true }))
+@UsePipes(
+  new ValidationPipe({
+    whitelist: true,
+    forbidNonWhitelisted: true,
+    transform: true,
+  }),
+)
 export class RoomsGateway implements OnGatewayConnection, OnGatewayDisconnect {
   @WebSocketServer()
   server!: Server<RoomClientToServerEvents, RoomServerToClientEvents>;

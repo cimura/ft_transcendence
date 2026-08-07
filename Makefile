@@ -7,6 +7,9 @@ all: up
 
 .env:
 	cp .env.example .env
+	@JWT_SECRET_VALUE=$$(openssl rand -hex 32); \
+		sed "s/^JWT_SECRET=.*/JWT_SECRET=$$JWT_SECRET_VALUE/" .env > .env.tmp; \
+		mv .env.tmp .env
 
 # compose を構築するターゲットは .env がないと失敗する(down/logs 系は不要)
 up build rebuild rebuild-clean dev-up dev-build dev-rebuild dev-rebuild-clean dev-migrate: .env
