@@ -28,6 +28,7 @@ import BackgroundVideo from './components/common/BackgroundVideo'
 import { PrivacyPolicyPage } from './pages/legal/PrivacyPolicyPage'
 import { TermsOfServicePage } from './pages/legal/TermsOfServicePage'
 import { SessionRetry } from './components/common/SessionRetry'
+import { OfflineBanner } from './components/common/OfflineBanner'
 
 function App() {
   return (
@@ -36,6 +37,7 @@ function App() {
 
       {/* コンテンツが背景の上に重なるように相対位置を指定 */}
       <div className="relative z-10 w-full h-full min-h-screen">
+        <OfflineBanner />
         <AppRoutes />
       </div>
     </BrowserRouter>
