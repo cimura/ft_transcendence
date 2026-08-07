@@ -60,6 +60,17 @@ export const getApiErrorMessage = (error: unknown, fallback: string) => {
 export const logApiError = (context: string, error: unknown) => {
   if (isSessionExpiredError(error)) return
 
+  // 操作に対する想定内の4xxは呼び出し元がUIへ表示するため、
+  // DevTools上で未処理エラーのように見えるログを重ねて出さない。
+  if (
+    axios.isAxiosError(error) &&
+    error.response &&
+    error.response.status >= 400 &&
+    error.response.status < 500
+  ) {
+    return
+  }
+
   console.error(context, error)
 }
 

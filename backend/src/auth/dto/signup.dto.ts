@@ -7,6 +7,7 @@ import {
   Matches,
 } from 'class-validator';
 import { ApiProperty } from '@nestjs/swagger';
+import { MaxUtf8ByteLength } from '../../common/validators/max-utf8-byte-length.validator';
 
 export enum SignUpDuplicateField {
   EMAIL = 'email',
@@ -37,12 +38,14 @@ export class SignUpRequestDto {
 
   @ApiProperty({
     example: 'password123',
-    description: 'サインイン用のパスワード (8文字以上72文字以内)',
+    description: 'サインイン用のパスワード (8文字以上72 UTF-8バイト以内)',
   })
   @IsString()
   @IsNotEmpty({ message: 'パスワードを入力してください' })
   @MinLength(8, { message: 'パスワードは最低8文字以上必要です' })
-  @MaxLength(72, { message: 'パスワードは72文字以内で入力してください' })
+  @MaxUtf8ByteLength(72, {
+    message: 'パスワードは72 UTF-8バイト以内で入力してください',
+  })
   password: string;
 }
 

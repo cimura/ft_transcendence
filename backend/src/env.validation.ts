@@ -8,7 +8,7 @@ import {
   IsOptional,
 } from 'class-validator';
 
-const JWT_SECRET_MIN_LENGTH = 24;
+const JWT_SECRET_MIN_LENGTH = 32;
 
 // 1. 環境変数のルールを定義
 class EnvironmentVariables {
@@ -17,7 +17,7 @@ class EnvironmentVariables {
     message: 'JWT_SECRET is required. Please set it in your .env file.',
   })
   @MinLength(JWT_SECRET_MIN_LENGTH, {
-    message: `JWT_SECRET must be at least ${JWT_SECRET_MIN_LENGTH} characters long. Generate one with: openssl rand -base64 24`,
+    message: `JWT_SECRET must be at least ${JWT_SECRET_MIN_LENGTH} characters long. Generate one with: openssl rand -hex 32`,
   })
   JWT_SECRET: string;
 
@@ -36,6 +36,10 @@ export function validate(config: Record<string, unknown>) {
     enableImplicitConversion: true,
   });
 
+  if (typeof validatedConfig.JWT_SECRET === 'string') {
+    validatedConfig.JWT_SECRET = validatedConfig.JWT_SECRET.trim();
+  }
+
   const errors = validateSync(validatedConfig, {
     skipMissingProperties: false,
   });
@@ -43,6 +47,24 @@ export function validate(config: Record<string, unknown>) {
   // 不正な環境変数があればエラー
   if (errors.length > 0) {
     throw new Error(errors.toString());
+  }
+
+  if (config.NODE_ENV === 'production') {
+    const secret = validatedConfig.JWT_SECRET;
+    const knownPlaceholders = new Set([
+      'your_jwt_secret_key_here',
+      'change_me',
+      'changeme',
+    ]);
+
+    if (
+      secret.length < JWT_SECRET_MIN_LENGTH ||
+      knownPlaceholders.has(secret.toLowerCase())
+    ) {
+      throw new Error(
+        'JWT_SECRET must be at least 32 characters and must not be a known placeholder in production.',
+      );
+    }
   }
 
   return validatedConfig;

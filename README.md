@@ -161,7 +161,7 @@ erDiagram
 
 ## Modules
 
-The selected modules total **19 points** (8 Major x 2 + 3 Minor x 1), above the
+The selected modules total **18 points** (8 Major x 2 + 2 Minor x 1), above the
 14 points required. A module is claimed only through the functionality described
 below and demonstrated in the running application.
 
@@ -176,9 +176,8 @@ below and demonstrated in the running application.
 | Gaming and user experience | Advanced 3D graphics (Three.js)             | Major |      2 | The match is rendered as a real 3D scene with Three.js via React Three Fiber: Blender-authored glTF assets (field, destructible rocks, bomb), a procedurally generated UFO, dynamic lighting with shadow mapping, and a camera rig that reframes the board as the viewport changes. Contributors: @ryomori, @ttakino, @sshimura. |
 | User management            | Standard user management and authentication | Major |      2 | Users can authenticate, edit profiles, upload or select avatars, add friends, view profiles, and see presence state. Contributors: @rseki, @ttakino.                                                                                                                                                                             |
 | Web                        | Use an ORM for the database                 | Minor |      1 | Prisma is the single data-access layer: the schema is declared in `schema.prisma`, versioned migrations are applied automatically on backend startup, and a generated type-safe client is used for every query. Contributors: @rseki, @ttakino.                                                                                  |
-| Web                        | Notification system                         | Minor |      1 | The application delivers and displays real-time in-app friend-request and game-invitation notifications. Contributors: @sshimura, @ttakino.                                                                                                                                                                                      |
 | User management            | Game statistics and match history           | Minor |      1 | Match results are persisted and exposed through personal history, rankings, statistics, and achievement progression. Contributors: @rseki, @ttakino.                                                                                                                                                                             |
-|                            | **Total**                                   |       | **19** |                                                                                                                                                                                                                                                                                                                                  |
+|                            | **Total**                                   |       | **18** |                                                                                                                                                                                                                                                                                                                                  |
 
 ### Why we chose these modules
 
@@ -214,9 +213,6 @@ below and demonstrated in the running application.
   are easy to get wrong in raw SQL. Prisma gave us migrations we could review in
   pull requests and a generated client that made schema mistakes compile errors
   instead of runtime errors.
-- **Notification system.** Friend requests and game invitations are worthless if
-  the recipient has to refresh to discover them, so we deliver them over the
-  existing socket connection.
 - **Game statistics and match history.** Persisting results gives matches
   consequences and gave us a reason to build rankings and the Galactic Guide
   achievement progression.
@@ -247,30 +243,35 @@ HTTPS entry point there.
 
 ### Configure environment variables
 
-Create your local environment file from the provided example, then generate a
-secret for `JWT_SECRET`:
+Create your local environment file from the provided example:
 
 ```bash
 cp .env.example .env
-openssl rand -base64 24
 ```
 
-`make` never creates `.env` for you; the targets fail with an explanation until
-the file exists.
+Generate a secret:
 
-| Variable                | Purpose                                                                          |
-| ----------------------- | -------------------------------------------------------------------------------- |
-| `JWT_SECRET`            | Secret used to sign and verify JSON Web Tokens. Required, minimum 24 characters. |
-| `JWT_EXPIRES_IN`        | JWT lifetime, for example `1d` or `60s`.                                         |
-| `DATABASE_URL`          | PostgreSQL connection URL used by Prisma.                                        |
-| `POSTGRES_USER`         | PostgreSQL user name.                                                            |
-| `POSTGRES_PASSWORD`     | PostgreSQL password.                                                             |
-| `POSTGRES_DB`           | PostgreSQL database name.                                                        |
-| `SOCKET_IO_CORS_ORIGIN` | Comma-separated origins allowed to connect to the Socket.IO namespaces.          |
+```bash
+openssl rand -hex 32
+```
+
+Copy the generated value into `JWT_SECRET` in `.env`. The Makefile does not
+create or overwrite `.env`; build targets fail with an explanation when the file
+is missing.
+
+| Variable                | Purpose                                                                                       |
+| ----------------------- | --------------------------------------------------------------------------------------------- |
+| `JWT_SECRET`            | Secret used to sign and verify JWTs. Required, minimum 32 characters.                         |
+| `JWT_EXPIRES_IN`        | JWT lifetime, for example `1d` or `60s`.                                                       |
+| `DATABASE_URL`          | PostgreSQL connection URL used by Prisma.                                                      |
+| `POSTGRES_USER`         | PostgreSQL user name.                                                                          |
+| `POSTGRES_PASSWORD`     | PostgreSQL password.                                                                           |
+| `POSTGRES_DB`           | PostgreSQL database name.                                                                      |
+| `SOCKET_IO_CORS_ORIGIN` | Comma-separated origins allowed to connect to the Socket.IO namespaces.                        |
 
 Never commit `.env`; it contains local secrets. The backend validates
-`JWT_SECRET` on startup and refuses to boot if it is empty or shorter than 24
-characters, so the shipped `.env.example` cannot be used as-is.
+`JWT_SECRET` on startup. Production refuses known placeholder values and secrets
+shorter than 32 characters, so the shipped `.env.example` cannot be used as-is.
 
 ### Build and start
 
