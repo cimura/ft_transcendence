@@ -7,6 +7,7 @@ import {
   ALLOWED_IMAGE_EXTENSIONS,
   IMAGE_UPLOAD_DIR,
   MAX_IMAGE_SIZE_BYTES,
+  ORPHANED_IMAGE_LOG_PREFIX,
   UPLOAD_URL_PREFIX,
 } from './uploads.constants';
 
@@ -51,16 +52,19 @@ export class UploadsService {
         where: { id: image.id },
       });
     } catch (error: unknown) {
-      this.logger.warn(
-        `Failed to delete uploaded image record ${image.id}: ${this.formatCleanupError(error)}`,
+      // レコード・実ファイルとも削除されず残る。自動リトライは無いため、
+      // 復旧には運用者がこのログを見て手動対応する必要がある。
+      this.logger.error(
+        `${ORPHANED_IMAGE_LOG_PREFIX} Failed to delete uploaded image record ${image.id}: ${this.formatCleanupError(error)}`,
       );
       return;
     }
 
     const imagePath = resolve(process.cwd(), IMAGE_UPLOAD_DIR, image.filename);
     await unlink(imagePath).catch((error: unknown) => {
-      this.logger.warn(
-        `Failed to unlink uploaded image file ${image.filename}: ${this.formatCleanupError(error)}`,
+      // レコードは既に削除済みのため、DB からは追跡できない孤児ファイルになる。
+      this.logger.error(
+        `${ORPHANED_IMAGE_LOG_PREFIX} Failed to unlink uploaded image file ${image.filename}: ${this.formatCleanupError(error)}`,
       );
     });
   }

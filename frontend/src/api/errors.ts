@@ -73,3 +73,22 @@ export const logApiError = (context: string, error: unknown) => {
 
   console.error(context, error)
 }
+
+/**
+ * ルーム参加(POST /rooms/:id/join)が満員・開始済みで拒否されたときの衝突ステータス。
+ */
+export const ROOM_JOIN_CONFLICT_STATUS = 409
+
+const ROOM_BAD_REQUEST_STATUS = 400
+const ROOM_NOT_FOUND_STATUS = 404
+
+/**
+ * ルームIDの形式が不正(400)、またはルームが存在しない(404)。
+ * 古いURLを開いた・ルームがすでに解散した等で普通に起こる想定内の失敗なので、
+ * コンソールにエラーを出さずに画面で伝える。
+ */
+export const isRoomUnavailableError = (error: unknown) => {
+  if (!axios.isAxiosError(error)) return false
+  const status = error.response?.status
+  return status === ROOM_BAD_REQUEST_STATUS || status === ROOM_NOT_FOUND_STATUS
+}

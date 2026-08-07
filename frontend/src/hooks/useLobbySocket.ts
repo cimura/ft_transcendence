@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import { Socket } from 'socket.io-client'
 import { useRoomStore } from '../stores/roomStore'
 import { useAuthStore } from '../stores/authStore'
-import { createSocket } from '../utils/socket'
+import { connectSocket, createSocket, releaseSocket } from '../utils/socket'
 import type {
   RoomClientToServerEvents,
   RoomServerToClientEvents,
@@ -73,10 +73,10 @@ export function useLobbySocket() {
       setRejoinTarget(inGame ? `/game/${room.id}` : `/room/${room.id}`)
     })
 
-    socket.connect()
+    connectSocket(socket)
 
     return () => {
-      socket.disconnect()
+      releaseSocket(socket)
       socketRef.current = null
     }
   }, [accessToken, authStatus])

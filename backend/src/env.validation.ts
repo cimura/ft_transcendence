@@ -2,16 +2,22 @@ import { plainToInstance } from 'class-transformer';
 import {
   IsString,
   IsNotEmpty,
+  MinLength,
   Matches,
   validateSync,
   IsOptional,
 } from 'class-validator';
+
+const JWT_SECRET_MIN_LENGTH = 32;
 
 // 1. 環境変数のルールを定義
 class EnvironmentVariables {
   @IsString()
   @IsNotEmpty({
     message: 'JWT_SECRET is required. Please set it in your .env file.',
+  })
+  @MinLength(JWT_SECRET_MIN_LENGTH, {
+    message: `JWT_SECRET must be at least ${JWT_SECRET_MIN_LENGTH} characters long. Generate one with: openssl rand -hex 32`,
   })
   JWT_SECRET: string;
 

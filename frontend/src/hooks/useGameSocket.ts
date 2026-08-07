@@ -2,7 +2,7 @@ import { useCallback, useEffect, useRef } from 'react'
 import { Socket } from 'socket.io-client'
 import { useGameStore } from '../stores/gameStore'
 import { useAuthStore } from '../stores/authStore'
-import { createSocket } from '../utils/socket'
+import { connectSocket, createSocket, releaseSocket } from '../utils/socket'
 import type { ServerToClientEvents } from '@ft_transcendence/shared/game-events.types'
 
 export function useGameSocket(roomId: string) {
@@ -25,8 +25,15 @@ export function useGameSocket(roomId: string) {
     const socket = createSocket('/game', accessToken, {
       transports: ['websocket'],
       secure: true,
+      autoConnect: false,
     })
     socketRef.current = socket
+
+    // connect ハンドラ内で送る。ここに置くことで、bfcache 復帰などによる
+    // 再接続のたびに再送され、再接続時も盤面が復元される。
+    socket.on('connect', () => {
+      socket.emit('game:join', { roomId })
+    })
 
     socket.on(
       'game:init',
@@ -117,9 +124,10 @@ export function useGameSocket(roomId: string) {
       })
     })
 
-    socket.emit('game:join', { roomId })
+    connectSocket(socket)
 
     return () => {
+      socket.off('connect')
       socket.off('game:init')
       socket.off('game:countdown')
       socket.off('game:playing')
@@ -131,7 +139,7 @@ export function useGameSocket(roomId: string) {
       socket.off('connect_error')
       socket.off('disconnect')
 
-      socket.disconnect()
+      releaseSocket(socket)
       socketRef.current = null
     }
   }, [
