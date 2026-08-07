@@ -1,7 +1,10 @@
 import { BadRequestException, Logger } from '@nestjs/common';
 import { mkdir, unlink, writeFile } from 'fs/promises';
 import { PrismaService } from '../prisma.service';
-import { MAX_IMAGE_SIZE_BYTES } from './uploads.constants';
+import {
+  MAX_IMAGE_SIZE_BYTES,
+  ORPHANED_IMAGE_LOG_PREFIX,
+} from './uploads.constants';
 import { UploadsService } from './uploads.service';
 
 jest.mock('fs/promises', () => ({
@@ -12,7 +15,7 @@ jest.mock('fs/promises', () => ({
 
 describe('UploadsService', () => {
   let service: UploadsService;
-  let loggerWarnSpy: jest.SpyInstance;
+  let loggerErrorSpy: jest.SpyInstance;
   let prisma: {
     uploadedImage: {
       create: jest.Mock;
@@ -33,8 +36,8 @@ describe('UploadsService', () => {
     jest.mocked(mkdir).mockResolvedValue(undefined);
     jest.mocked(unlink).mockResolvedValue(undefined);
     jest.mocked(writeFile).mockResolvedValue(undefined);
-    loggerWarnSpy = jest
-      .spyOn(Logger.prototype, 'warn')
+    loggerErrorSpy = jest
+      .spyOn(Logger.prototype, 'error')
       .mockImplementation(() => undefined);
 
     prisma = {
@@ -50,7 +53,7 @@ describe('UploadsService', () => {
 
   afterEach(() => {
     jest.clearAllMocks();
-    loggerWarnSpy.mockRestore();
+    loggerErrorSpy.mockRestore();
   });
 
   it.each([
@@ -146,12 +149,12 @@ describe('UploadsService', () => {
     await expect(service.deleteImage(image)).resolves.toBeUndefined();
 
     expect(unlink).not.toHaveBeenCalled();
-    expect(loggerWarnSpy).toHaveBeenCalledWith(
-      'Failed to delete uploaded image record image-id: DB error',
+    expect(loggerErrorSpy).toHaveBeenCalledWith(
+      `${ORPHANED_IMAGE_LOG_PREFIX} Failed to delete uploaded image record image-id: DB error`,
     );
   });
 
-  it('logs a warning when uploaded image file deletion fails', async () => {
+  it('logs an error when uploaded image file deletion fails', async () => {
     const image = { id: 'image-id', filename: 'avatar.png' };
     jest.mocked(unlink).mockRejectedValue(new Error('File error'));
 
@@ -160,8 +163,8 @@ describe('UploadsService', () => {
     expect(prisma.uploadedImage.delete).toHaveBeenCalledWith({
       where: { id: image.id },
     });
-    expect(loggerWarnSpy).toHaveBeenCalledWith(
-      'Failed to unlink uploaded image file avatar.png: File error',
+    expect(loggerErrorSpy).toHaveBeenCalledWith(
+      `${ORPHANED_IMAGE_LOG_PREFIX} Failed to unlink uploaded image file avatar.png: File error`,
     );
   });
 });
