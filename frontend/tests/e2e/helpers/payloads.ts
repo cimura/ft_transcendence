@@ -20,12 +20,25 @@ export const XSS_PAYLOADS = [
  * ルーム名用の XSS ペイロード。CreateRoomDto.name が MaxLength(30) のため、
  * 30 文字を超えるものはサーバに届く前に 400 で弾かれてしまい、
  * 「保存された文字列がどう描画されるか」を検証できない。
+ *
+ * E2E テストはデータをクリーンアップしないため、固定文字列だと過去の実行で
+ * 作成された同名ルームが `getByText` の一致対象になり得る(その場合、
+ * 今回のルーム名が正しく保存・エスケープされていなくてもテストが通ってしまう)。
+ * そのため呼び出しごとに一意な suffix (3 桁の数字) を埋め込む。
+ * onerror/onload の引数はその suffix をそのまま使い、実行可能なペイロードのまま保つ。
  */
-export const SHORT_XSS_PAYLOADS = [
-  '<img src=x onerror=alert(1)>',
-  '<svg onload=alert(1)>',
-  '"><b>xss</b>',
-] as const
+export function createShortXssPayloads(uniqueId: string) {
+  return [
+    `<img src=x onerror=alert(${uniqueId})>`,
+    `<svg onload=alert(${uniqueId})>`,
+    `"><b>${uniqueId}</b>`,
+  ] as const
+}
+
+/** {@link createShortXssPayloads} 用の一意な 3 桁 suffix を生成する。 */
+export function makeXssUniqueId() {
+  return String(100 + Math.floor(Math.random() * 900))
+}
 
 /**
  * AccountInfoModal のクライアント側チェック(`/^[^\s@]+@[^\s@]+\.[^\s@]+$/`)を

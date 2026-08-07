@@ -4,8 +4,9 @@ import { signUpViaUi } from '../helpers/auth'
 import { createRoomViaUi, joinRoomViaLobby } from '../helpers/rooms'
 import {
   attachXssProbe,
+  createShortXssPayloads,
   EMAIL_XSS_PAYLOAD,
-  SHORT_XSS_PAYLOADS,
+  makeXssUniqueId,
   XSS_PAYLOADS,
 } from '../helpers/payloads'
 
@@ -185,7 +186,7 @@ test.describe('XSS 攻撃への耐性', () => {
     const victimProbe = attachXssProbe(victimPage)
     await signUpViaUi(victimPage, makeTestUser('xss_lobby_victim'))
 
-    for (const payload of SHORT_XSS_PAYLOADS) {
+    for (const payload of createShortXssPayloads(makeXssUniqueId())) {
       // ルームに入ったままだとロビーへ行っても元のルームへ引き戻されるため、
       // ペイロードごとに別ユーザー(別コンテキスト)で作成する
       const attackerContext = await browser.newContext()
@@ -196,12 +197,16 @@ test.describe('XSS 攻撃への耐性', () => {
       await createRoomViaUi(attackerPage, { name: payload, maxPlayers: 2 })
 
       // 待機室のヘッダーに、ルーム名が文字列そのままで出る
-      await expect(attackerPage.getByText(payload).first()).toBeVisible()
+      await expect(
+        attackerPage.getByText(payload, { exact: true }).first()
+      ).toBeVisible()
       await attackerProbe.assertNotExecuted(`room name (待機室): ${payload}`)
 
       // 他ユーザーのロビー一覧にも、文字列そのままで出る
       await victimPage.goto('/lobby')
-      await expect(victimPage.getByText(payload).first()).toBeVisible({
+      await expect(
+        victimPage.getByText(payload, { exact: true }).first()
+      ).toBeVisible({
         timeout: 10_000,
       })
       await victimProbe.assertNotExecuted(`room name (ロビー): ${payload}`)
