@@ -16,6 +16,14 @@ to connected players. Matches are rendered as a 3D scene with Three.js, the
 interface follows an 8-bit galactic visual theme, and both keyboard and touch
 controls are supported.
 
+## Demo
+
+https://github.com/user-attachments/assets/89478f54-c935-4348-93fc-141604fd62b5
+
+| Game room | Rankings | Galactic Guide achievements |
+| --- | --- | --- |
+| [<img src="docs/media/room-lobby.png" alt="Game room with player list, map preview, invitations, and chat" width="260">](docs/media/room-lobby.png) | [<img src="docs/media/ranking.png" alt="Player rankings screen" width="260">](docs/media/ranking.png) | [<img src="docs/media/achievements.png" alt="Galactic Guide achievement-progress screen" width="260">](docs/media/achievements.png) |
+
 Key features include:
 
 - Secure email-and-password authentication.
